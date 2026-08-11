@@ -16,6 +16,9 @@ let webhookUrl: string | null = null;
 let storedLobbyFields: Array<{ name: string; value: string; inline: boolean }> = [];
 // Flag to prevent duplicate message updates
 let messageUpdated = false;
+// Lifecycle-bound MutationObserver reference so we can disconnect on remove
+// and never register more than one across enable → remove → enable (Issue #9 P0-2).
+let startButtonObserver: MutationObserver | null = null;
 
 export async function discordWebhooks() {
   console.log("Autodarts Tools: Discord Webhooks - Starting");
@@ -117,8 +120,11 @@ export async function discordWebhooks() {
 
 // Function to set up a mutation observer to watch for the Start Game button
 function setupStartButtonListener() {
+  // Guard: only ever create one observer across enable → remove → enable.
+  if (startButtonObserver !== null) return;
+
   // Create a MutationObserver to watch for button additions to the DOM
-  const observer = new MutationObserver((mutations) => {
+  startButtonObserver = new MutationObserver((mutations) => {
     for (const mutation of mutations) {
       if (mutation.type === "childList") {
         const startButtons = Array.from(document.querySelectorAll("button")).filter(
@@ -140,7 +146,7 @@ function setupStartButtonListener() {
   });
 
   // Start observing the document body for changes
-  observer.observe(document.body, { childList: true, subtree: true });
+  startButtonObserver.observe(document.body, { childList: true, subtree: true });
 
   // Check for existing buttons
   const existingStartButtons = Array.from(document.querySelectorAll("button")).filter(
@@ -442,4 +448,31 @@ function startAutoStartTimer(minutes: number) {
       autoStartTimer = null;
     }
   }, milliseconds);
+}
+
+// Lifecycle cleanup for Discord Webhooks feature (Issue #9 P0-2).
+// Called from lobby.content/index.ts when leaving the lobby route.
+// Behaviour: disconnect the body-wide MutationObserver, cancel any pending
+// auto-start timer, remove the injected Discord button, and reset module state
+// so that a subsequent lobby-enter re-arms the feature cleanly.
+export function discordWebhooksOnRemove(): void {
+  if (startButtonObserver !== null) {
+    startButtonObserver.disconnect();
+    startButtonObserver = null;
+  }
+
+  if (autoStartTimer !== null) {
+    clearTimeout(autoStartTimer);
+    autoStartTimer = null;
+  }
+
+  // Remove injected Discord button(s), if still present.
+  document.querySelectorAll<HTMLButtonElement>("button[title=\"Send Discord Webhook\"]")
+    .forEach(b => b.remove());
+
+  // Reset per-session state so the next lobby-enter starts fresh.
+  webhookMessageId = null;
+  webhookUrl = null;
+  storedLobbyFields = [];
+  messageUpdated = false;
 }

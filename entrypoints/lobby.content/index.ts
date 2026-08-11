@@ -13,7 +13,7 @@ import {
   AutodartsToolsConfig,
   AutodartsToolsUrlStatus,
 } from "@/utils/storage";
-import { discordWebhooks } from "@/entrypoints/lobby.content/discord-webhooks";
+import { discordWebhooks, discordWebhooksOnRemove } from "@/entrypoints/lobby.content/discord-webhooks";
 import { autoStart, onRemove as onAutoStartRemove } from "@/entrypoints/lobby.content/auto-start";
 import { onRemove as onShufflePlayersRemove, shufflePlayers } from "@/entrypoints/lobby.content/shuffle-players";
 import { onRemove as onQrCodeRemove, qrCode } from "@/entrypoints/lobbynew.content/qr-code";
@@ -125,6 +125,7 @@ export default defineContentScript({
         await wledFxOnRemove();
         onRemoveCareerBotHint();
         botSkinPickerOnRemove();
+        discordWebhooksOnRemove();
       }
     });
   },
