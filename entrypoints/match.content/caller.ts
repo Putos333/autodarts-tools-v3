@@ -42,6 +42,10 @@ let currentAudioIndex = 0;
 // Tracking URLs that need to be revoked
 const blobUrlsToRevoke: string[] = [];
 
+// Lifecycle handles for caller-owned resources
+let blobCleanupIntervalId: number | null = null;
+let unlockAudioAbortController: AbortController | null = null;
+
 function checkBoardStatus(boardData: IBoard): void {
   const boardEvent = boardData.event;
   const boardStatus = boardData.status;
@@ -72,6 +76,12 @@ export async function caller() {
 
     // Initialize audio player for Safari compatibility
     initAudioPlayer();
+
+    // Keep blob cleanup bound to the caller lifecycle.
+    if (blobCleanupIntervalId === null) {
+      blobCleanupIntervalId = window.setInterval(cleanupBlobUrlsTick, 60000);
+    }
+
     // Autodarts-Original-Caller stummschalten damit kein Doppel-Caller entsteht
     muteAutodartsOriginalCaller();
 
@@ -130,6 +140,18 @@ export function callerOnRemove() {
 
   // Reset gameshot cooldown timestamp
   lastGameshotTimestamp = 0;
+
+  // Stop caller-owned periodic blob cleanup.
+  if (blobCleanupIntervalId !== null) {
+    clearInterval(blobCleanupIntervalId);
+    blobCleanupIntervalId = null;
+  }
+
+  // Remove pending audio-unlock listeners.
+  if (unlockAudioAbortController !== null) {
+    unlockAudioAbortController.abort();
+    unlockAudioAbortController = null;
+  }
 
   // Cancel any ongoing TTS
   if (window.speechSynthesis) {
@@ -236,6 +258,10 @@ function unmuteAutodartsOriginalCaller(): void {
  */
 function initAudioPlayer(): void {
   if (!audioPlayer) {
+    if (unlockAudioAbortController === null) {
+      unlockAudioAbortController = new AbortController();
+    }
+
     audioPlayer = new Audio();
     audioPlayer.dataset.adtOwned = "true"; // Nicht stummschalten
 
@@ -259,16 +285,25 @@ function initAudioPlayer(): void {
       });
       audio.addEventListener("error", (error) => {
         console.error("Autodarts Tools: Pool audio error", error);
-        document.addEventListener("click", unlockAudio, { once: true });
+        if (unlockAudioAbortController !== null) {
+          document.addEventListener("click", unlockAudio, {
+            once: true,
+            signal: unlockAudioAbortController.signal,
+          });
+        }
         playNextSound();
       });
       audioPool.push(audio);
     }
 
     // Unlock audio on first user interaction (required for Safari/iOS)
-    document.addEventListener("click", unlockAudio, { once: true });
-    document.addEventListener("touchstart", unlockAudio, { once: true });
-    document.addEventListener("keydown", unlockAudio, { once: true });
+    const unlockAudioListenerOptions: AddEventListenerOptions = {
+      once: true,
+      signal: unlockAudioAbortController.signal,
+    };
+    document.addEventListener("click", unlockAudio, unlockAudioListenerOptions);
+    document.addEventListener("touchstart", unlockAudio, unlockAudioListenerOptions);
+    document.addEventListener("keydown", unlockAudio, unlockAudioListenerOptions);
   }
 }
 
@@ -1325,7 +1360,7 @@ function createAudioBlobUrl(base64Data: string): string | null {
 }
 
 // Clean up blob URLs periodically to prevent memory leaks
-setInterval(() => {
+function cleanupBlobUrlsTick(): void {
   if (blobUrlsToRevoke.length > 20) {
     console.log("Autodarts Tools: Cleaning up blob URLs", blobUrlsToRevoke.length);
     // Keep the 5 most recent URLs (they might still be in use)
@@ -1343,7 +1378,7 @@ setInterval(() => {
     blobUrlsToRevoke.length = 0;
     blobUrlsToRevoke.push(...urlsToKeep);
   }
-}, 60000); // Check every minute
+}
 
 /**
  * Stops all currently playing sounds and clears the sound queue
