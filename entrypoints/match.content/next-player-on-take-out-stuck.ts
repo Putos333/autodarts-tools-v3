@@ -6,28 +6,11 @@ import { AutodartsToolsBoardData } from "@/utils/board-data-storage";
 
 let boardDataWatcherUnwatch: any;
 
-// Create a map to store event listeners
-const eventListenersMap = new Map();
-
-// Create a wrapper around addEventListener
-// @ts-expect-error
-Document.prototype.realAddEventListener = Document.prototype.addEventListener;
-Document.prototype.addEventListener = function (eventName, callback) {
-// @ts-expect-error
-  this.realAddEventListener(eventName, callback);
-
-  if (!eventListenersMap.has(eventName)) {
-    eventListenersMap.set(eventName, []);
-  }
-
-  eventListenersMap.get(eventName).push(callback);
-};
-
-// Create a function to check if an event listener has been defined
-function hasEventListener(eventName, callback) {
-  const listeners = eventListenersMap.get(eventName);
-  return listeners && listeners.includes(callback);
-}
+// Stable module-scope handler references so removeEventListener actually
+// removes the exact handler that was registered (Issue #9 P0-1).
+// Also acts as an idempotency guard for enable → remove → enable.
+let clickHandlerRef: ((e: Event) => void) | null = null;
+let fullscreenHandlerRef: (() => void) | null = null;
 
 export async function nextPlayerOnTakeOutStuck() {
   try {
@@ -43,9 +26,10 @@ export async function nextPlayerOnTakeOutStuck() {
       if (takeOutTimout) clearInterval(takeOutTimout);
     }
 
-    // Make sure event listeners are properly registered and maintained in fullscreen mode
-    if (!hasEventListener("click", remove)) {
-      document.addEventListener("click", remove);
+    // Register click listener once; guard by module-scope ref.
+    if (!clickHandlerRef) {
+      clickHandlerRef = remove;
+      document.addEventListener("click", clickHandlerRef);
     }
 
     // Handle fullscreen changes
@@ -53,15 +37,17 @@ export async function nextPlayerOnTakeOutStuck() {
       if (document.fullscreenElement) {
         console.log("Autodarts Tools: Fullscreen mode detected, ensuring next player on takeout stuck still works");
         // Re-register click event if needed in fullscreen
-        if (!hasEventListener("click", remove)) {
-          document.addEventListener("click", remove);
+        if (!clickHandlerRef) {
+          clickHandlerRef = remove;
+          document.addEventListener("click", clickHandlerRef);
         }
       }
     }
 
-    // Add fullscreen change handler if not already present
-    if (!hasEventListener("fullscreenchange", handleFullscreenChange)) {
-      document.addEventListener("fullscreenchange", handleFullscreenChange);
+    // Register fullscreenchange listener once; guard by module-scope ref.
+    if (!fullscreenHandlerRef) {
+      fullscreenHandlerRef = handleFullscreenChange;
+      document.addEventListener("fullscreenchange", fullscreenHandlerRef);
     }
 
     boardDataWatcherUnwatch?.();
@@ -132,23 +118,16 @@ export async function nextPlayerOnTakeOutStuck() {
 export function nextPlayerOnTakeOutStuckOnRemove() {
   if (boardDataWatcherUnwatch) {
     boardDataWatcherUnwatch();
+    boardDataWatcherUnwatch = null;
   }
 
-  // Clean up fullscreen event listener
-  const fullscreenHandler = eventListenersMap.get("fullscreenchange")?.find(
-    callback => callback.name === "handleFullscreenChange",
-  );
-
-  if (fullscreenHandler) {
-    document.removeEventListener("fullscreenchange", fullscreenHandler);
+  if (fullscreenHandlerRef) {
+    document.removeEventListener("fullscreenchange", fullscreenHandlerRef);
+    fullscreenHandlerRef = null;
   }
 
-  // Clean up click handler
-  const clickHandler = eventListenersMap.get("click")?.find(
-    callback => callback.name === "remove",
-  );
-
-  if (clickHandler) {
-    document.removeEventListener("click", clickHandler);
+  if (clickHandlerRef) {
+    document.removeEventListener("click", clickHandlerRef);
+    clickHandlerRef = null;
   }
 }
