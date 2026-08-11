@@ -43,6 +43,15 @@ let currentAudioIndex2 = 0;
 // Tracking URLs that need to be revoked
 const blobUrlsToRevoke: string[] = [];
 
+// Stable handler references so removeEventListener actually removes them
+// (Fix A – Issue #7). Assigned in initAudioPlayer(), cleared in soundFxOnRemove().
+let handleAudioPlayer1Ended: (() => void) | null = null;
+let handleAudioPlayer2Ended: (() => void) | null = null;
+
+// Lifecycle-bound blob URL cleanup interval (Fix B – Issue #7).
+// Started once in soundFx(), cleared in soundFxOnRemove().
+let blobCleanupIntervalId: number | null = null;
+
 function checkBoardStatus(boardData: IBoard): void {
   const boardEvent = boardData.event;
   const boardStatus = boardData.status;
@@ -73,6 +82,12 @@ export async function soundFx() {
 
     // Initialize audio player for Safari compatibility
     initAudioPlayer();
+
+    // Start (or keep) the lifecycle-bound blob URL cleanup interval.
+    // Guard ensures max. one active interval across enable → remove → enable (Fix B).
+    if (blobCleanupIntervalId === null) {
+      blobCleanupIntervalId = window.setInterval(cleanupBlobUrlsTick, 60000);
+    }
 
     if (!gameDataWatcherUnwatch) {
       gameDataWatcherUnwatch = AutodartsToolsGameData.watch((gameData: IGameData, oldGameData: IGameData) => {
@@ -175,6 +190,12 @@ export function soundFxOnRemove() {
     tournamentReadyObserver = null;
   }
 
+  // Stop the lifecycle-bound blob URL cleanup interval (Fix B – Issue #7).
+  if (blobCleanupIntervalId !== null) {
+    clearInterval(blobCleanupIntervalId);
+    blobCleanupIntervalId = null;
+  }
+
   // Clear any pending debounce timer
   if (debounceTimer) {
     clearTimeout(debounceTimer);
@@ -192,15 +213,21 @@ export function soundFxOnRemove() {
   // Clean up audio players
   if (audioPlayer) {
     audioPlayer.pause();
-    audioPlayer.removeEventListener("ended", () => playNextSound(1));
+    if (handleAudioPlayer1Ended) {
+      audioPlayer.removeEventListener("ended", handleAudioPlayer1Ended);
+    }
     audioPlayer = null;
   }
+  handleAudioPlayer1Ended = null;
 
   if (audioPlayer2) {
     audioPlayer2.pause();
-    audioPlayer2.removeEventListener("ended", () => playNextSound(2));
+    if (handleAudioPlayer2Ended) {
+      audioPlayer2.removeEventListener("ended", handleAudioPlayer2Ended);
+    }
     audioPlayer2 = null;
   }
+  handleAudioPlayer2Ended = null;
 
   // Clean up audio pools
   audioPool.forEach((audio) => {
@@ -239,7 +266,8 @@ function initAudioPlayer(): void {
     audioPlayer = new Audio();
 
     // Add ended event listener to play the next sound in queue
-    audioPlayer.addEventListener("ended", () => playNextSound(1));
+    handleAudioPlayer1Ended = () => playNextSound(1);
+    audioPlayer.addEventListener("ended", handleAudioPlayer1Ended);
 
     // Handle errors
     audioPlayer.addEventListener("error", (e) => {
@@ -269,7 +297,8 @@ function initAudioPlayer(): void {
     audioPlayer2 = new Audio();
 
     // Add ended event listener to play the next sound in second queue
-    audioPlayer2.addEventListener("ended", () => playNextSound(2));
+    handleAudioPlayer2Ended = () => playNextSound(2);
+    audioPlayer2.addEventListener("ended", handleAudioPlayer2Ended);
 
     // Handle errors for second player
     audioPlayer2.addEventListener("error", (e) => {
@@ -2066,8 +2095,10 @@ function createAudioBlobUrl(base64Data: string): string | null {
   }
 }
 
-// Clean up blob URLs periodically to prevent memory leaks
-setInterval(() => {
+// Clean up blob URLs periodically to prevent memory leaks.
+// The interval is started by soundFx() and cleared by soundFxOnRemove()
+// so it is bound to the feature lifecycle (Fix B – Issue #7).
+function cleanupBlobUrlsTick(): void {
   if (blobUrlsToRevoke.length > 20) {
     console.log("Autodarts Tools: Cleaning up blob URLs", blobUrlsToRevoke.length);
     // Keep the 5 most recent URLs (they might still be in use)
@@ -2085,7 +2116,7 @@ setInterval(() => {
     blobUrlsToRevoke.length = 0;
     blobUrlsToRevoke.push(...urlsToKeep);
   }
-}, 60000); // Check every minute
+}
 
 /**
  * Stops all currently playing sounds and clears the sound queue
