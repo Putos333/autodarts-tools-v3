@@ -1,0 +1,89 @@
+name: build-firefox
+
+# Reproduzierbarer Firefox-XPI-Build aus dem TypeScript-Quellcode.
+# Erzeugt bei jedem Push auf source/** oder develop sowie manuell:
+#   - autodarts-tools-<version>-firefox.zip  (das eigentliche XPI)
+#   - autodarts-tools-<version>-sources.zip  (AMO-Reviewer-Bundle)
+# Werden als GitHub-Actions-Artefakte hochgeladen (30 Tage Retention).
+#
+# HINWEIS: Dieser Workflow läuft NICHT auf `main` oder Tags — der bestehende
+# release.yml (iOS/macOS/AltStore) bleibt davon unberührt.
+
+on:
+  push:
+    branches:
+      - 'source/**'
+      - 'develop'
+  pull_request:
+    branches:
+      - 'develop'
+  workflow_dispatch:
+
+concurrency:
+  group: build-firefox-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build Firefox XPI
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'yarn'
+
+      - name: Install dependencies (frozen lockfile)
+        run: yarn install --frozen-lockfile
+        env:
+          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
+
+      - name: Read package version
+        id: pkg
+        run: echo "version=$(node -p "require('./package.json').version")" >> "$GITHUB_OUTPUT"
+
+      - name: Build & zip Firefox extension
+        run: yarn zip:firefox
+
+      - name: Show output size
+        run: ls -lh .output/
+
+      - name: Compute SHA-256 hashes
+        run: |
+          cd .output
+          sha256sum autodarts-tools-${{ steps.pkg.outputs.version }}-firefox.zip \
+                    autodarts-tools-${{ steps.pkg.outputs.version }}-sources.zip \
+                    | tee SHA256SUMS.txt
+
+      - name: Upload Firefox XPI artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: autodarts-tools-${{ steps.pkg.outputs.version }}-firefox
+          path: .output/autodarts-tools-${{ steps.pkg.outputs.version }}-firefox.zip
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Upload AMO-reviewer sources bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: autodarts-tools-${{ steps.pkg.outputs.version }}-sources
+          path: .output/autodarts-tools-${{ steps.pkg.outputs.version }}-sources.zip
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Upload SHA-256 checksums
+        uses: actions/upload-artifact@v4
+        with:
+          name: SHA256SUMS
+          path: .output/SHA256SUMS.txt
+          if-no-files-found: error
+          retention-days: 30

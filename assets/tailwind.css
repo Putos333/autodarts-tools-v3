@@ -1,0 +1,13 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  font-family: var(--chakra-fonts-body);
+  color: var(--chakra-colors-chakra-body-text);
+  font-feature-settings: "kern";
+}
+
+.adt-container {
+  @apply rounded-md bg-[var(--chakra-colors-card-background)] p-5 relative overflow-hidden;
+}

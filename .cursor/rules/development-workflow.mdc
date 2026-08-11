@@ -1,0 +1,76 @@
+---
+description:
+globs:
+alwaysApply: false
+---
+# Development Workflow
+
+This document outlines the development workflow for Autodarts Tools.
+
+## Setup and Installation
+
+1. Install dependencies:
+   ```
+   yarn install
+   ```
+
+2. Start development server:
+   ```
+   yarn dev
+   ```
+   This will use WXT to build and load the extension in Chrome.
+
+3. For Firefox development:
+   ```
+   yarn dev:firefox
+   ```
+
+## Build Commands
+
+- Build for production:
+  ```
+  yarn build
+  ```
+
+- Build Firefox version:
+  ```
+  yarn build:firefox
+  ```
+
+- Create distribution zip:
+  ```
+  yarn zip
+  ```
+
+## Development Tips
+
+- Use `Alt+T` to reload the extension during development
+- WXT automatically rebuilds when files change
+- Check the browser console for errors and logs
+- Background script logs can be viewed in the extension's background service worker console
+
+## Debugging
+
+- Content scripts can be debugged through the browser's devtools on the target page
+- Background scripts can be debugged through the extension's dedicated devtools
+- The WXT development server provides helpful error messages
+
+## Code Organization
+
+- Follow Vue file structure guidelines in `.cursor/rules/vue-file-structure.mdc`
+- Use the feature component pattern for new features in `.cursor/rules/feature-settings.mdc`
+- Use TypeScript for type safety
+- Use TailwindCSS for styling
+
+## Testing
+
+- Manual testing on autodarts.io is required for feature verification
+- Test on both Chrome and Firefox before releasing
+
+## Release Process
+
+1. Increment version in package.json
+2. Update CHANGELOG.md with new changes
+3. Build for production: `yarn build`
+4. Create zip file: `yarn zip`
+5. Publish to browser extension stores

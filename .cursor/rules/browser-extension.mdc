@@ -1,0 +1,54 @@
+---
+description:
+globs:
+alwaysApply: false
+---
+# Browser Extension Development
+
+This document outlines the structure and patterns used for browser extension development with WXT.
+
+## Entry Points
+
+The extension has multiple entry points defined in the `entrypoints/` directory:
+
+- Background script (`background.ts`) - Persistent background service worker
+- Content scripts - Injected into specific pages on autodarts.io:
+  - `match.content/` - For match pages
+  - `boards.content/` - For board management pages
+  - `lobby.content/` - For lobby pages
+  - `lobbynew.content/` - For new lobby interface
+  - `content/` - Common content scripts
+
+## WXT Configuration
+
+The WXT configuration in `wxt.config.ts` defines:
+- Permission requirements
+- Host permissions (for API access)
+- Web accessible resources
+- Build configuration
+- Plugin setup
+
+## Browser API Access
+
+- Browser APIs are available through the polyfill: `import { browser } from '@wxt-dev/webextension-polyfill'`
+- Storage access is done through the browser.storage API or wrappers around it
+
+## Content Script Communication
+
+- Content scripts can communicate with the background script using browser.runtime.sendMessage
+- Background script can send messages to content scripts using browser.tabs.sendMessage
+- Extension can access runtime resources using browser.runtime.getURL
+
+## Developing New Features
+
+1. For UI features, create a component in `components/Settings/`
+2. For content script features, create a new file in the appropriate content directory
+3. For background features, add code to `background.ts`
+4. Register the feature in PageConfig.vue if it has UI settings
+
+## Permissions
+
+The extension requires these permissions:
+- `storage` - For storing user preferences
+- Host permissions for autodarts.io domains and API endpoints
+- Additional permissions for specific features may be required

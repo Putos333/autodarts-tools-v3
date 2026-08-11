@@ -1,0 +1,10 @@
+---
+description: Used to get info about available components
+globs: 
+alwaysApply: false
+---
+
+# UI Components
+
+- UI Components are stored inside the components folder
+- UI Components will should have the `App` prefix. Example: `AppButton`, `AppInput` etc.

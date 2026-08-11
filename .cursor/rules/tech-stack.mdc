@@ -1,0 +1,47 @@
+---
+description: Tech Stack
+globs: 
+alwaysApply: false
+---
+# Autodarts Tools Tech Stack
+
+This document defines the technology stack used in the Autodarts Tools project.
+
+## Languages
+- TypeScript
+- Vue
+
+## Frameworks
+- Vue 3.x
+- WXT (Web Extension Toolkit) - For building browser extensions
+- TailwindCSS 3.x
+
+## Libraries
+- VueUse - Collection of Vue Composition Utilities
+- Radix Vue - UI component library
+- Iconify - Icons in CSS mode (from https://iconify.design/docs/usage/css/)
+- tailwind-merge - For handling dynamic class merging in Vue components
+
+## Custom Components
+Button: AppButton.vue
+Input: AppInput.vue
+Textarea: AppTextarea.vue
+Notification: AppNotification.vue
+Radio Group: AppRadioGroup.vue
+Select: AppSelect
+Tabs: AppTabs
+Confirm Dialog: ConfirmDialog.vue
+Modal: AppModal.vue
+
+## Build Tools
+- Vite - Build tool and dev server
+- TypeScript 5.x
+
+## Project Configuration
+- Package Manager: Yarn
+- Project Type: Browser Extension
+
+## Development Conventions
+- Component Format: Vue Single File Components (.vue)
+- State Management: Vue Composition API
+- CSS Framework: TailwindCSS
