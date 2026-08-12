@@ -1,5 +1,6 @@
 import { AutodartsToolsBoardData, type IBoard } from "./board-data-storage";
 import { AutodartsToolsBoardImages } from "./board-image-storage";
+import { type IDedupeState, createDedupeState, shouldProcessSnapshot } from "./event-dedupe";
 import { AutodartsToolsGameData } from "./game-data-storage";
 import { AutodartsToolsLobbyData } from "./lobby-data-storage";
 import { AutodartsToolsTournamentData, type ITournament } from "./tournament-data-storage";
@@ -201,6 +202,21 @@ export interface IMatch {
   chalkboards?: IChalkboard[];
 }
 
+/**
+ * P1 Schritt 1 – Zustand der exakten Duplikat-Unterdrückung für
+ * `autodarts.matches`. Modul-Scope, also pro Content-Script-Instanz und pro Tab:
+ * nach einem Reload ist er leer und der erste Snapshot passiert immer.
+ */
+const matchSnapshotDedupe: IDedupeState = createDedupeState();
+
+/**
+ * Diagnose: Anzahl der bisher unterdrückten byte-identischen Match-Snapshots.
+ * Verändert kein Verhalten, dient der späteren Runtime-Messung.
+ */
+export function getSuppressedMatchSnapshotCount(): number {
+  return matchSnapshotDedupe.suppressed;
+}
+
 export async function processWebSocketMessage(channel: string, data: ILobbies | IMatch | IBoard | ITournament | string) {
   // do a switch on the channel
   switch (channel) {
@@ -222,6 +238,17 @@ export async function processWebSocketMessage(channel: string, data: ILobbies | 
       if ((id !== data.id && !playersBoard) && (data as IMatch).activated === undefined) return;
 
       const gameData = await AutodartsToolsGameData.getValue();
+
+      // P1 Schritt 1: exakte Duplikat-Unterdrückung. Ein byte-identischer
+      // Folge-Snapshot würde über setValue() sämtliche registrierten
+      // AutodartsToolsGameData-Watcher auslösen, ohne dass sich etwas geändert
+      // hat. Unterdrückt wird nur, wenn der Payload sowohl dem direkten
+      // Vorgänger dieser Instanz als auch dem gespeicherten Zustand exakt
+      // entspricht – der Storage-Vergleich macht Writes der jeweils anderen
+      // Content-Script-Instanz (Socket-Pfad vs. REST-Bootstrap) sichtbar.
+      // Ohne stabile data.id wird nicht unterdrückt (fail open).
+      if (!shouldProcessSnapshot(matchSnapshotDedupe, data.id, data, gameData.match)) return;
+
       if ((data as IMatch).activated !== undefined) {
         // Merge activated state with existing match data
         AutodartsToolsGameData.setValue({
