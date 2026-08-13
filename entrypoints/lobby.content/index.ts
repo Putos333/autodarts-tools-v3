@@ -27,7 +27,7 @@ let recentLocalPlayersUI: any;
 let lobbyReadyUnwatch: any;
 
 export default defineContentScript({
-  matches: [ "*://play.autodarts.io/*" ],
+  matches: [ "*://play.autodarts.io/*", "*://play.autodarts.com/*" ],
   cssInjectionMode: "ui",
   async main(ctx: any) {
     lobbyReadyUnwatch = AutodartsToolsUrlStatus.watch(async (url: string) => {

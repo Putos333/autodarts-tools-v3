@@ -68,7 +68,7 @@ async function runCleanups() {
 }
 
 export default defineContentScript({
-  matches: [ "*://play.autodarts.io/*" ],
+  matches: [ "*://play.autodarts.io/*", "*://play.autodarts.com/*" ],
   cssInjectionMode: "ui",
   async main(ctx: any) {
     AutodartsToolsUrlStatus.watch(async (url: string) => {
@@ -210,6 +210,10 @@ async function initMatch(ctx, url: string, matchId?: string) {
 
   // Match-Sticker (nur bei Match-Ende aktiv, keine Kosten wenn ausgeschaltet)
   lazy(() => import("./match-card"), "initMatchCard", "cleanupMatchCard").catch(console.error);
+
+  // Canonical Match Result (P2): schreibt bei Match-Ende ein kanonisches
+  // Ergebnis. Kein UI, kein Feature – nur die gemeinsame Datengrundlage.
+  lazy(() => import("./canonical-match-result"), "initCanonicalMatchResult", "cleanupCanonicalMatchResult").catch(console.error);
 
   // Venue-Theming (reagiert auf Storage-Events; kein Overhead ohne Venue)
   lazy(() => import("./venue-theming"), "initVenueTheming", "cleanupVenueTheming").catch(console.error);

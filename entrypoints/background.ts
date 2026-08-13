@@ -288,7 +288,7 @@ export default defineBackground({
     browser.tabs.onActivated.addListener(async (activeInfo) => {
       try {
         const tab = await browser.tabs.get(activeInfo.tabId);
-        if (tab?.url?.includes('play.autodarts.io')) {
+        if (tab?.url?.includes('play.autodarts.io') || tab?.url?.includes('play.autodarts.com')) {
           browser.tabs.sendMessage(activeInfo.tabId, { type: 'UNLOCK_AUDIO_CONTEXT' }).catch(() => {});
         }
       } catch {

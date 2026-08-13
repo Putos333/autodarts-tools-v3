@@ -47,7 +47,7 @@ function waitForElementObserver(selector: string, timeout = 15000): Promise<HTML
 }
 
 export default defineContentScript({
-  matches: [ "*://play.autodarts.io/*" ],
+  matches: [ "*://play.autodarts.io/*", "*://play.autodarts.com/*" ],
   // BUGFIX v2.9.45: Vorher "ui" → CSS wurde nur in Shadow-Root-UIs injiziert.
   // Da wir die App direkt in den DOM mounten, war Tailwind unbrauchbar
   // (unformatierter Text-Blob im Screenshot). "manifest" injiziert die

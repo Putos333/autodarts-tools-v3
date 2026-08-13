@@ -215,7 +215,7 @@ async function importSettings(ev: Event) {
     alert('Import erfolgreich! autodarts.io-Tabs werden nach Reload aktualisiert.');
     // Reload alle Tabs auf autodarts.io
     try {
-      const tabs = await browser.tabs.query({ url: '*://play.autodarts.io/*' });
+      const tabs = await browser.tabs.query({ url: [ '*://play.autodarts.io/*', '*://play.autodarts.com/*' ] });
       for (const t of tabs) if (t.id) await browser.tabs.reload(t.id);
     } catch { /* ignore */ }
   } catch (e) {
