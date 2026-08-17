@@ -22,7 +22,7 @@
 
 const DEFAULT_ORIGIN = "https://play.autodarts.io";
 
-function normalizeOrigin(origin?: string | null): string {
+export function normalizeOrigin(origin?: string | null): string {
   if (typeof origin !== "string") return DEFAULT_ORIGIN;
   const found = origin.match(/^https?:\/\/play\.autodarts\.(io|com)/i);
   return found ? found[0] : DEFAULT_ORIGIN;
