@@ -15,6 +15,9 @@
     <!-- ── SPIELER │ LETZTES / AKTUELLES MATCH ─────────────────────────── -->
     <CcPlayersCard class="cc-col-7" />
     <CcMatchDetails class="cc-col-5" />
+
+    <!-- ── KURZÜBERSICHT (Bilanz + letztes Training, aus lokal gespeicherten Daten) ── -->
+    <CcDashboardSummary class="cc-col-12" />
   </div>
 </template>
 
@@ -32,4 +35,5 @@ import CcConnectionCard from "../CcConnectionCard.vue";
 import CcQuickStats from "../CcQuickStats.vue";
 import CcPlayersCard from "../CcPlayersCard.vue";
 import CcMatchDetails from "../CcMatchDetails.vue";
+import CcDashboardSummary from "../CcDashboardSummary.vue";
 </script>
