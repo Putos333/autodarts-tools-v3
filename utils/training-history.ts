@@ -14,6 +14,14 @@ export interface TrainingSession {
   checkoutRate: number;
   goalsReached: number;
   totalGoals: number;
+  /**
+   * ID/Titel der aktiven Übung (aus training-exercises.ts), falls beim Speichern
+   * eine gesetzt war. Optional und rückwärtskompatibel: ältere Sessions (vor
+   * dieser Erweiterung) und freies Training ohne gewählte Übung haben dieses
+   * Feld nicht — das ist "unbekannt", nicht 0/erfunden.
+   */
+  exerciseId?: string;
+  exerciseTitle?: string;
 }
 
 /**

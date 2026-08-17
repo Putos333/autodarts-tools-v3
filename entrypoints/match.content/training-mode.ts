@@ -155,7 +155,7 @@ export async function trainingMode(): Promise<void> {
       }
 
       if (config.training?.trackHistory) {
-        await saveToHistory({ goals });
+        await saveToHistory({ goals, exerciseId: activeExercise?.id, exerciseTitle: activeExercise?.title });
       }
 
       // Clear active exercise after match ends
@@ -348,7 +348,7 @@ function showSummary(cfg: any): void {
 }
 
 // ─── Verlaufsspeicherung ──────────────────────────────────────────────────────
-async function saveToHistory(cfg: { goals: TrainingGoals }): Promise<void> {
+async function saveToHistory(cfg: { goals: TrainingGoals; exerciseId?: string; exerciseTitle?: string }): Promise<void> {
   try {
     const goals = cfg.goals;
     const checks = [
@@ -376,6 +376,8 @@ async function saveToHistory(cfg: { goals: TrainingGoals }): Promise<void> {
       checkoutRate: liveCheckoutRate,
       goalsReached: checks.length,
       totalGoals,
+      exerciseId: cfg.exerciseId,
+      exerciseTitle: cfg.exerciseTitle,
     };
 
     const history = await AutodartsToolsTrainingHistory.getValue();

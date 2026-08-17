@@ -116,7 +116,9 @@
             >
               <div class="cc-result-date">{{ formatDate(session.date) }}</div>
               <div class="cc-result-names">
-                <span>{{ session.goalsReached }} / {{ session.totalGoals }} Ziele erreicht</span>
+                <span>
+                  <template v-if="session.exerciseTitle">{{ session.exerciseTitle }} — </template>{{ session.goalsReached }} / {{ session.totalGoals }} Ziele erreicht
+                </span>
                 <div class="cc-result-sub">
                   Ø {{ session.average.toFixed(1) }} · {{ session.count140Plus }}× 140+ · {{ session.count180s }}× 180
                   · Checkout {{ session.checkoutRate.toFixed(0) }}% · {{ session.checkoutMisses }} Fehlversuche
@@ -167,8 +169,9 @@
         </div>
 
         <p class="cc-note" style="margin-top: 8px;">
-          Medaillen werden automatisch vergeben, wenn du die Ziele einer Übung im Match erreichst
-          (Bronze/Silber/Gold = aufsteigende Stufen). Der Fortschritt ist pro Übung gespeichert.
+          Bronze/Silber/Gold sind die Zielstufen jeder Übung (sichtbar auf den Übungskarten oben).
+          Die automatische Vergabe nach einem abgeschlossenen Match ist technisch noch nicht
+          verdrahtet — der Fortschritt hier bleibt deshalb aktuell leer, bis das nachgezogen wird.
         </p>
       </CcCard>
     </div>

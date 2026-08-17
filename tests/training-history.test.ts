@@ -83,4 +83,13 @@ describe("mergeTrainingHistories", () => {
     assert.deepEqual(current, currentSnapshot);
     assert.deepEqual(legacy, legacySnapshot);
   });
+
+  it("8. exerciseId/exerciseTitle überleben den Merge unverändert (rückwärtskompatible Erweiterung)", () => {
+    const withExercise = session({ date: "2026-08-16T10:00:00.000Z", exerciseId: "warmup-1", exerciseTitle: "Aufwärmen" });
+    const legacyWithoutExercise = session({ date: "2026-08-14T10:00:00.000Z" }); // altes Format, kein exerciseId
+    const result = mergeTrainingHistories([ withExercise ], [ legacyWithoutExercise ]);
+    assert.equal(result[0].exerciseId, "warmup-1");
+    assert.equal(result[0].exerciseTitle, "Aufwärmen");
+    assert.equal(result[1].exerciseId, undefined); // alte Session bleibt "unbekannt", nicht erfunden
+  });
 });
