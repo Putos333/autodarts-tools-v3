@@ -815,8 +815,6 @@ async function applyCorrection(value: string) {
 
     console.log(matchId);
 
-    console.log(authToken);
-
     // Send the correction
     const response = await browser.runtime.sendMessage({
       type: "fetch",
