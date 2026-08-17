@@ -1,4 +1,5 @@
 import type { BoardStatus } from "@/utils/types";
+import type { TrainingSession } from "@/utils/training-history";
 import { FALLBACK_BACKEND_URL } from "@/utils/backend-url";
 
 export interface IConfig {
@@ -1122,6 +1123,21 @@ export const AutodartsToolsUrlStatus: WxtStorageItem<string, any> = storage.defi
 
 export const AutodartsToolsStreamingModeStatus: WxtStorageItem<boolean, any> = storage.defineItem(
   "local:streamingmodestatus",
+  {
+    defaultValue: false,
+  },
+);
+
+export const AutodartsToolsTrainingHistory: WxtStorageItem<TrainingSession[], any> = storage.defineItem(
+  "local:training-history",
+  {
+    defaultValue: [],
+  },
+);
+
+/** Guards the one-time migration of legacy page-`localStorage` training history into browser.storage.local. */
+export const AutodartsToolsTrainingHistoryMigrated: WxtStorageItem<boolean, any> = storage.defineItem(
+  "local:training-history-migrated-v1",
   {
     defaultValue: false,
   },

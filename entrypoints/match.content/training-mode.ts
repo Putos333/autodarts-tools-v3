@@ -18,16 +18,62 @@
 
 import { AutodartsToolsConfig } from "@/utils/storage";
 import { AutodartsToolsGameData } from "@/utils/game-data-storage";
+import { AutodartsToolsTrainingHistory, AutodartsToolsTrainingHistoryMigrated } from "@/utils/storage";
+import type { TrainingSession } from "@/utils/training-history";
+import { mergeTrainingHistories } from "@/utils/training-history";
+import { getExerciseById } from "@/utils/training-exercises";
 
-interface TrainingSession {
-  date: string;
-  average: number;
-  count140Plus: number;
-  count180s: number;
-  checkoutMisses: number;
-  checkoutRate: number;
-  goalsReached: number;
-  totalGoals: number;
+/** Legacy page-localStorage key (pre-R1), read once for a non-destructive migration into browser.storage.local. */
+const LEGACY_HISTORY_KEY = "ad-training-history";
+
+/**
+ * One-time, idempotent migration of training history from page `localStorage` (origin-bound, invisible
+ * to Control Center) into `local:training-history`. Never overwrites — only merges. Safe no-op if already
+ * migrated or if no legacy data exists.
+ */
+async function migrateLegacyTrainingHistory(): Promise<void> {
+  try {
+    const alreadyMigrated = await AutodartsToolsTrainingHistoryMigrated.getValue();
+    if (alreadyMigrated) return;
+
+    const raw = localStorage.getItem(LEGACY_HISTORY_KEY);
+    const legacy = raw ? JSON.parse(raw) : [];
+    if (Array.isArray(legacy) && legacy.length > 0) {
+      const current = await AutodartsToolsTrainingHistory.getValue();
+      await AutodartsToolsTrainingHistory.setValue(mergeTrainingHistories(current, legacy));
+    }
+    await AutodartsToolsTrainingHistoryMigrated.setValue(true);
+  } catch (e) {
+    console.error("[training-mode] migrateLegacyTrainingHistory failed", e);
+  }
+}
+
+/** Storage key for the active training exercise (written by CcExerciseCard / TrainingExercises.vue) */
+const ACTIVE_EXERCISE_KEY = "training-active-exercise";
+
+async function getActiveTrainingExercise(): Promise<string | null> {
+  try {
+    const result = await browser.storage.local.get(ACTIVE_EXERCISE_KEY);
+    return result[ACTIVE_EXERCISE_KEY] ?? null;
+  } catch {
+    return null;
+  }
+}
+
+async function clearActiveTrainingExercise(): Promise<void> {
+  try {
+    await browser.storage.local.remove(ACTIVE_EXERCISE_KEY);
+  } catch {
+    // ignore
+  }
+}
+
+interface TrainingGoals {
+  minAverage: number;
+  min140Plus: number;
+  min180s: number;
+  maxCheckoutMisses: number;
+  minCheckoutRate: number;
 }
 
 let overlayEl: HTMLElement | null = null;
@@ -46,6 +92,8 @@ export async function trainingMode(): Promise<void> {
   const config = await AutodartsToolsConfig.getValue();
   if (!config.training?.enabled) return;
 
+  await migrateLegacyTrainingHistory();
+
   matchFinished = false;
   liveAvg = 0; live140Plus = 0; live180s = 0;
   liveCheckoutMisses = 0; liveCheckoutRate = 0;
@@ -57,34 +105,61 @@ export async function trainingMode(): Promise<void> {
   gameDataWatcherUnwatch = AutodartsToolsGameData.watch(async (gameData: any) => {
     if (!gameData) return;
 
-    const players = gameData?.players || [];
-    const myPlayer = players[0]; // Heimspieler
+    // Check if there's an active training exercise
+    const activeExerciseId = await getActiveTrainingExercise();
+    const activeExercise = activeExerciseId ? getExerciseById(activeExerciseId) : null;
+
+    // Use the active exercise's goals if available, otherwise fall back to config
+    const goals: TrainingGoals = activeExercise?.goals?.gold
+      ? {
+          minAverage: activeExercise.goals.gold.minAverage ?? 0,
+          min140Plus: activeExercise.goals.gold.min140Plus ?? 0,
+          min180s: activeExercise.goals.gold.min180s ?? 0,
+          maxCheckoutMisses: activeExercise.goals.gold.maxMissRate ?? 0,
+          minCheckoutRate: activeExercise.goals.gold.minCheckoutRate ?? 0,
+        }
+      : config.training?.goals ?? { minAverage: 0, min140Plus: 0, min180s: 0, maxCheckoutMisses: 0, minCheckoutRate: 0 };
+
+    const match = gameData.match;
+    if (!match) return;
+
+    // Home player = Index 0 (konsistent mit match-card.ts / career-controller.ts)
+    const myPlayer = match.players?.[0];
     if (!myPlayer) return;
 
-    // Statistiken aktualisieren
-    liveAvg = parseFloat(myPlayer.stats?.average || '0');
-    live140Plus = parseInt(myPlayer.stats?.scores140Plus || myPlayer.stats?.count140 || '0', 10);
-    live180s = parseInt(myPlayer.stats?.scores180 || myPlayer.stats?.count180 || '0', 10);
-    liveCheckoutRate = parseFloat(myPlayer.stats?.checkoutRate || '0') * 100;
-    liveCheckoutMisses = parseInt(myPlayer.stats?.checkoutMisses || '0', 10);
-
-    // Live-Overlay aktualisieren
-    if (config.training.showLiveProgress) {
-      updateLiveOverlay(config.training);
+    // Statistiken aus IMatch.stats[position].matchStats lesen (IPlayer selbst hat kein .stats-Feld)
+    const matchStats = match.stats?.[0]?.matchStats;
+    if (matchStats) {
+      liveAvg = matchStats.average ?? 0;
+      live140Plus = matchStats.plus140 ?? 0;
+      live180s = matchStats.total180 ?? 0;
+      liveCheckoutRate = matchStats.checkoutPercent ?? 0;
+      // checkoutMisses nicht direkt verfügbar – annähern via checkouts/checkoutsHit
+      const checkoutsHit = matchStats.checkoutsHit ?? 0;
+      const checkouts = matchStats.checkouts ?? 0;
+      liveCheckoutMisses = Math.max(0, checkouts - checkoutsHit);
     }
 
-    // Match beendet?
-    const isFinished = gameData?.gameState === 'finished' || gameData?.status === 'finished';
+    // Live-Overlay aktualisieren
+    if (config.training?.showLiveProgress) {
+      updateLiveOverlay({ goals });
+    }
+
+    // Match beendet? (per IMatch.finished / winner)
+    const isFinished = match.finished === true || (match.winner ?? -1) >= 0;
     if (isFinished && !matchFinished) {
       matchFinished = true;
 
-      if (config.training.showSummaryAfterMatch) {
-        showSummary(config.training);
+      if (config.training?.showSummaryAfterMatch) {
+        showSummary({ goals });
       }
 
-      if (config.training.trackHistory) {
-        saveToHistory(config.training);
+      if (config.training?.trackHistory) {
+        await saveToHistory({ goals });
       }
+
+      // Clear active exercise after match ends
+      await clearActiveTrainingExercise();
     }
   });
 }
@@ -273,7 +348,7 @@ function showSummary(cfg: any): void {
 }
 
 // ─── Verlaufsspeicherung ──────────────────────────────────────────────────────
-function saveToHistory(cfg: any): void {
+async function saveToHistory(cfg: { goals: TrainingGoals }): Promise<void> {
   try {
     const goals = cfg.goals;
     const checks = [
@@ -303,27 +378,25 @@ function saveToHistory(cfg: any): void {
       totalGoals,
     };
 
-    const history: TrainingSession[] = JSON.parse(
-      localStorage.getItem('ad-training-history') || '[]'
-    );
+    const history = await AutodartsToolsTrainingHistory.getValue();
     history.unshift(session);
     // Maximal 50 Einträge speichern
     if (history.length > 50) history.splice(50);
-    localStorage.setItem('ad-training-history', JSON.stringify(history));
+    await AutodartsToolsTrainingHistory.setValue(history);
   } catch (e) {
-    // Stille Fehlerbehandlung
+    console.error("[training-mode] saveToHistory failed", e);
   }
 }
 
 // ─── Verlauf abrufen (für Vue-Komponente) ─────────────────────────────────────
-export function getTrainingHistory(): TrainingSession[] {
+export async function getTrainingHistory(): Promise<TrainingSession[]> {
   try {
-    return JSON.parse(localStorage.getItem('ad-training-history') || '[]');
+    return await AutodartsToolsTrainingHistory.getValue();
   } catch {
     return [];
   }
 }
 
-export function clearTrainingHistory(): void {
-  localStorage.removeItem('ad-training-history');
+export async function clearTrainingHistory(): Promise<void> {
+  await AutodartsToolsTrainingHistory.setValue([]);
 }

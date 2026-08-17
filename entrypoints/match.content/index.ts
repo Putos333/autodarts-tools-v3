@@ -16,7 +16,7 @@ import {
 } from "@/utils/storage";
 import { fetchWithAuth, isSafari, isiOS } from "@/utils/helpers";
 import { processWebSocketMessage } from "@/utils/websocket-helpers";
-import { AutodartsToolsGameData } from "@/utils/game-data-storage";
+import { AutodartsToolsGameData, defaultGameData } from "@/utils/game-data-storage";
 
 // v2.9.68 – Bundle-Splitting / Lazy Feature Loading
 // -------------------------------------------------
@@ -458,6 +458,15 @@ function clearMatch(fromBullOff: boolean = false) {
   void fromBullOff;
 
   matchInitialized = false;
+
+  // R7-Fix: lokal gespeichertes Match nur bei echtem Verlassen leeren (nicht beim
+  // Bull-off-Übergang, der 2s später mit demselben Match neu initialisiert wird –
+  // ein kurzes Leeren dort würde unnötig sichtbares Flackern in Overlay/Control
+  // Center erzeugen). Verhindert, dass ein beendetes/verlassenes Match nach
+  // Reload/Restart als "aktiv" stehen bleibt.
+  if (!fromBullOff) {
+    AutodartsToolsGameData.setValue(defaultGameData).catch(console.error);
+  }
 }
 
 function startActiveMatchObserver(ctx) {

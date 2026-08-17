@@ -5,19 +5,19 @@ import { getTrainingHistory, clearTrainingHistory } from "@/entrypoints/match.co
 
 const config = ref(await AutodartsToolsConfig.getValue());
 const activeTab = ref<'ziele' | 'verlauf'>('ziele');
-const history = ref(getTrainingHistory());
+const history = ref(await getTrainingHistory());
 
 watch(config, async (newConfig) => {
   const currentConfig = await AutodartsToolsConfig.getValue();
   await updateConfigIfChanged(currentConfig, newConfig, "training");
 }, { deep: true });
 
-function refreshVerlauf() {
-  history.value = getTrainingHistory();
+async function refreshVerlauf() {
+  history.value = await getTrainingHistory();
 }
 
-function clearVerlauf() {
-  clearTrainingHistory();
+async function clearVerlauf() {
+  await clearTrainingHistory();
   history.value = [];
 }
 
