@@ -551,3 +551,180 @@ export async function quickPlayGroup(
     return { success: false, error: String(e), invited: [], failed: friendIds };
   }
 }
+
+// ─── Diagnostischer Abruf (v2.9.98 Control-Center-Runtime-Fix) ────────────────
+//
+// RUNTIME-BEFUND: `getFriends()` liefert Einträge, deren Namensfelder bei
+// manchen Konten nicht unter `username`/`displayName`/`name` liegen. Das Mapping
+// oben fällt dann auf den Literaltext 'Unbekannt' zurück und `online` auf
+// `false` — beides ist von einem echten Wert nicht mehr zu unterscheiden.
+// Ebenso verschluckt es, ob `/as/v0/friends/online-status` überhaupt geantwortet
+// hat: schlägt der Call fehl, erscheinen alle Freunde als "offline".
+//
+// Diese Funktion ist rein ADDITIV. `getFriends()` und alle bestehenden Aufrufer
+// (u.a. components/Settings/Friends.vue) bleiben unverändert. Sie nutzt exakt
+// dieselben Endpoints und erfindet keinen neuen — sie gibt lediglich zurück, was
+// wirklich ankam, inklusive "nicht auflösbar" als eigenen Zustand.
+
+/** Ein Freund, bei dem Unbekanntes ausdrücklich `null` ist statt Ersatzwert. */
+export interface IFriendResolved {
+  id: string;
+  /** `null` = in der Antwort war kein Name enthalten. */
+  name: string | null;
+  avatarUrl?: string;
+  /** `null` = Online-Status konnte nicht ermittelt werden. */
+  online: boolean | null;
+  /** `null` = nicht gemeldet. */
+  inMatch: boolean | null;
+  stats?: IFriendStats;
+}
+
+export interface IFriendsDiagnostic {
+  /** Hat der Freundeslisten-Endpoint mit 2xx geantwortet? */
+  ok: boolean;
+  httpStatus: number | null;
+  friends: IFriendResolved[];
+  /** Hat `/as/v0/friends/online-status` verwertbar geantwortet? */
+  onlineStatusAvailable: boolean;
+  /** Feldnamen des ersten Eintrags — macht sichtbar, was Autodarts liefert. */
+  sampleKeys: string[];
+  error?: string;
+}
+
+const UUID_ONLY = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** Ein String taugt als Anzeigename, wenn er nicht leer und keine UUID ist. */
+function usableName(value: unknown): string | null {
+  if (typeof value !== 'string') return null;
+  const trimmed = value.trim();
+  if (trimmed.length === 0 || UUID_ONLY.test(trimmed)) return null;
+  return trimmed;
+}
+
+/**
+ * Sucht den Anzeigenamen datengetrieben statt auf Verdacht:
+ *   1. die bekannten Direktfelder,
+ *   2. dieselben Felder eine Ebene tiefer (Autodarts verschachtelt Nutzer an
+ *      anderen Stellen als `user: { name }`, siehe IPlayer in websocket-helpers),
+ *   3. als letzte Stufe jedes Feld, dessen Name auf einen Anzeigenamen deutet.
+ * Findet sich nichts, ist das Ergebnis `null` — kein Platzhaltertext.
+ */
+function resolveName(entry: any): string | null {
+  if (!entry || typeof entry !== 'object') return null;
+
+  const direct = usableName(entry.username) ?? usableName(entry.displayName) ?? usableName(entry.name);
+  if (direct) return direct;
+
+  for (const value of Object.values(entry)) {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) continue;
+    const nested = value as any;
+    const found = usableName(nested.username) ?? usableName(nested.displayName) ?? usableName(nested.name);
+    if (found) return found;
+  }
+
+  for (const [ key, value ] of Object.entries(entry)) {
+    if (!/name|nick/i.test(key)) continue;
+    const found = usableName(value);
+    if (found) return found;
+  }
+
+  return null;
+}
+
+/** Nimmt die ID aus denselben Feldern wie `getFriends()`, plus Verschachtelung. */
+function resolveId(entry: any): string {
+  if (!entry || typeof entry !== 'object') return '';
+  const direct = entry.userId ?? entry.id ?? entry.friendId;
+  if (typeof direct === 'string' && direct.length > 0) return direct;
+  for (const value of Object.values(entry)) {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) continue;
+    const nested = (value as any).userId ?? (value as any).id;
+    if (typeof nested === 'string' && nested.length > 0) return nested;
+  }
+  return '';
+}
+
+/**
+ * Wie `getFriends()`, aber ohne Ersatzwerte und mit Auskunft darüber, was
+ * tatsächlich ankam. Gleiche Endpoints, gleiche Auth.
+ */
+export async function getFriendsDiagnostic(): Promise<IFriendsDiagnostic> {
+  const empty: IFriendsDiagnostic = {
+    ok: false,
+    httpStatus: null,
+    friends: [],
+    onlineStatusAvailable: false,
+    sampleKeys: [],
+  };
+
+  try {
+    await ensureFreshAuthToken(2500).catch(() => null);
+
+    const response = await fetchWithAuth(`${API_BASE}/as/v0/friends`);
+    if (!response.ok) {
+      return { ...empty, httpStatus: response.status, error: `HTTP ${response.status}` };
+    }
+
+    const data = await response.json();
+    const users: any[] = Array.isArray(data) ? data : (data?.items ?? data?.friends ?? []);
+
+    // Online-Status separat — und wir merken uns, ob er überhaupt kam.
+    let onlineIds = new Set<string>();
+    let onlineStatusAvailable = false;
+    try {
+      const res = await fetchWithAuth(`${API_BASE}/as/v0/friends/online-status`);
+      if (res.ok) {
+        const payload = await res.json();
+        if (Array.isArray(payload)) {
+          onlineIds = new Set(
+            payload
+              .map((p: any) => (typeof p === 'string' ? p : (p?.userId ?? p?.id ?? '')))
+              .filter(Boolean),
+          );
+          onlineStatusAvailable = true;
+        } else if (payload && Array.isArray(payload.online)) {
+          onlineIds = new Set(payload.online);
+          onlineStatusAvailable = true;
+        }
+      }
+    } catch (_) { /* onlineStatusAvailable bleibt false */ }
+
+    const friends: IFriendResolved[] = users.map((entry: any): IFriendResolved => {
+      const id = resolveId(entry);
+      const ownOnline = typeof entry?.online === 'boolean' ? entry.online : null;
+      const online = onlineStatusAvailable
+        ? (onlineIds.has(id) || ownOnline === true)
+        : ownOnline;
+
+      const inMatch = typeof entry?.inMatch === 'boolean'
+        ? entry.inMatch
+        : (typeof entry?.playing === 'boolean' ? entry.playing : null);
+
+      return {
+        id,
+        name: resolveName(entry),
+        avatarUrl: entry?.avatar ?? entry?.avatarUrl ?? undefined,
+        online,
+        inMatch,
+        stats: entry?.stats
+          ? {
+              average: entry.stats.average ?? 0,
+              checkoutQuote: entry.stats.checkoutQuote ?? 0,
+              wins: entry.stats.wins ?? 0,
+              losses: entry.stats.losses ?? 0,
+            }
+          : undefined,
+      };
+    });
+
+    return {
+      ok: true,
+      httpStatus: response.status,
+      friends,
+      onlineStatusAvailable,
+      sampleKeys: users[0] && typeof users[0] === 'object' ? Object.keys(users[0]) : [],
+    };
+  } catch (e) {
+    return { ...empty, error: e instanceof Error ? e.message : String(e) };
+  }
+}

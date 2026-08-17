@@ -167,6 +167,16 @@ function openOptions() {
   }
 }
 
+// ── Control Center — eigene Extension-Seite (controlcenter.html) ─────────
+function openControlCenter() {
+  try {
+    browser.tabs.create({ url: browser.runtime.getURL("/controlcenter.html") });
+    window.close();
+  } catch {
+    /* ignore */
+  }
+}
+
 // ── v2.9.87 — Settings Export / Import ──────────────────────────────────
 
 const busy = ref<'' | 'export' | 'import' | 'csv'>('');
@@ -410,6 +420,11 @@ const wsLabel = computed(() => {
       </button>
     </div>
 
+    <!-- Control Center (eigene Extension-Seite) -->
+    <button class="btn cc-open" @click="openControlCenter" data-testid="btn-control-center">
+      🎛️ Control Center öffnen
+    </button>
+
     <!-- Actions -->
     <div class="actions">
       <button class="btn primary" @click="openAutodarts" data-testid="btn-play">
@@ -622,6 +637,15 @@ const wsLabel = computed(() => {
   font-weight: 800;
 }
 .toggle:not(.on) .toggle-state { color: #6b7385; }
+
+.cc-open {
+  width: 100%;
+  margin-bottom: 8px;
+  background: linear-gradient(90deg, #F5C842, #E8002D);
+  color: #0d1b2a;
+  font-size: 12px;
+}
+.cc-open:hover { filter: brightness(1.08); }
 
 .actions {
   display: flex;
