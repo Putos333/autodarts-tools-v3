@@ -7,13 +7,43 @@ einen bestehenden Autodarts-Account mit Boardsimulator), und etwas Zeit.
 Gehe die Tests der Reihe nach durch. Bei jedem Test steht:
 
 - **VORAUSSETZUNG** – was vorher erledigt sein muss
-- **AKTION** – was du klickst/tust
-- **ERWARTET** – was danach passieren sollte
-- **FEHLERBILD** – wie es aussieht, wenn etwas nicht funktioniert
-- **WAS NOTIEREN** – was du aufschreiben sollst, wenn etwas schiefgeht (am besten mit Screenshot)
+- **AKTION** – was du klickst/tust (= WAS ICH MACHE)
+- **ERWARTET** – was danach passieren sollte (= WAS ICH SEHEN MUSS / PASS WENN)
+- **FEHLERBILD** – wie es aussieht, wenn etwas nicht funktioniert (= FAIL WENN)
+- **WAS NOTIEREN** – was du aufschreiben sollst, wenn etwas schiefgeht (immer mit
+  Screenshot des jeweils beschriebenen Zustands, plus Konsolen-Fehlern falls vorhanden)
+
+Jeder Test hat außerdem eine **Priorität**:
+
+- **P0** – Kernfunktion. Wenn das nicht geht, ist der Rest zweitrangig.
+- **P1** – wichtig, bekannte Risikobereiche aus den vorherigen Audits.
+- **P2** – gut zu wissen, aber kein Blocker für die anderen Tests.
+
+**Empfohlene Reihenfolge für möglichst wenige echte Matches** (siehe auch
+`RELEASE_READINESS.md` für den Gesamtstatus): zuerst alle P0-Tests
+(B, F, K, L, N), dann die P1-Tests, P2-Tests nur wenn noch Zeit/Lust ist. Die
+vier "Session"-Blöcke unten sind bereits genau in dieser sinnvollen
+Reihenfolge gruppiert — du musst nicht selbst nach Priorität sortieren.
 
 Wenn ein Test fehlschlägt: mach trotzdem mit dem nächsten Test weiter und
 notiere den Fehler. Am Ende hast du eine Liste aller echten Probleme.
+
+---
+
+## Empfohlene Session-Reihenfolge (möglichst wenige echte Matches)
+
+| Session | Deckt ab | Braucht |
+|---|---|---|
+| **1 — Baseline Match** | Vorbereitung, A, B, C, D, E, F, G, J, K, L, M, N | 1 vollständiges Match |
+| **2 — Recovery** | O, P | mitten in einem laufenden Match (kann Teil von Session 1 sein) |
+| **3 — Multi-Tab** | Q, R | ein zweiter Browser-Tab, kein eigenes Match nötig |
+| **4 — Korrektur & Persistenz** | H, I, S | ein kurzes Zusatz-Match + Browser-Neustart ganz am Ende |
+
+Session 1 deckt die meisten Tests ab, wenn du gezielt auf 140+/180/Checkout-Miss
+hin spielst, statt einfach nur normal zu spielen — siehe die einzelnen Tests
+unten für die genaue Aktion. Session 4 gehört ans Ende, weil Test S erst
+sinnvoll ist, wenn schon History-/Trainings-Einträge aus den anderen Sessions
+vorhanden sind.
 
 ---
 
@@ -48,7 +78,7 @@ Fehler.
 
 ---
 
-## Test A — Board Connection
+## Test A — Board Connection — Priorität: P1
 
 **VORAUSSETZUNG:** Board ist eingeschaltet und mit Autodarts verbunden.
 **AKTION:** Öffne das Control Center, schaue auf die Board-Karte.
@@ -56,7 +86,7 @@ Fehler.
 **FEHLERBILD:** Board zeigt "getrennt", obwohl es verbunden ist (oder umgekehrt).
 **WAS NOTIEREN:** Was die Karte anzeigt vs. was tatsächlich der Fall ist.
 
-## Test B — Normal Match
+## Test B — Normal Match — Priorität: P0
 
 **VORAUSSETZUNG:** Board verbunden, kein Match aktiv.
 **AKTION:** Starte ein normales X01-Match (z. B. 501) auf play.autodarts.io.
@@ -66,7 +96,7 @@ aktueller Spieler korrekt an, kurz nach Matchstart.
 obwohl das Match läuft.
 **WAS NOTIEREN:** Was angezeigt wird vs. was das echte Match zeigt.
 
-## Test C — Three Throws
+## Test C — Three Throws — Priorität: P1
 
 **VORAUSSETZUNG:** Match läuft (siehe Test B).
 **AKTION:** Wirf 3 Darts nacheinander (normale Camera-Erkennung abwarten).
@@ -76,7 +106,7 @@ Echtzeit (kein Rückstand von mehreren Sekunden, keine falschen Zahlen).
 oder ein Dart "verschwindet" (wird nicht gezählt).
 **WAS NOTIEREN:** Welcher Dart betroffen war, welcher Score angezeigt wurde.
 
-## Test D — 140+
+## Test D — 140+ — Priorität: P2
 
 **VORAUSSETZUNG:** Match läuft, Trainings-Modus optional aktiviert
 (Einstellungen → Training).
@@ -88,7 +118,7 @@ Falls Sound-FX/Caller aktiv: entsprechende Ansage/Sound (falls konfiguriert).
 oder Sound spielt gar nicht/mehrfach.
 **WAS NOTIEREN:** Angezeigter Zählerstand vor/nach dem Wurf.
 
-## Test E — 180
+## Test E — 180 — Priorität: P2
 
 **VORAUSSETZUNG:** Match läuft, Trainings-Modus optional aktiviert.
 **AKTION:** Wirf ein 180er (3× Treble 20).
@@ -97,7 +127,7 @@ Falls Crowd-Sounds aktiv: 180-Sound/Ansage spielt.
 **FEHLERBILD:** Zähler bleibt gleich, oder Sound spielt nicht/verzögert.
 **WAS NOTIEREN:** Zählerstand vor/nach dem Wurf, ob Sound abgespielt wurde.
 
-## Test F — Checkout
+## Test F — Checkout — Priorität: P0
 
 **VORAUSSETZUNG:** Match läuft, du bist nah am Leg-Ende (Restscore ≤ 170,
 idealerweise ein glattes Finish wie 40 oder 32).
@@ -108,7 +138,7 @@ später korrekt als "Bester Checkout" angezeigt (nicht als Prozentwert).
 Checkout-Wert wird angezeigt.
 **WAS NOTIEREN:** Tatsächlich geworfener Checkout-Wert vs. angezeigter Wert.
 
-## Test G — Checkout Miss
+## Test G — Checkout Miss — Priorität: P1
 
 **VORAUSSETZUNG:** Match läuft, Trainings-Modus aktiv mit sichtbarem
 "Checkout-Fehlversuche"-Ziel.
@@ -123,7 +153,7 @@ dafür). Notiere genau: wie viele Doppel-Versuche insgesamt, wie viele davon
 verpasst, und was die Extension anzeigt — das ist der wichtigste Test, um zu
 prüfen, ob diese Annäherung in der Praxis stimmt oder nicht.
 
-## Test H — Undo
+## Test H — Undo — Priorität: P1
 
 **VORAUSSETZUNG:** Match läuft, mindestens ein Dart wurde geworfen.
 **AKTION:** Nutze die "Undo"/Korrektur-Funktion in Autodarts selbst (nicht in
@@ -135,7 +165,7 @@ Autodarts selbst schon den korrigierten Stand zeigt.
 **WAS NOTIEREN:** Wie lange es dauert, bis die Extension nachzieht (Sekunden),
 und ob sie am Ende überhaupt nachzieht.
 
-## Test I — Correction
+## Test I — Correction — Priorität: P1
 
 **VORAUSSETZUNG:** Match läuft.
 **AKTION:** Nutze die Autodarts-eigene Korrektur-Funktion, um einen Wurf
@@ -147,7 +177,7 @@ nach mehreren Sekunden.
 **WAS NOTIEREN:** Alter Wert, korrigierter Wert, was die Extension zeigt
 (sofort und nach 10/30 Sekunden).
 
-## Test J — Leg End
+## Test J — Leg End — Priorität: P2
 
 **VORAUSSETZUNG:** Match mit mehreren Legs (z. B. Best of 3 Legs).
 **AKTION:** Spiele ein Leg zu Ende.
@@ -157,7 +187,7 @@ alte Wurf-Historie wird nicht mit dem neuen Leg vermischt.
 Leg noch kurz nach.
 **WAS NOTIEREN:** Was genau falsch/verzögert angezeigt wurde.
 
-## Test K — Match End
+## Test K — Match End — Priorität: P0
 
 **VORAUSSETZUNG:** Match kurz vor dem Ende (letztes Leg/Set).
 **AKTION:** Beende das Match komplett (Gewinner steht fest).
@@ -169,7 +199,7 @@ Verlaufs-Eintrag erscheint.
 **WAS NOTIEREN:** Angezeigter Sieger vs. echter Sieger, ob/wann der
 Verlaufs-Eintrag erscheint.
 
-## Test L — Training Summary
+## Test L — Training Summary — Priorität: P0
 
 **VORAUSSETZUNG:** Trainings-Modus aktiviert (Einstellungen → Training →
 Ziele gesetzt, "Auswertung nach dem Match einblenden" angehakt).
@@ -184,7 +214,7 @@ Werten, obwohl du z. B. tatsächlich Average > 0 gespielt hast.
 angezeigten Wert (Average, 140+, 180er, Checkout-Rate) mit dem, was
 Autodarts selbst für dieses Match anzeigt.
 
-## Test M — Training History
+## Test M — Training History — Priorität: P1
 
 **VORAUSSETZUNG:** Test L wurde mindestens einmal erfolgreich durchgeführt.
 **AKTION:** Öffne Einstellungen → Training → Tab "Verlauf". Klicke
@@ -196,7 +226,7 @@ weichen von der Zusammenfassung aus Test L ab.
 **WAS NOTIEREN:** Ob der Eintrag erscheint, und ob die Zahlen mit Test L
 übereinstimmen.
 
-## Test N — Match History
+## Test N — Match History — Priorität: P0
 
 **VORAUSSETZUNG:** Mindestens ein komplettes Match wurde gespielt (Test K).
 **AKTION:** Öffne Control Center → Verlauf.
@@ -206,7 +236,7 @@ korrektem Gegner, Sieger, Modus, Legs/Sets, Average.
 Spieler.
 **WAS NOTIEREN:** Was fehlt oder falsch ist, mit Screenshot.
 
-## Test O — Reload During Match
+## Test O — Reload During Match — Priorität: P2
 
 **VORAUSSETZUNG:** Match läuft, mindestens 3 Darts geworfen.
 **AKTION:** Drücke `F5` (Seite neu laden) mitten im laufenden Match.
@@ -217,7 +247,7 @@ oder "kein Match" angezeigt, obwohl es weiterläuft.
 **WAS NOTIEREN:** Was direkt nach dem Reload angezeigt wird, und wie lange es
 dauert, bis der korrekte Stand erscheint (falls überhaupt).
 
-## Test P — WebSocket Reconnect
+## Test P — WebSocket Reconnect — Priorität: P1
 
 **VORAUSSETZUNG:** Match läuft.
 **AKTION:** Trenne kurz die Internetverbindung (WLAN aus/ein, oder Kabel
@@ -232,7 +262,7 @@ automatische Wiederverbindungs-Logik, nur einen manuellen "Seite neu
 laden"-Hinweis. Notiere genau, ob dieser Hinweis erscheint und ob er
 funktioniert.
 
-## Test Q — Two Autodarts Tabs
+## Test Q — Two Autodarts Tabs — Priorität: P1
 
 **VORAUSSETZUNG:** Ein Match läuft in Tab A.
 **AKTION:** Öffne einen zweiten Tab (Tab B), navigiere dort zu einer Lobby
@@ -247,7 +277,7 @@ plötzlich Daten aus Tab B statt aus Tab A.
 Speicher). Notiere genau, was in Tab A und im Control Center jeweils
 angezeigt wird, bevor und nachdem Tab B navigiert.
 
-## Test R — Control Center Reload
+## Test R — Control Center Reload — Priorität: P2
 
 **VORAUSSETZUNG:** Match läuft in einem Autodarts-Tab, Control Center ist in
 einem anderen Tab offen.
@@ -259,7 +289,7 @@ etwas tun musst.
 Daten.
 **WAS NOTIEREN:** Was angezeigt wird, wie lange es dauert.
 
-## Test S — Browser Restart/Persistence
+## Test S — Browser Restart/Persistence — Priorität: P1
 
 **VORAUSSETZUNG:** Mindestens ein Match wurde gespielt und ist im Verlauf
 sichtbar (Test N), mindestens eine Trainingseinheit im Trainings-Verlauf
