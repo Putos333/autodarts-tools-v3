@@ -63,7 +63,7 @@
               >
                 <!-- Disabled overlay -->
                 <div v-if="!sound.enabled" class="absolute inset-0 flex items-center justify-center bg-black/40">
-                  <span class="icon-[pixelarticons--close-circle] text-2xl text-white/70" />
+                  <span class="icon-[pixelarticons--close] text-2xl text-white/70" />
                 </div>
 
                 <!-- Toggle button -->

@@ -43,7 +43,7 @@
                     >
                       <span
                         class="mr-1"
-                        :class="isLoadingDevices ? 'icon-[eos-icons--loading] animate-spin' : 'icon-[material-symbols--refresh]'"
+                        :class="isLoadingDevices ? 'icon-[material-symbols--refresh] animate-spin' : 'icon-[material-symbols--refresh]'"
                       />
                       {{ isLoadingDevices ? 'Prüfe…' : 'Aktualisieren' }}
                     </AppButton>
