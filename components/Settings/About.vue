@@ -3,7 +3,7 @@ import { ref } from "vue";
 
 const easterEggClicks = ref(0);
 const showEasterEgg = ref(false);
-const version = "2.3.1";
+const version = "2.9.98"; // synchron mit package.json halten
 const buildDate = "Juni 2025";
 
 function handleLogoClick() {

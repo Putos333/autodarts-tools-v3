@@ -165,11 +165,20 @@
       </div>
     </div>
   </div>
+
+  <AppNotification
+    @close="hideNotification"
+    :show="notification.show"
+    :message="notification.message"
+    :type="notification.type"
+  />
 </template>
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from "vue";
 import AppButton from "@/components/AppButton.vue";
+import AppNotification from "@/components/AppNotification.vue";
+import { useNotification } from "@/composables/useNotification";
 import {
   TRAINING_EXERCISES,
   EXERCISE_CATEGORIES,
@@ -182,6 +191,8 @@ import {
 
 defineProps<{ modalOpen?: boolean }>();
 defineEmits<{ (e: "toggle"): void }>();
+
+const { notification, showNotification, hideNotification } = useNotification();
 
 const exercises = TRAINING_EXERCISES;
 const categories = EXERCISE_CATEGORIES;
@@ -241,7 +252,11 @@ async function startExercise(id: string) {
     await browser.storage.local.set({ "training-active-exercise": id });
     const ex = exercises.find((e) => e.id === id);
     if (ex) {
-      alert(`Übung „${ex.title}" gestartet.\n\nÖffne jetzt play.autodarts.io und beginne mit einem Match. Das Overlay im Match zeigt dir den Fortschritt.\n\nEmpfohlener Modus: ${ex.suggestedVariant ?? "beliebig"}`);
+      showNotification(
+        `Übung „${ex.title}" gestartet.<br><br>Öffne jetzt play.autodarts.io und beginne mit einem Match. Das Overlay im Match zeigt dir den Fortschritt.<br><br>Empfohlener Modus: ${ex.suggestedVariant ?? "beliebig"}`,
+        "success",
+        8000,
+      );
     }
   } catch (e) {
     console.error("[TrainingExercises] startExercise failed", e);

@@ -14,7 +14,7 @@ import { AutodartsToolsConfig } from "@/utils/storage";
 import { getBackendUrl } from "@/utils/backend-url";
 import { COIN_SHOP, spendCoins, type CoinShopItem, type DartCoinsState } from "@/utils/dart-coins";
 
-const version = ref("2.9.88");
+const version = ref("2.9.98"); // synchron mit package.json halten
 const backendStatus = ref<"checking" | "ok" | "error">("checking");
 const backendLatencyMs = ref<number | null>(null);
 const backendUrl = ref<string>("");

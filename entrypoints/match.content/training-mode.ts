@@ -54,7 +54,7 @@ const ACTIVE_EXERCISE_KEY = "training-active-exercise";
 async function getActiveTrainingExercise(): Promise<string | null> {
   try {
     const result = await browser.storage.local.get(ACTIVE_EXERCISE_KEY);
-    return result[ACTIVE_EXERCISE_KEY] ?? null;
+    return (result[ACTIVE_EXERCISE_KEY] as string | undefined) ?? null;
   } catch {
     return null;
   }

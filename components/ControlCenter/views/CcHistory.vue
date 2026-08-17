@@ -35,11 +35,11 @@
       <div class="cc-col-12">
         <div class="cc-tiles" style="grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));">
           <CcStatTile label="Gespeichert" :value="kpis.total" accent="gold" />
-          <CcStatTile label="Vollständig" :value="kpis.complete" accent="ok" />
+          <CcStatTile label="Vollständig" :value="kpis.complete" accent="accent" />
           <CcStatTile label="Teilweise" :value="kpis.partial" accent="accent" />
           <CcStatTile label="Minimal" :value="kpis.minimal" accent="plain" />
           <CcStatTile label="Siege" :value="kpis.wins" hint="Matches mit Sieg (Spieler 1)" accent="gold" />
-          <CcStatTile label="Ø Average" :value="kpis.avgAverage" decimals="1" hint="Aus vollständigen Matches" accent="accent" />
+          <CcStatTile label="Ø Average" :value="kpis.avgAverage" :decimals="1" hint="Aus vollständigen Matches" accent="accent" />
         </div>
       </div>
 
@@ -274,7 +274,7 @@
             text="Sobald ein Match auf play.autodarts.io beendet wird, speichert die Erweiterung das Ergebnis hier lokal."
           >
             <template #action>
-              <button @click="openAutodarts" class="cc-btn is-primary" type="button">
+              <button @click="() => openAutodarts()" class="cc-btn is-primary" type="button">
                 <span class="icon-[pixelarticons--external-link]" />
                 <span>Autodarts öffnen</span>
               </button>
@@ -307,7 +307,7 @@
           text="Sobald ein Match auf play.autodarts.io beendet wird, speichert die Erweiterung das Ergebnis hier lokal. Danach erscheinen hier Verlauf, Filter und Details."
         >
           <template #action>
-            <button @click="openAutodarts" class="cc-btn is-primary" type="button">
+            <button @click="() => openAutodarts()" class="cc-btn is-primary" type="button">
               <span class="icon-[pixelarticons--external-link]" />
               <span>Autodarts öffnen</span>
             </button>

@@ -28,11 +28,11 @@
               Ziele und Zusammenfassung werden dir direkt im Match-Overlay angezeigt.
             </p>
             <div class="cc-btn-row">
-              <button @click="openAutodarts" class="cc-btn is-primary" type="button" data-testid="cc-training-open-autodarts">
+              <button @click="() => openAutodarts()" class="cc-btn is-primary" type="button" data-testid="cc-training-open-autodarts">
                 <span class="icon-[pixelarticons--external-link]" />
                 <span>Autodarts öffnen</span>
               </button>
-              <button @click="openClassicSettings" class="cc-btn" type="button" data-testid="cc-training-open-classic">
+              <button @click="() => openClassicSettings()" class="cc-btn" type="button" data-testid="cc-training-open-classic">
                 <span class="icon-[pixelarticons--sliders]" />
                 <span>Einstellungen</span>
               </button>
@@ -136,7 +136,7 @@
           text="Sobald du eine Übung startest und ein Match mit aktiviertem Training-Modus spielst, erscheinen hier deine Sessions."
         >
           <template #action>
-            <button @click="openAutodarts" class="cc-btn is-primary" type="button">
+            <button @click="() => openAutodarts()" class="cc-btn is-primary" type="button">
               <span class="icon-[pixelarticons--external-link]" />
               <span>Autodarts öffnen</span>
             </button>
