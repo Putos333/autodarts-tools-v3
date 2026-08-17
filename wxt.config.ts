@@ -141,9 +141,12 @@ export default defineConfig({
     build: {
       minify: "esbuild",
       target: "esnext",
-      esbuild: {
-        drop: [ "console", "debugger" ],
-      },
+    },
+    // TD-02: `drop` gehört zu Vite's Top-Level `esbuild`-Option (UserConfig.esbuild),
+    // nicht unter `build.esbuild` (BuildOptions kennt dieses Feld nicht – wurde bisher
+    // von Vite stillschweigend ignoriert, siehe node_modules/vite/dist/node/index.d.ts).
+    esbuild: {
+      drop: [ "console", "debugger" ],
     },
   }),
 });
