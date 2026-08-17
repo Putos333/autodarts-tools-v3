@@ -40,9 +40,8 @@ export const CC_SECTIONS: ICcSection[] = [
   {
     id: "board",
     label: "Board & Autoscoring",
-    hint: "Board-Verbindung, Autoscoring-Zustand und externe Boards",
+    hint: "Verbindungs- und Board-Diagnose (Kalibrierung/Erkennung bleiben bei Autodarts)",
     icon: "icon-[pixelarticons--bullseye]",
-    preview: true,
   },
   {
     id: "match",
@@ -65,23 +64,20 @@ export const CC_SECTIONS: ICcSection[] = [
   {
     id: "sound",
     label: "Caller & Sounds",
-    hint: "Caller, Sound-FX, Crowd, Walk-On und Soundboard",
+    hint: "Status und Schnellumschalter für Caller, Sound-FX und Crowd",
     icon: "icon-[pixelarticons--volume-3]",
-    preview: true,
   },
   {
     id: "lighting",
     label: "WLED / Beleuchtung",
-    hint: "Lichteffekte passend zu Würfen und Match-Ereignissen",
+    hint: "Status und Schnellumschalter für konfigurierte WLED-Effekte",
     icon: "icon-[pixelarticons--lightbulb]",
-    preview: true,
   },
   {
     id: "stats",
-    label: "Statistiken / Match History",
-    hint: "Gespeicherte Match-Ergebnisse, Präzision und Liga",
+    label: "Statistiken",
+    hint: "Kennzahlen und Trends aus deinen gespeicherten Match-Ergebnissen",
     icon: "icon-[pixelarticons--chart-bar]",
-    preview: true,
   },
   {
     id: "history",
@@ -92,13 +88,22 @@ export const CC_SECTIONS: ICcSection[] = [
   {
     id: "settings",
     label: "Einstellungen",
-    hint: "Sprache, Backup, Import/Export und erweiterte Optionen",
+    hint: "Version, Diagnose und Datenschutz — Details in den klassischen Einstellungen",
     icon: "icon-[pixelarticons--sliders]",
-    preview: true,
   },
 ];
 
 export const CC_DEFAULT_SECTION: TCcSectionId = "dashboard";
+
+/**
+ * Transiente Übergabe eines gewünschten Spielmodus-Filters von Verlauf →
+ * Statistiken. Bewusst `sessionStorage` statt persistenter Datenkopie: der
+ * Wert wird von der Statistics-Ansicht sofort nach Anwendung wieder gelöscht
+ * und überlebt keinen Browser-Neustart. Kein Eingriff in das Hash-Routing
+ * (`ControlCenter.vue::readHash`/`isCcSectionId`), damit Deep-Links wie
+ * `#stats` unverändert funktionieren.
+ */
+export const CC_STATS_PENDING_GAME_MODE_KEY = "cc-stats-pending-game-mode";
 
 export function isCcSectionId(value: unknown): value is TCcSectionId {
   return typeof value === "string" && CC_SECTIONS.some(section => section.id === value);
