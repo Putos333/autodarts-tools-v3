@@ -222,6 +222,19 @@
                   </div>
                 </div>
 
+                <!-- Verknüpfung zu Statistiken (nur wenn ein filterbarer Spielmodus bekannt ist) -->
+                <div v-if="match.gameMode" class="cc-detail-section">
+                  <button
+                    @click="viewInStatistics(match.gameMode)"
+                    class="cc-btn is-ghost"
+                    type="button"
+                    data-testid="cc-history-view-in-stats"
+                  >
+                    <span class="icon-[pixelarticons--chart-bar]" />
+                    <span>In Statistiken ansehen (Modus: {{ match.gameMode }})</span>
+                  </button>
+                </div>
+
                 <!-- Technische Details -->
                 <div class="cc-detail-section">
                   <button
@@ -328,6 +341,7 @@ import CcEmptyState from "../CcEmptyState.vue";
 import CcPlayerBadge from "../CcPlayerBadge.vue";
 import CcHistoryPlayerStats from "../CcHistoryPlayerStats.vue";
 import { openAutodarts } from "../open-autodarts";
+import { CC_STATS_PENDING_GAME_MODE_KEY } from "../sections";
 import {
   AutodartsToolsCanonicalMatchResults,
   getCanonicalMatchResults,
@@ -393,6 +407,17 @@ const matchListSubtitle = computed(() => {
 function resetFilters(): void {
   filters.value = { ...DEFAULT_HISTORY_FILTERS };
   sortBy.value = "newest";
+}
+
+/** Übergibt den Spielmodus dieses Matches transient an die Statistics-Ansicht und navigiert dorthin. */
+function viewInStatistics(gameMode: string): void {
+  try {
+    sessionStorage.setItem(CC_STATS_PENDING_GAME_MODE_KEY, gameMode);
+  } catch {
+    // sessionStorage nicht verfügbar (z.B. privater Modus) — Navigation trotzdem erlauben,
+    // Statistics zeigt dann einfach ungefiltert.
+  }
+  window.location.hash = "stats";
 }
 
 /* ─── KPIs ──────────────────────────────────────────────────────────────────── */
