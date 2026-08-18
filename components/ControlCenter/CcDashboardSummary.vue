@@ -38,6 +38,7 @@ import {
 import type { ICanonicalMatchResult } from "@/utils/canonical-match-result";
 import { AutodartsToolsTrainingHistory } from "@/utils/storage";
 import type { TrainingSession } from "@/utils/training-history";
+import { getUserIdFromToken } from "@/utils/helpers";
 import { computeMatchSummary } from "@/utils/statistics";
 
 /* ─── Match-Bilanz (aus CMR, ungefiltert — dieselbe Quelle wie Verlauf/Statistiken) ── */
@@ -52,7 +53,19 @@ async function loadResults(): Promise<void> {
   }
 }
 
-const summary = computed(() => computeMatchSummary(rawResults.value));
+/* ─── Eigene Identität (Player-Identity-Fix, siehe ROADMAP_DEPENDENCIES.md) ── */
+const myUserId = ref<string | null>(null);
+
+async function loadMyUserId(): Promise<void> {
+  try {
+    myUserId.value = await getUserIdFromToken();
+  } catch (error) {
+    console.error("[CcDashboardSummary] loadMyUserId failed", error);
+    myUserId.value = null;
+  }
+}
+
+const summary = computed(() => computeMatchSummary(rawResults.value, myUserId.value));
 const winRatePercent = computed(() => {
   const rate = summary.value.winRate;
   return rate === null ? null : Math.round(rate * 100);
@@ -81,7 +94,7 @@ function formatDate(iso: string): string {
 }
 
 onMounted(async () => {
-  await Promise.all([ loadResults(), loadTrainingHistory() ]);
+  await Promise.all([ loadResults(), loadTrainingHistory(), loadMyUserId() ]);
   unwatchCmr = AutodartsToolsCanonicalMatchResults.watch(() => void loadResults());
   unwatchTraining = AutodartsToolsTrainingHistory.watch(() => void loadTrainingHistory());
 });

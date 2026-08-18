@@ -206,11 +206,19 @@ export interface IHistoryKPIs {
   minimal: number;
   finished: number;
   unfinished: number;
-  wins: number; // matches where player 0 (assumed "you") won
-  avgAverage: number | null; // average of player averages (complete matches only)
+  wins: number; // matches where the authenticated user (resolved via userId) won
+  avgAverage: number | null; // average of the authenticated user's averages (complete matches only)
 }
 
-export function computeHistoryKPIs(matches: ICmrMatchDisplay[]): IHistoryKPIs {
+/**
+ * `myUserId` kommt aus `getUserIdFromToken()` (utils/helpers.ts, JWT `sub`-Claim,
+ * kein Netzwerk-Call) und wird PRO MATCH gegen `player.userId` gematcht — nicht
+ * gegen einen festen Index, da dieselbe Person in unterschiedlichen Matches an
+ * unterschiedlichen Positionen sitzen kann. Fehlt `myUserId` oder taucht sie in
+ * einem Match nicht auf, zählt dieses Match weder als Sieg noch als Niederlage
+ * (kein Index-0-Fallback).
+ */
+export function computeHistoryKPIs(matches: ICmrMatchDisplay[], myUserId?: string | null): IHistoryKPIs {
   let complete = 0;
   let partial = 0;
   let minimal = 0;
@@ -230,17 +238,15 @@ export function computeHistoryKPIs(matches: ICmrMatchDisplay[]): IHistoryKPIs {
     if (match.finished) finished++;
     else unfinished++;
 
-    // Wins: assume first player (index 0) is "you" if winnerIndex === 0
-    if (match.finished && match.winnerIndex === 0) wins++;
+    const me = myUserId ? match.players.find(p => p.userId === myUserId) : undefined;
+
+    // Wins: nur werten, wenn die Identität in diesem Match aufgelöst werden konnte
+    if (match.finished && me && match.winnerIndex === me.index) wins++;
 
     // Average of averages (only complete matches with data)
-    if (match.quality === "COMPLETE") {
-      for (const player of match.players) {
-        if (player.average !== undefined && player.index === 0) {
-          avgSum += player.average;
-          avgCount++;
-        }
-      }
+    if (match.quality === "COMPLETE" && me?.average !== undefined) {
+      avgSum += me.average;
+      avgCount++;
     }
   }
 

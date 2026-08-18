@@ -17,14 +17,20 @@
  *   Checkout-%/-Versuche/-Treffer, 100+/140+/170+, Matchdauer,
  *   Best-Leg/Dart-genaue Werte, echtes H2H.
  *
- * ── Spieler-Identität (bekannte Einschränkung, siehe ROADMAP_DEPENDENCIES.md) ─
- * Wer "ich" bin, ist ohne Laufzeit-Auth-Abruf (`getMyUserId()`, ein
- * Netzwerk-Call) nicht aus CMR allein ableitbar. Alle Funktionen hier nehmen
- * daher optional `myPlayerIndex` entgegen (Default: 0 — Positions-Index, wie
- * bereits in `match-history-view.ts::computeHistoryKPIs` etabliert und dort
- * bewusst als "Spieler 1" statt "Du" beschriftet). Diese Datei erfindet
- * keine neue, "korrigierte" Identitätslogik — sie übernimmt exakt dieselbe,
- * bereits produktive Konvention, parametrisiert statt hart codiert.
+ * ── Spieler-Identität (Player Identity Fix, siehe ROADMAP_DEPENDENCIES.md) ──
+ * Wer "ich" bin, wird über die stabile, bereits lokal verfügbare `userId`
+ * aus dem Auth-Token bestimmt (`getUserIdFromToken()` in `utils/helpers.ts`,
+ * dekodiert den JWT `sub`-Claim ohne Netzwerk-Call — dieselbe Funktion, die
+ * bereits in `share-card.ts`, `Zoom.vue`, `precision-tracker.ts` und
+ * `ai-commentator.ts` produktiv läuft). Alle Funktionen hier nehmen daher
+ * `myUserId: string | null | undefined` entgegen und matchen sie gegen
+ * `ICmrPlayer.userId` PRO RECORD — nicht mehr gegen einen festen
+ * Positions-Index, da dieselbe Person in unterschiedlichen Matches an
+ * unterschiedlichen `index`-Positionen sitzen kann. Fehlt `myUserId`, oder
+ * taucht sie in einem Record nicht auf (z. B. unbekannter Gast, Bot-Match,
+ * Token abgelaufen), liefert `myPlayer()` `undefined` — das Match fließt
+ * dann NICHT in identitätsabhängige Kennzahlen ein (kein stiller
+ * Index-0-Fallback, keine falsche Win/Loss-Zuordnung).
  */
 
 import type { ICanonicalMatchResult, ICmrPlayer, TCmrQuality } from "./canonical-match-result";
@@ -95,8 +101,16 @@ export function sortStatisticsRecords(records: ICanonicalMatchResult[]): ICanoni
 
 // ─── Hilfsfunktionen ────────────────────────────────────────────────────────
 
-function myPlayer(record: ICanonicalMatchResult, myPlayerIndex: number): ICmrPlayer | undefined {
-  return record.players.find(p => p.index === myPlayerIndex);
+/**
+ * Findet den Spieler, der `myUserId` entspricht — pro Record neu aufgelöst,
+ * da derselbe Nutzer in unterschiedlichen Matches unterschiedliche
+ * `index`-Positionen haben kann. Ohne `myUserId` (fehlender/ungültiger
+ * Auth-Token) oder ohne Treffer in `record.players` gibt es `undefined`
+ * zurück — nie einen Index-0-Fallback.
+ */
+function myPlayer(record: ICanonicalMatchResult, myUserId: string | null | undefined): ICmrPlayer | undefined {
+  if (!myUserId) return undefined;
+  return record.players.find(p => p.userId === myUserId);
 }
 
 /** Ein Match "zählt fürs Ergebnis", wenn es beendet ist und einen gültigen Sieger hat. */
@@ -121,7 +135,7 @@ export interface IMatchSummary {
 
 export function computeMatchSummary(
   records: ICanonicalMatchResult[],
-  myPlayerIndex = 0,
+  myUserId?: string | null,
 ): IMatchSummary {
   let completedMatches = 0;
   let decidedMatches = 0;
@@ -132,8 +146,11 @@ export function computeMatchSummary(
     if (record.finished) completedMatches++;
     if (!hasDecidedResult(record)) continue;
 
+    const me = myPlayer(record, myUserId);
+    if (!me) continue; // Identität in diesem Match unbekannt — nicht werten, kein Index-0-Fallback
+
     decidedMatches++;
-    if (record.winnerIndex === myPlayerIndex) wins++;
+    if (record.winnerIndex === me.index) wins++;
     else losses++;
   }
 
@@ -150,7 +167,7 @@ export function computeMatchSummary(
 // ─── Average / Bester Average ───────────────────────────────────────────────
 
 export interface IAverageStats {
-  /** Ø über alle Matches mit bekanntem `average` für `myPlayerIndex`. null = keine Daten. */
+  /** Ø über alle Matches mit bekanntem `average` für `myUserId`. null = keine Daten. */
   average: number | null;
   bestAverage: number | null;
   /** Anzahl Matches, die tatsächlich in `average`/`bestAverage` eingeflossen sind. */
@@ -159,11 +176,11 @@ export interface IAverageStats {
 
 export function computeAverageStats(
   records: ICanonicalMatchResult[],
-  myPlayerIndex = 0,
+  myUserId?: string | null,
 ): IAverageStats {
   const values: number[] = [];
   for (const record of records) {
-    const p = myPlayer(record, myPlayerIndex);
+    const p = myPlayer(record, myUserId);
     if (p?.average !== undefined) values.push(p.average);
   }
 
@@ -193,7 +210,7 @@ export interface IScoringStats {
 
 export function computeScoringStats(
   records: ICanonicalMatchResult[],
-  myPlayerIndex = 0,
+  myUserId?: string | null,
 ): IScoringStats {
   let total180 = 0;
   let matchesWith180Field = 0;
@@ -201,7 +218,7 @@ export function computeScoringStats(
   let highestCheckout: number | null = null;
 
   for (const record of records) {
-    const p = myPlayer(record, myPlayerIndex);
+    const p = myPlayer(record, myUserId);
     if (!p) continue;
 
     if (p.total180 !== undefined) {
@@ -234,7 +251,7 @@ export interface ILegSetStats {
 
 export function computeLegSetStats(
   records: ICanonicalMatchResult[],
-  myPlayerIndex = 0,
+  myUserId?: string | null,
 ): ILegSetStats {
   let legsWon = 0;
   let legsLost = 0;
@@ -243,9 +260,9 @@ export function computeLegSetStats(
   let anySets = false;
 
   for (const record of records) {
-    const me = myPlayer(record, myPlayerIndex);
+    const me = myPlayer(record, myUserId);
     if (!me) continue;
-    const opponents = record.players.filter(p => p.index !== myPlayerIndex);
+    const opponents = record.players.filter(p => p.index !== me.index);
 
     if (me.legs !== undefined) {
       legsWon += me.legs;
@@ -272,11 +289,11 @@ export interface ITrendPoint {
 /** Chronologisch (älteste zuerst) — passend für eine Trend-Darstellung von links nach rechts. */
 export function computeAverageTrend(
   records: ICanonicalMatchResult[],
-  myPlayerIndex = 0,
+  myUserId?: string | null,
 ): ITrendPoint[] {
   const points: ITrendPoint[] = [];
   for (const record of records) {
-    const p = myPlayer(record, myPlayerIndex);
+    const p = myPlayer(record, myUserId);
     if (p?.average === undefined) continue;
     points.push({ matchId: record.matchId, recordedAt: record.recordedAt, average: p.average });
   }
@@ -299,16 +316,17 @@ export interface IRecentFormEntry {
 export function computeRecentForm(
   records: ICanonicalMatchResult[],
   count = 10,
-  myPlayerIndex = 0,
+  myUserId?: string | null,
 ): IRecentFormEntry[] {
   return sortStatisticsRecords(records)
     .slice(0, count)
     .map((record) => {
-      const p = myPlayer(record, myPlayerIndex);
+      const p = myPlayer(record, myUserId);
       return {
         matchId: record.matchId,
         recordedAt: record.recordedAt,
-        won: hasDecidedResult(record) ? record.winnerIndex === myPlayerIndex : null,
+        // p fehlt → Identität in diesem Match unbekannt → null (nicht als Niederlage werten)
+        won: (hasDecidedResult(record) && p) ? record.winnerIndex === p.index : null,
         average: p?.average,
       };
     });
@@ -360,18 +378,18 @@ export interface IStatisticsOverview {
 export function computeStatisticsOverview(
   records: ICanonicalMatchResult[],
   filters: IStatisticsFilters = DEFAULT_STATISTICS_FILTERS,
-  myPlayerIndex = 0,
+  myUserId?: string | null,
 ): IStatisticsOverview {
   const filtered = filterStatisticsRecords(records, filters);
 
   return {
-    summary: computeMatchSummary(filtered, myPlayerIndex),
-    averages: computeAverageStats(filtered, myPlayerIndex),
-    scoring: computeScoringStats(filtered, myPlayerIndex),
-    legsSets: computeLegSetStats(filtered, myPlayerIndex),
+    summary: computeMatchSummary(filtered, myUserId),
+    averages: computeAverageStats(filtered, myUserId),
+    scoring: computeScoringStats(filtered, myUserId),
+    legsSets: computeLegSetStats(filtered, myUserId),
     quality: computeQualityBreakdown(filtered),
-    trend: computeAverageTrend(filtered, myPlayerIndex),
-    recentForm: computeRecentForm(filtered, 10, myPlayerIndex),
+    trend: computeAverageTrend(filtered, myUserId),
+    recentForm: computeRecentForm(filtered, 10, myUserId),
     gameModes: extractStatisticsGameModes(records), // aus dem UNGEFILTERTEN Bestand (Filter-Optionen)
   };
 }

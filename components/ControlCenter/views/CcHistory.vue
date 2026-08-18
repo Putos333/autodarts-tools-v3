@@ -347,6 +347,7 @@ import {
   getCanonicalMatchResults,
 } from "@/utils/canonical-match-result-storage";
 import type { ICanonicalMatchResult } from "@/utils/canonical-match-result";
+import { getUserIdFromToken } from "@/utils/helpers";
 import {
   computeHistoryKPIs,
   DEFAULT_HISTORY_FILTERS,
@@ -374,6 +375,18 @@ async function loadResults(): Promise<void> {
   } catch (error) {
     console.error("[CcHistory] loadResults failed", error);
     rawResults.value = [];
+  }
+}
+
+/* ─── Eigene Identität (Player-Identity-Fix, siehe ROADMAP_DEPENDENCIES.md) ── */
+const myUserId = ref<string | null>(null);
+
+async function loadMyUserId(): Promise<void> {
+  try {
+    myUserId.value = await getUserIdFromToken();
+  } catch (error) {
+    console.error("[CcHistory] loadMyUserId failed", error);
+    myUserId.value = null;
   }
 }
 
@@ -421,7 +434,7 @@ function viewInStatistics(gameMode: string): void {
 }
 
 /* ─── KPIs ──────────────────────────────────────────────────────────────────── */
-const kpis = computed(() => computeHistoryKPIs(allDisplay.value));
+const kpis = computed(() => computeHistoryKPIs(allDisplay.value, myUserId.value));
 
 /* ─── Selected Match (Detail) ───────────────────────────────────────────────── */
 const selectedMatch = ref<ICmrMatchDisplay | null>(null);
@@ -486,7 +499,7 @@ function qualityTone(quality: ICmrMatchDisplay["quality"]): ReturnType<typeof ge
 
 /* ─── Init & Cleanup ────────────────────────────────────────────────────────── */
 onMounted(async () => {
-  await loadResults();
+  await Promise.all([ loadResults(), loadMyUserId() ]);
   unwatch = AutodartsToolsCanonicalMatchResults.watch(() => {
     void loadResults();
   });

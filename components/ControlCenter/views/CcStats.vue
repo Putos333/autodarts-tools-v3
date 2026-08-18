@@ -198,6 +198,7 @@ import {
   getCanonicalMatchResults,
 } from "@/utils/canonical-match-result-storage";
 import type { ICanonicalMatchResult } from "@/utils/canonical-match-result";
+import { getUserIdFromToken } from "@/utils/helpers";
 import {
   DEFAULT_STATISTICS_FILTERS,
   computeStatisticsOverview,
@@ -218,6 +219,18 @@ async function loadResults(): Promise<void> {
   }
 }
 
+/* ─── Eigene Identität (Player-Identity-Fix, siehe ROADMAP_DEPENDENCIES.md) ── */
+const myUserId = ref<string | null>(null);
+
+async function loadMyUserId(): Promise<void> {
+  try {
+    myUserId.value = await getUserIdFromToken();
+  } catch (error) {
+    console.error("[CcStats] loadMyUserId failed", error);
+    myUserId.value = null;
+  }
+}
+
 /* ─── Filter & Ableitung ─────────────────────────────────────────────────────── */
 const filters = ref<IStatisticsFilters>({ ...DEFAULT_STATISTICS_FILTERS });
 
@@ -234,7 +247,7 @@ function applyPendingGameModeFilter(): void {
   }
 }
 
-const overview = computed(() => computeStatisticsOverview(rawResults.value, filters.value));
+const overview = computed(() => computeStatisticsOverview(rawResults.value, filters.value, myUserId.value));
 
 const winRatePercent = computed(() => {
   const rate = overview.value.summary.winRate;
@@ -278,7 +291,7 @@ function formTitle(entry: IRecentFormEntry): string {
 /* ─── Init & Cleanup ─────────────────────────────────────────────────────────── */
 onMounted(async () => {
   applyPendingGameModeFilter();
-  await loadResults();
+  await Promise.all([ loadResults(), loadMyUserId() ]);
   unwatch = AutodartsToolsCanonicalMatchResults.watch(() => {
     void loadResults();
   });
