@@ -18,8 +18,22 @@ let currentBoardId: string;
 
 let debounceTimer: number | null = null;
 const DEBOUNCE_DELAY = 200;
+let wledActive = false;
+const activeRequestControllers = new Set<AbortController>();
+const requestStartTimers = new Set<ReturnType<typeof setTimeout>>();
+
+function abortActiveRequests(): void {
+  for (const controller of activeRequestControllers) controller.abort();
+  activeRequestControllers.clear();
+}
+
+function clearRequestStartTimers(): void {
+  for (const timeoutId of requestStartTimers) clearTimeout(timeoutId);
+  requestStartTimers.clear();
+}
 
 function eventTrigger(trigger: string) {
+  if (!wledActive) return;
   if (isTriggerPresent(trigger) &&
     (
       config!.wledFx.boardIds.length === 0 ||
@@ -33,6 +47,8 @@ function eventTrigger(trigger: string) {
 }
 
 async function checkStatus(boardData: IBoard): Promise<void> {
+  if (!wledActive) return;
+
   const boardEvent: string | undefined = boardData.event;
   const boardStatus: string | undefined = boardData.status;
 
@@ -70,23 +86,33 @@ export async function wledFx() {
   console.log("Autodarts Tools: WLED: WLED FX");
 
   try {
+    // Remove any leftovers from a previous lifecycle, including a pending cleanup-idle request.
+    if (debounceTimer !== null) {
+      clearTimeout(debounceTimer);
+      debounceTimer = null;
+    }
+    clearRequestStartTimers();
+    abortActiveRequests();
+
     config = await AutodartsToolsConfig.getValue();
     const gameData = await AutodartsToolsGameData.getValue();
     console.log(`Autodarts Tools: WLED: Config loaded, ${config.wledFx?.effects?.length || 0} effects available`);
+    wledActive = true;
 
     if (!gameDataWatcherUnwatch) {
       gameDataWatcherUnwatch = AutodartsToolsGameData.watch(
         (gameData: IGameData, oldGameData: IGameData) => {
-          if (!config.wledFx?.enabled) return;
+          if (!config.wledFx?.enabled || !wledActive) return;
 
           // Debounce the processGameData call
-          if (debounceTimer) {
+          if (debounceTimer !== null) {
             clearTimeout(debounceTimer);
           }
 
           debounceTimer = window.setTimeout(() => {
-            processGameData(gameData, oldGameData, true);
             debounceTimer = null;
+            if (!wledActive) return;
+            processGameData(gameData, oldGameData, true).catch(console.error);
           }, DEBOUNCE_DELAY);
         },
       );
@@ -97,14 +123,14 @@ export async function wledFx() {
       )?.[0];
 
       if (gameData.match?.id === matchId) {
-        processGameData(gameData, gameData);
+        processGameData(gameData, gameData).catch(console.error);
       }
     }
 
     if (!lobbyDataWatcherUnwatch) {
       lobbyDataWatcherUnwatch = AutodartsToolsLobbyData.watch(
         async (_lobbyData: ILobbies | undefined, _oldLobbyData: ILobbies | undefined) => {
-          if (!_lobbyData || !_oldLobbyData || !config.wledFx?.enabled) return;
+          if (!_lobbyData || !_oldLobbyData || !config.wledFx?.enabled || !wledActive) return;
           const currentURL = window.location.href;
           if (!currentURL.includes("lobbies")) return;
 
@@ -134,7 +160,7 @@ export async function wledFx() {
     if (!tournamentDataWatcherUnwatch) {
       tournamentDataWatcherUnwatch = AutodartsToolsTournamentData.watch(
         async (tournamentData: ITournament | undefined, oldTournamentData: ITournament | undefined) => {
-          if (!tournamentData || !config.wledFx?.enabled) return;
+          if (!tournamentData || !config.wledFx?.enabled || !wledActive) return;
 
           // Check if tournament event is "start" and trigger the tournament_ready effect
           if (tournamentData.event === "start") {
@@ -145,12 +171,15 @@ export async function wledFx() {
       );
     }
   } catch (error) {
+    wledActive = false;
     console.error("Autodarts Tools: WLED: wledFx initialization error", error);
   }
 }
 
 export function wledFxOnRemove() {
   console.log("Autodarts Tools: WLED: wledFx on remove");
+  wledActive = false;
+
   if (gameDataWatcherUnwatch) {
     gameDataWatcherUnwatch();
     gameDataWatcherUnwatch = null;
@@ -171,7 +200,16 @@ export function wledFxOnRemove() {
     tournamentDataWatcherUnwatch = null;
   }
 
-  setEffectByTrigger("idle");
+  if (debounceTimer !== null) {
+    clearTimeout(debounceTimer);
+    debounceTimer = null;
+  }
+
+  clearRequestStartTimers();
+  abortActiveRequests();
+
+  // Cleanup may still send the configured idle effect, but normal stale callbacks are blocked.
+  setEffectByTrigger("idle", false, true).catch(console.error);
 }
 
 /**
@@ -182,7 +220,7 @@ async function processGameData(
   oldGameData: IGameData,
   fromWebSocket: boolean = false,
 ): Promise<void> {
-  if (!gameData.match || !gameData.match.turns?.length) return;
+  if (!wledActive || !gameData.match || !gameData.match.turns?.length) return;
 
   const editMode: boolean = gameData.match.activated !== undefined && gameData.match.activated >= 0;
   if (editMode) return;
@@ -227,6 +265,8 @@ async function processGameData(
   }
 
   const effect: string | null = await gameDataProcessor(gameData, oldGameData, fromWebSocket, isTriggerPresent);
+  if (!wledActive) return;
+
   if (effect) {
     // found effect for match variant
     nextEffect = effect;
@@ -276,7 +316,13 @@ function isTriggerPresent(trigger: string): boolean {
 /**
  * Set an effect based on the trigger
  */
-export async function setEffectByTrigger(trigger: string, wait: boolean = false): Promise<void> {
+export async function setEffectByTrigger(
+  trigger: string,
+  wait: boolean = false,
+  allowInactive: boolean = false,
+): Promise<void> {
+  if (!allowInactive && !wledActive) return;
+
   if (!config) {
     config = await AutodartsToolsConfig.getValue();
     if (!config.wledFx.effects.length) {
@@ -284,6 +330,8 @@ export async function setEffectByTrigger(trigger: string, wait: boolean = false)
       return;
     }
   }
+
+  if (!allowInactive && !wledActive) return;
 
   // Find all effects that match the trigger
   const matchingEffects = config.wledFx.effects.filter(
@@ -321,13 +369,21 @@ export async function setEffectByTrigger(trigger: string, wait: boolean = false)
   const nextEffect = matchingEffects[randomIndex];
 
   console.log(`Autodarts Tools: WLED: Found matching effect ${nextEffect.name}`);
-  await setEffect(nextEffect, wait);
+  await setEffect(nextEffect, wait, allowInactive);
 }
 
 let currentEffect: IWled;
-export async function setEffect(effect: IWled, wait: boolean = false) {
+export async function setEffect(
+  effect: IWled,
+  wait: boolean = false,
+  allowInactive: boolean = false,
+) {
+  if (!allowInactive && !wledActive) return;
+
   if (!config)
     config = await AutodartsToolsConfig.getValue();
+
+  if (!allowInactive && !wledActive) return;
 
   if (config.wledFx.onlyOnce && effect === currentEffect) {
     console.info("Autodarts Tools: WLED: didn't fetch", effect.url, "because the effect is already active");
@@ -341,6 +397,8 @@ export async function setEffect(effect: IWled, wait: boolean = false) {
   console.info("Autodarts Tools: WLED: fetching", effect.url);
 
   const controller = new AbortController();
+  activeRequestControllers.add(controller);
+
   const data: RequestInit = {
     mode: "no-cors" as RequestMode,
     method: effect.type === WledType.URL ? "GET" : "POST",
@@ -359,35 +417,45 @@ export async function setEffect(effect: IWled, wait: boolean = false) {
       + (effect.url.endsWith('/') ? '' : '/')
       + 'win/PL=' + effect.preset;
   }
+
   if (wait) {
+    let timeoutId: ReturnType<typeof setTimeout> | null = null;
     try {
-      // Use setTimeout to ensure the fetch doesn't block or interfere with page state
-      // This makes it truly fire-and-forget
-      const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+      timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
       await fetch(url, data);
-      clearTimeout(timeoutId);
     } catch (e) {
       const error = e as Error;
       if (error.name !== "AbortError") {
         console.log("Autodarts Tools: WLED: Request failed (non-critical)", error);
       }
+    } finally {
+      if (timeoutId !== null) clearTimeout(timeoutId);
+      activeRequestControllers.delete(controller);
     }
   } else {
-    setTimeout(() => {
+    const startTimer = setTimeout(() => {
+      requestStartTimers.delete(startTimer);
+
+      if (!allowInactive && !wledActive) {
+        activeRequestControllers.delete(controller);
+        return;
+      }
+
       const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
       fetch(url, data)
-        .then(() => {
-          clearTimeout(timeoutId);
-          // Success - no need to do anything with no-cors response
-        })
         .catch((e) => {
           const error = e as Error;
-          clearTimeout(timeoutId);
           // Silently ignore errors to prevent interfering with game state
           if (error.name !== "AbortError") {
             console.log("Autodarts Tools: WLED: Request failed (non-critical)", error);
           }
+        })
+        .finally(() => {
+          clearTimeout(timeoutId);
+          activeRequestControllers.delete(controller);
         });
     }, 0);
+
+    requestStartTimers.add(startTimer);
   }
 }
