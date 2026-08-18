@@ -36,6 +36,8 @@ import { AutodartsToolsGameData } from "@/utils/game-data-storage";
 let matchInitialized = false;
 let activeMatchObserver: MutationObserver | null = null;
 let gameDataWatcher: any;
+let matchGeneration = 0;
+let cleanupBarrier: Promise<void> = Promise.resolve();
 
 // Vue-Shadow-Root Instanzen (Referenzen für Cleanup)
 const shadowUis = {
@@ -53,11 +55,10 @@ const shadowUis = {
 const featureCleanups: Array<() => void | Promise<void>> = [];
 
 function registerCleanup(fn: () => void | Promise<void>) {
-  if (typeof fn === "function") featureCleanups.push(fn);
+  if (typeof fn === "function" && !featureCleanups.includes(fn)) featureCleanups.push(fn);
 }
 
-async function runCleanups() {
-  const fns = featureCleanups.splice(0);
+async function runCleanups(fns: Array<() => void | Promise<void>> = featureCleanups.splice(0)) {
   for (const fn of fns) {
     try {
       await fn();
@@ -168,22 +169,39 @@ async function lazy<T extends Record<string, any>>(
   removeKey: keyof T | null,
   url?: string,
 ) {
+  const generation = matchGeneration;
+  const isCurrentGeneration = () => matchInitialized && generation === matchGeneration;
+
   try {
     const mod = await loader();
+    if (!isCurrentGeneration()) return;
+
     const mainFn = mod[mainKey];
     if (typeof mainFn !== "function") {
       console.warn(`Autodarts Tools: Lazy module missing key "${String(mainKey)}"`);
       return;
     }
-    if (url !== undefined) {
-      if (window.location.href !== url) return;
-      await mainFn();
-    } else {
-      await mainFn();
+
+    const removeFn = removeKey && typeof mod[removeKey] === "function"
+      ? mod[removeKey] as () => void | Promise<void>
+      : null;
+
+    if (url !== undefined && window.location.href !== url) return;
+
+    await mainFn();
+
+    if (!isCurrentGeneration()) {
+      if (removeFn) {
+        try {
+          await removeFn();
+        } catch (e) {
+          console.error(`Autodarts Tools: stale lazy cleanup failed for ${String(mainKey)}`, e);
+        }
+      }
+      return;
     }
-    if (removeKey && typeof mod[removeKey] === "function") {
-      registerCleanup(mod[removeKey] as () => void);
-    }
+
+    if (removeFn) registerCleanup(removeFn);
   } catch (e) {
     console.error(`Autodarts Tools: lazy load failed for ${String(mainKey)}`, e);
   }
@@ -191,11 +209,17 @@ async function lazy<T extends Record<string, any>>(
 
 async function initMatch(ctx, url: string, matchId?: string) {
   if (matchInitialized) return;
+
+  const generation = ++matchGeneration;
   matchInitialized = true;
+
+  await cleanupBarrier;
+  if (!matchInitialized || generation !== matchGeneration) return;
 
   console.log("Autodarts Tools: Initializing match");
 
   const config = await AutodartsToolsConfig.getValue();
+  if (!matchInitialized || generation !== matchGeneration) return;
 
   // ─── IMMER AKTIV (Kern-Features) ──────────────────────────────────────
   // Quick-Menu: Zeigt Caller/Sound/Crowd Controls unabhängig von Feature-Enable
@@ -416,6 +440,9 @@ async function initMatch(ctx, url: string, matchId?: string) {
 function clearMatch(fromBullOff: boolean = false) {
   console.log("Autodarts Tools: Clearing match");
 
+  matchInitialized = false;
+  matchGeneration += 1;
+
   // Always disconnect the observer when clearing
   activeMatchObserver?.disconnect();
   activeMatchObserver = null;
@@ -442,9 +469,11 @@ function clearMatch(fromBullOff: boolean = false) {
   shadowUis.quickCorrection = null;
   shadowUis.instantReplay = null;
 
-  // fromBullOff: hideMenuInMatchOnRemove / automaticFullscreenOnRemove
-  // NICHT ausführen. Wir filtern das direkt bei den Cleanup-Callbacks.
-  runCleanups().catch(console.error);
+  // Serialize asynchronous feature cleanup before the next match starts.
+  const pendingCleanups = featureCleanups.splice(0);
+  cleanupBarrier = cleanupBarrier
+    .then(() => runCleanups(pendingCleanups))
+    .catch((e) => console.error("Autodarts Tools: cleanup barrier error", e));
 
   // TODO(fromBullOff): fromBullOff wird nur beim Bull-Off-Übergang gesetzt,
   // um hide-menu-in-match und automatic-fullscreen NICHT zu entfernen (weil
@@ -452,8 +481,6 @@ function clearMatch(fromBullOff: boolean = false) {
   // durchführen und die Features gleich wieder lazy-geladen werden, ist das
   // Verhalten funktional identisch (kurzes Aufblitzen möglich).
   void fromBullOff;
-
-  matchInitialized = false;
 }
 
 function startActiveMatchObserver(ctx) {

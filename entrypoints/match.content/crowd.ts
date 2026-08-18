@@ -63,6 +63,24 @@ let nineDarterPotential = false;
 // Für Aufholjagd-Erkennung
 let previousLegsGap = 0;
 
+// Lifecycle handles for crowd-owned resources
+let venueStorageChangeHandler: Parameters<typeof browser.storage.onChanged.addListener>[0] | null = null;
+const crowdTimeouts = new Set<ReturnType<typeof setTimeout>>();
+
+function scheduleCrowdTask(fn: () => void, delay: number): void {
+  const timeoutId = setTimeout(() => {
+    crowdTimeouts.delete(timeoutId);
+    if (!isActive) return;
+    fn();
+  }, delay);
+  crowdTimeouts.add(timeoutId);
+}
+
+function clearCrowdTimeouts(): void {
+  for (const timeoutId of crowdTimeouts) clearTimeout(timeoutId);
+  crowdTimeouts.clear();
+}
+
 // ─── Öffentliche API ──────────────────────────────────────────────────────────
 
 export async function crowd(): Promise<void> {
@@ -71,6 +89,15 @@ export async function crowd(): Promise<void> {
 
   if (!config.crowd?.enabled) return;
 
+  // Defensive idempotency in case initialization is requested twice.
+  gameDataWatcherUnwatch?.();
+  gameDataWatcherUnwatch = null;
+  if (venueStorageChangeHandler) {
+    browser.storage.onChanged.removeListener(venueStorageChangeHandler);
+    venueStorageChangeHandler = null;
+  }
+  clearCrowdTimeouts();
+
   isActive = true;
   nineDarterPotential = false;
   first3DartsScore = 0;
@@ -78,12 +105,15 @@ export async function crowd(): Promise<void> {
 
   // v2.9.63: Venue-Preset laden (dynamischer Hall + Loudness-Kurven)
   await refreshActiveVenue();
+
   // Listen for venue-change so the reverb-bus wird sofort neu aufgebaut
-  browser.storage.onChanged.addListener((changes, area) => {
+  venueStorageChangeHandler = (changes, area) => {
+    if (!isActive) return;
     if (area === 'local' && 'adt-venue-active' in changes) {
       refreshActiveVenue().catch(() => {});
     }
-  });
+  };
+  browser.storage.onChanged.addListener(venueStorageChangeHandler);
 
   startAmbientCrowd();
 
@@ -96,13 +126,21 @@ export async function crowd(): Promise<void> {
 
 export function crowdOnRemove(): void {
   console.log("Autodarts Tools: Crowd-Modul entfernt");
+  isActive = false;
+
   gameDataWatcherUnwatch?.();
   gameDataWatcherUnwatch = null;
+
+  if (venueStorageChangeHandler) {
+    browser.storage.onChanged.removeListener(venueStorageChangeHandler);
+    venueStorageChangeHandler = null;
+  }
+
+  clearCrowdTimeouts();
   stopAmbientCrowd();
   stopReactionAudio();
   destroyReverbBus();
   activeVenue = null;
-  isActive = false;
 }
 
 // ─── Hintergrundgemurmel ──────────────────────────────────────────────────────
@@ -573,7 +611,7 @@ function playSyntheticReaction(event: CrowdEvent, volume: number): void {
     case 'crowd_matchshot':
       // Maximaler Jubel — lang, eskalierend, mit Nachklang
       createCrowdBurst(ctx, gainNode, effectiveVolume, 4.0, true, 1200);
-      setTimeout(() => createCrowdBurst(ctx, gainNode, effectiveVolume * 0.7, 2.0, false, 900), 1500);
+      scheduleCrowdTask(() => createCrowdBurst(ctx, gainNode, effectiveVolume * 0.7, 2.0, false, 900), 1500);
       break;
 
     case 'crowd_180':
@@ -594,13 +632,13 @@ function playSyntheticReaction(event: CrowdEvent, volume: number): void {
     case 'crowd_comeback':
       // Aufholjagd — langer, wachsender Jubel
       createCrowdBurst(ctx, gainNode, effectiveVolume * 0.6, 1.0, false, 800);
-      setTimeout(() => createCrowdBurst(ctx, gainNode, effectiveVolume, 2.5, true, 1100), 800);
+      scheduleCrowdTask(() => createCrowdBurst(ctx, gainNode, effectiveVolume, 2.5, true, 1100), 800);
       break;
 
     case 'crowd_nine_darter_potential':
       // Aufgeregte Stille → dann Gemurmel
       createCrowdTension(ctx, gainNode, effectiveVolume * 0.6, 3.0);
-      setTimeout(() => createCrowdBurst(ctx, gainNode, effectiveVolume * 0.4, 1.0, false, 700), 2000);
+      scheduleCrowdTask(() => createCrowdBurst(ctx, gainNode, effectiveVolume * 0.4, 1.0, false, 700), 2000);
       break;
 
     case 'crowd_gameshot':
@@ -623,7 +661,7 @@ function playSyntheticReaction(event: CrowdEvent, volume: number): void {
     case 'crowd_bust_double_miss':
       // Kollektives Stöhnen — tiefer und länger als normaler Bust
       createCrowdGroan(ctx, gainNode, effectiveVolume * 0.7, 1.8, 500);
-      setTimeout(() => createCrowdGroan(ctx, gainNode, effectiveVolume * 0.3, 0.8, 400), 1000);
+      scheduleCrowdTask(() => createCrowdGroan(ctx, gainNode, effectiveVolume * 0.3, 0.8, 400), 1000);
       break;
 
     case 'crowd_bust':

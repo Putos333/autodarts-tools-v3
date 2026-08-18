@@ -32,6 +32,7 @@ interface TrainingSession {
 
 let overlayEl: HTMLElement | null = null;
 let summaryEl: HTMLElement | null = null;
+let summaryTimeout: ReturnType<typeof setTimeout> | null = null;
 let gameDataWatcherUnwatch: (() => void) | null = null;
 let matchFinished = false;
 
@@ -92,6 +93,10 @@ export async function trainingMode(): Promise<void> {
 export function trainingModeOnRemove(): void {
   gameDataWatcherUnwatch?.();
   gameDataWatcherUnwatch = null;
+  if (summaryTimeout !== null) {
+    clearTimeout(summaryTimeout);
+    summaryTimeout = null;
+  }
   overlayEl?.remove();
   overlayEl = null;
   summaryEl?.remove();
@@ -209,6 +214,10 @@ function updateLiveOverlay(cfg: any): void {
 // ─── Zusammenfassung nach Match ───────────────────────────────────────────────
 function showSummary(cfg: any): void {
   summaryEl?.remove();
+  if (summaryTimeout !== null) {
+    clearTimeout(summaryTimeout);
+    summaryTimeout = null;
+  }
   const goals = cfg.goals;
 
   const checks = [
@@ -261,14 +270,19 @@ function showSummary(cfg: any): void {
   summaryEl = el;
 
   document.getElementById('ad-training-close')?.addEventListener('click', () => {
+    if (summaryTimeout !== null) {
+      clearTimeout(summaryTimeout);
+      summaryTimeout = null;
+    }
     el.remove();
-    summaryEl = null;
+    if (summaryEl === el) summaryEl = null;
   });
 
   // Automatisch nach 15 Sekunden schließen
-  setTimeout(() => {
+  summaryTimeout = setTimeout(() => {
+    summaryTimeout = null;
     el.remove();
-    summaryEl = null;
+    if (summaryEl === el) summaryEl = null;
   }, 15000);
 }
 
