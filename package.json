@@ -17,6 +17,8 @@
     "zip": "wxt zip",
     "zip:firefox": "wxt zip -b firefox",
     "compile": "vue-tsc --noEmit",
+    "test": "node --test tests/*.test.mjs",
+    "test:lifecycle": "node --test tests/lifecycle-contracts.test.mjs",
     "postinstall": "wxt prepare"
   },
   "dependencies": {
