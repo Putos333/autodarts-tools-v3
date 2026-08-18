@@ -82,6 +82,12 @@ jobs:
         env:
           PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
 
+      - name: TypeScript compile gate
+        run: yarn compile
+
+      - name: Lifecycle regression tests
+        run: yarn test
+
       - name: Read package version
         id: pkg
         run: echo "version=$(node -p "require('./package.json').version")" >> "$GITHUB_OUTPUT"

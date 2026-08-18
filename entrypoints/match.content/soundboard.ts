@@ -17,6 +17,7 @@ import { AutodartsToolsConfig } from "@/utils/storage";
 
 let overlayEl: HTMLElement | null = null;
 let audioCtx: AudioContext | null = null;
+const flashTimeouts = new Set<ReturnType<typeof setTimeout>>();
 
 // ─── Soundboard-Buttons ───────────────────────────────────────────────────────
 
@@ -40,6 +41,10 @@ export async function soundboard(): Promise<void> {
 }
 
 export function soundboardOnRemove(): void {
+  for (const timeoutId of flashTimeouts) clearTimeout(timeoutId);
+  flashTimeouts.clear();
+  delete (window as any)._adSoundboard;
+  delete (window as any)._adSoundboardVolume;
   overlayEl?.remove();
   overlayEl = null;
   audioCtx?.close().catch(() => {});
@@ -192,7 +197,11 @@ function flashButton(id: string, color: string): void {
   if (!btn) return;
   const orig = btn.style.background;
   btn.style.background = `rgba(${hexToRgb(color)},0.3)`;
-  setTimeout(() => { btn.style.background = orig; }, 300);
+  const timeoutId = setTimeout(() => {
+    flashTimeouts.delete(timeoutId);
+    if (btn.isConnected) btn.style.background = orig;
+  }, 300);
+  flashTimeouts.add(timeoutId);
 }
 
 // ─── Lautstärke ───────────────────────────────────────────────────────────────
