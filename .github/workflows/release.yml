@@ -46,8 +46,38 @@ jobs:
             echo "version_changed=true" >> $GITHUB_OUTPUT
           fi
 
+  test:
+    permissions:
+      contents: read
+
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 22
+
+      - run: yarn install --no-frozen-lockfile
+        env:
+          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: 1
+
+      - name: Run unit tests
+        run: node --import tsx --test "tests/*.test.ts"
+
+      # Informational only (61 pre-existing errors in untouched legacy files as of
+      # 2026-08-18, see RELEASE_READINESS.md). Not a hard gate yet — a NO-NEW-
+      # TYPE-ERRORS mechanism (baseline diff or path-scoped check) is a follow-up,
+      # not part of this change.
+      - name: Typecheck (informational, non-blocking)
+        continue-on-error: true
+        run: npx vue-tsc --noEmit
+
   draft_release:
-    needs: check_new_version
+    needs: [check_new_version, test]
     if: needs.check_new_version.outputs.version_changed == 'true'
     permissions:
       contents: write # Allows this job to create releases

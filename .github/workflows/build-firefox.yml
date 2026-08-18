@@ -24,8 +24,43 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  test:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'yarn'
+
+      - name: Install dependencies (frozen lockfile)
+        run: yarn install --frozen-lockfile
+        env:
+          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
+
+      - name: Run unit tests
+        run: node --import tsx --test "tests/*.test.ts"
+
+      # Informational only (61 pre-existing errors in untouched legacy files as of
+      # 2026-08-18, see RELEASE_READINESS.md). Not a hard gate yet — a NO-NEW-
+      # TYPE-ERRORS mechanism (baseline diff or path-scoped check) is a follow-up,
+      # not part of this change.
+      - name: Typecheck (informational, non-blocking)
+        continue-on-error: true
+        run: npx vue-tsc --noEmit
+
   build:
     name: Build Firefox XPI
+    needs: test
     runs-on: ubuntu-latest
     timeout-minutes: 10
 

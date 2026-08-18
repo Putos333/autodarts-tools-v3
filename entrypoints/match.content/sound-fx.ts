@@ -52,6 +52,10 @@ let handleAudioPlayer2Ended: (() => void) | null = null;
 // Started once in soundFx(), cleared in soundFxOnRemove().
 let blobCleanupIntervalId: number | null = null;
 
+// Lifecycle handle for the audio-unlock listeners, mirroring caller.ts.
+// Created in initAudioPlayer(), aborted in soundFxOnRemove().
+let unlockAudioAbortController: AbortController | null = null;
+
 function checkBoardStatus(boardData: IBoard): void {
   const boardEvent = boardData.event;
   const boardStatus = boardData.status;
@@ -196,6 +200,12 @@ export function soundFxOnRemove() {
     blobCleanupIntervalId = null;
   }
 
+  // Remove pending audio-unlock listeners.
+  if (unlockAudioAbortController !== null) {
+    unlockAudioAbortController.abort();
+    unlockAudioAbortController = null;
+  }
+
   // Clear any pending debounce timer
   if (debounceTimer) {
     clearTimeout(debounceTimer);
@@ -263,6 +273,10 @@ export function soundFxOnRemove() {
  */
 function initAudioPlayer(): void {
   if (!audioPlayer) {
+    if (unlockAudioAbortController === null) {
+      unlockAudioAbortController = new AbortController();
+    }
+
     audioPlayer = new Audio();
 
     // Add ended event listener to play the next sound in queue
@@ -285,9 +299,12 @@ function initAudioPlayer(): void {
       });
       audio.addEventListener("error", (error) => {
         console.error("Autodarts Tools: Pool audio error", error);
-        document.addEventListener("click", unlockAudio, { once: true });
-        document.addEventListener("touchstart", unlockAudio, { once: true });
-        document.addEventListener("keydown", unlockAudio, { once: true });
+        if (unlockAudioAbortController !== null) {
+          const listenerOptions: AddEventListenerOptions = { once: true, signal: unlockAudioAbortController.signal };
+          document.addEventListener("click", unlockAudio, listenerOptions);
+          document.addEventListener("touchstart", unlockAudio, listenerOptions);
+          document.addEventListener("keydown", unlockAudio, listenerOptions);
+        }
         playNextSound(1);
       });
       audioPool.push(audio);
@@ -316,18 +333,25 @@ function initAudioPlayer(): void {
       });
       audio.addEventListener("error", (error) => {
         console.error("Autodarts Tools: Pool audio error (channel 2)", error);
-        document.addEventListener("click", unlockAudio, { once: true });
-        document.addEventListener("touchstart", unlockAudio, { once: true });
-        document.addEventListener("keydown", unlockAudio, { once: true });
+        if (unlockAudioAbortController !== null) {
+          const listenerOptions: AddEventListenerOptions = { once: true, signal: unlockAudioAbortController.signal };
+          document.addEventListener("click", unlockAudio, listenerOptions);
+          document.addEventListener("touchstart", unlockAudio, listenerOptions);
+          document.addEventListener("keydown", unlockAudio, listenerOptions);
+        }
         playNextSound(2);
       });
       audioPool2.push(audio);
     }
 
     // Unlock audio on first user interaction (required for Safari/iOS)
-    document.addEventListener("click", unlockAudio, { once: true });
-    document.addEventListener("touchstart", unlockAudio, { once: true });
-    document.addEventListener("keydown", unlockAudio, { once: true });
+    const unlockAudioListenerOptions: AddEventListenerOptions = {
+      once: true,
+      signal: unlockAudioAbortController.signal,
+    };
+    document.addEventListener("click", unlockAudio, unlockAudioListenerOptions);
+    document.addEventListener("touchstart", unlockAudio, unlockAudioListenerOptions);
+    document.addEventListener("keydown", unlockAudio, unlockAudioListenerOptions);
   }
 }
 

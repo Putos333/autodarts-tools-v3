@@ -34,7 +34,7 @@ notiere den Fehler. Am Ende hast du eine Liste aller echten Probleme.
 
 | Session | Deckt ab | Braucht |
 |---|---|---|
-| **1 — Baseline Match** | Vorbereitung, A, B, C, D, E, F, G, J, K, L, M, N | 1 vollständiges Match |
+| **1 — Baseline Match** | Vorbereitung, A, B, C, D, E, F, G, J, K, L, M, N, T | 1 vollständiges Match |
 | **2 — Recovery** | O, P | mitten in einem laufenden Match (kann Teil von Session 1 sein) |
 | **3 — Multi-Tab** | Q, R | ein zweiter Browser-Tab, kein eigenes Match nötig |
 | **4 — Korrektur & Persistenz** | H, I, S | ein kurzes Zusatz-Match + Browser-Neustart ganz am Ende |
@@ -303,6 +303,44 @@ Training → Verlauf.
 sind weiterhin vorhanden.
 **FEHLERBILD:** Verlauf ist leer, obwohl vorher Einträge da waren.
 **WAS NOTIEREN:** Welche Einträge fehlen.
+
+## Test T — Caller/Sound-FX Listener-Lifecycle — Priorität: P1
+
+Dieser Test prüft einen internen Speicherleck-Fix (Audio-Unlock-Listener in
+`caller.ts`/`sound-fx.ts`) und braucht — anders als die anderen Tests — kurz
+die Browser-Konsole, weil der Fehler kein sichtbares Symptom im UI hat.
+
+**VORAUSSETZUNG:** Ein Match läuft (Autodarts-Tab), Caller UND Sound-FX sind
+in den Einstellungen verfügbar (müssen nicht beide aktiv sein).
+**AKTION:**
+1. Öffne die Browser-Konsole im Autodarts-Match-Tab (F12 → Konsole).
+2. Füge folgenden Zähler-Schnipsel ein und drücke Enter:
+   ```js
+   window.__adtListenerCount = 0;
+   const __origAdd = EventTarget.prototype.addEventListener;
+   EventTarget.prototype.addEventListener = function (type, ...rest) {
+     if (this === document && ["click", "touchstart", "keydown"].includes(type))
+       window.__adtListenerCount++;
+     return __origAdd.call(this, type, ...rest);
+   };
+   ```
+3. Aktiviere Caller → warte bis das Match-Overlay reagiert (1 Sound abspielen
+   lassen reicht) → deaktiviere Caller wieder. Wiederhole das dreimal
+   (Enable → Disable ×3), **ohne** zwischendurch irgendwo hinzuklicken/zu
+   tippen (sonst feuert der Once-Listener von selbst und verfälscht die
+   Zählung).
+4. Prüfe danach in der Konsole: `window.__adtListenerCount`.
+5. Wiederhole Schritt 2–4 identisch für Sound-FX.
+**ERWARTET:** Der Zähler steigt pro Enable-Zyklus um **maximal 3** (die drei
+Listener aus `initAudioPlayer()`), nicht kumulativ höher. Nach dem letzten
+Disable und einem Klick irgendwo auf die Seite darf `unlockAudio` nicht
+mehrfach hintereinander in der Konsole geloggt werden (kein
+`console.log`-Spam bei einem einzigen Klick).
+**FEHLERBILD:** Zähler steigt schneller als 3 pro Zyklus (z. B. weil ein
+vorheriger Cleanup nicht griff), oder ein einzelner Klick nach mehreren
+Enable/Disable-Zyklen löst mehrere Sound-Unlock-Logs gleichzeitig aus.
+**WAS NOTIEREN:** Den finalen Zählerstand nach 3 Zyklen sowie ob mehrfaches
+Unlock-Verhalten bei einem einzigen Klick auftritt.
 
 ---
 
