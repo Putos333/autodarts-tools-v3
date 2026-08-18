@@ -67,6 +67,9 @@ export function buzzerOnRemove(): void {
   overlayEl = null;
   qrOverlayEl?.remove();
   qrOverlayEl = null;
+  delete (window as any)._adBuzzerPress;
+  delete (window as any)._adBuzzerReset;
+  delete (window as any)._adBuzzerClose;
   buzzLocked = false;
   players = [];
 }
