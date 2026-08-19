@@ -62,7 +62,7 @@ export default defineConfig({
       },
     },
     homepage_url: "https://darts-caller-ext.emergent.host",
-    author: "Autodarts Tools Community",
+    author: { email: "community@autodarts.tools" },
     // content_scripts: [
     //   {
     //     matches: [ "*://play.autodarts.io/*" ],

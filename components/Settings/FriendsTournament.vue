@@ -62,7 +62,8 @@ const tournament = ref<FriendsTournamentState | null>(null);
 async function loadState() {
   try {
     const r = await browser.storage.local.get(STORAGE_KEY);
-    if (r[STORAGE_KEY]) tournament.value = JSON.parse(r[STORAGE_KEY]);
+    const raw = r[STORAGE_KEY];
+    if (typeof raw === 'string') tournament.value = JSON.parse(raw);
   } catch (e) { /* ignore */ }
 }
 async function saveState() {
@@ -91,7 +92,7 @@ async function consumePendingResults() {
   if (!tournament.value || tournament.value.phase !== 'running') return;
   try {
     const r = await browser.storage.local.get(FT_PENDING_KEY);
-    const pending: Record<string, string> = r[FT_PENDING_KEY] ?? {};
+    const pending = (r[FT_PENDING_KEY] ?? {}) as Record<string, string>;
     if (!Object.keys(pending).length) return;
 
     let applied = 0;

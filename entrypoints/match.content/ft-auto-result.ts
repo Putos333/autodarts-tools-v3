@@ -38,7 +38,12 @@ async function readTournament(): Promise<FTState | null> {
     const r = await browser.storage.local.get(FT_STORAGE_KEY);
     const raw = r[FT_STORAGE_KEY];
     if (!raw) return null;
-    return typeof raw === 'string' ? JSON.parse(raw) : raw;
+    if (typeof raw === 'string') return JSON.parse(raw);
+    // Check if raw has the required properties of FTState
+    if (raw && typeof raw === 'object' && 'matches' in raw && 'currentRound' in raw && 'phase' in raw) {
+      return raw as FTState;
+    }
+    return null;
   } catch (_) { return null; }
 }
 

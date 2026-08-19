@@ -33,7 +33,7 @@ import { AutodartsToolsConfig, type IConfig } from "@/utils/storage";
 
 const emit = defineEmits([ "settingChange" ]);
 
-const imageUrl = browser.runtime.getURL("/images/qr-code.png");
+const imageUrl = browser.runtime.getURL("/images/qr-code.svg");
 
 const config = ref<IConfig>();
 

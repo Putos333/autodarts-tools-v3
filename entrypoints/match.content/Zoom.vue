@@ -56,7 +56,7 @@ import { AutodartsToolsConfig } from "@/utils/storage";
 import { waitForElement } from "@/utils";
 import { getUserIdFromToken } from "@/utils/helpers";
 
-const defaultBoardImage = browser.runtime.getURL("/images/board.png");
+const defaultBoardImage = browser.runtime.getURL("/images/board.svg");
 const boardImages = ref<string[]>([
   "",
   "",

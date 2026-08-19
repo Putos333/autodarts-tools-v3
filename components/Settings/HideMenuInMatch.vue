@@ -61,7 +61,7 @@ import { AutodartsToolsConfig, type IConfig } from "@/utils/storage";
 
 const emit = defineEmits([ "toggle", "settingChange" ]);
 const config = ref<IConfig>();
-const imageUrl = browser.runtime.getURL("/images/hide-menu-in-match.png");
+const imageUrl = browser.runtime.getURL("/images/hide-menu-in-match.svg");
 
 async function toggleFeature() {
   if (!config.value) return;

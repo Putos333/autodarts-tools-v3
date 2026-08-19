@@ -705,7 +705,7 @@ s25
 ...`;
 
 const config = ref<IConfig>();
-const imageUrl = browser.runtime.getURL("/images/caller.png");
+const imageUrl = browser.runtime.getURL("/images/caller.svg");
 const showSoundModal = ref(false);
 const isEditMode = ref(false);
 const newSound = ref({
@@ -861,7 +861,7 @@ onMounted(async () => {
   // v2.9.57: Queue-Handler für Live-Voice-Pack-Import aus Match-Quick-Menü
   try {
     const queue = await browser.storage.local.get("adt-voice-pack-queue");
-    const queuedUrl: string | undefined = queue["adt-voice-pack-queue"];
+    const queuedUrl = queue["adt-voice-pack-queue"] as string | undefined;
     if (queuedUrl && typeof queuedUrl === "string" && queuedUrl.startsWith("https://")) {
       await browser.storage.local.remove("adt-voice-pack-queue");
       selectedPresetURL.value = queuedUrl;

@@ -504,7 +504,7 @@ s25
 `;
 
 const config = ref<IConfig>();
-const imageUrl = browser.runtime.getURL("/images/sound-fx.png");
+const imageUrl = browser.runtime.getURL("/images/sound-fx.svg");
 const showSoundModal = ref(false);
 const isEditMode = ref(false);
 const newSound = ref({

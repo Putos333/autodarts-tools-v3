@@ -428,7 +428,7 @@ const triggerPlaceholder = "gameon\ntakeout\nbusted\ngameshot\nmatchshot\n...";
 const boardIdsPlaceholder = "6a501a61-53a5-468a-a56a-17134ace3099\n6128583a-66d8-46a7-87be-97f045ce7456\n...";
 
 const config = ref<IConfig>();
-const imageUrl = browser.runtime.getURL("/images/ad_wled_logo.png");
+const imageUrl = browser.runtime.getURL("/images/ad_wled_logo.svg");
 const showEffectModal = ref(false);
 const isEditMode = ref(false);
 const newEffect = ref<IWled>({
@@ -471,9 +471,9 @@ const { notification, showNotification, hideNotification } = useNotification();
 
 // Computed property for trigger text handling
 const wledTrigger = computed({
-  get: () => newEffect.value.triggers,
+  get: () => Array.isArray(newEffect.value.triggers) ? newEffect.value.triggers.join('\n') : newEffect.value.triggers,
   set: (val: string) => {
-    newEffect.value.triggers = val.toLowerCase();
+    newEffect.value.triggers = val.toLowerCase().split('\n').filter(t => t.trim());
   },
 });
 

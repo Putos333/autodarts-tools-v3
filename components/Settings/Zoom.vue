@@ -159,7 +159,7 @@ import { AutodartsToolsConfig, type IConfig } from "@/utils/storage";
 
 const emit = defineEmits([ "toggle", "settingChange" ]);
 const config = ref<IConfig>();
-const imageUrl = browser.runtime.getURL("/images/zoom.png");
+const imageUrl = browser.runtime.getURL("/images/zoom.svg");
 
 // Computed property for zoom level with mapping between 1-6 and the actual zoom value
 const zoomLevel = computed({

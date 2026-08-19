@@ -77,6 +77,7 @@ interface OldConfig {
     board: boolean;
     boardImage: boolean;
     avg: boolean;
+    checkout: boolean;
     scoreBoardSettings: {
       scale: number;
       x: number;
@@ -92,6 +93,7 @@ interface OldConfig {
     enabled: boolean;
     background: string;
     text: string;
+    matchBackground: string;
   };
   recentLocalPlayers: {
     enabled: boolean;

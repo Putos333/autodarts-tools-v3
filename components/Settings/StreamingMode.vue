@@ -204,7 +204,7 @@ const emit = defineEmits([ "toggle", "settingChange" ]);
 const config = ref<IConfig>();
 const streamingModeBackgroundFileSelect = ref() as Ref<HTMLInputElement>;
 const backgroundMode = ref(true);
-const imageUrl = browser.runtime.getURL("/images/streaming-mode.png");
+const imageUrl = browser.runtime.getURL("/images/streaming-mode.svg");
 
 onMounted(async () => {
   config.value = await AutodartsToolsConfig.getValue();

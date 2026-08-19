@@ -86,7 +86,7 @@ import { AutodartsToolsConfig, type IConfig } from "@/utils/storage";
 
 const emit = defineEmits([ "toggle", "settingChange" ]);
 const config = ref<IConfig>();
-const imageUrl = browser.runtime.getURL("/images/quick-correction.png");
+const imageUrl = browser.runtime.getURL("/images/quick-correction.svg");
 
 // Computed property for scale
 const scale = computed({

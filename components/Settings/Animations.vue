@@ -430,7 +430,7 @@ const emit = defineEmits([ "toggle", "settingChange" ]);
 const { notification, showNotification, hideNotification } = useNotification();
 useStorage("adt:active-settings", "animations");
 const config = ref<IConfig>();
-const imageUrl = browser.runtime.getURL("/images/animations.png");
+const imageUrl = browser.runtime.getURL("/images/animations.svg");
 const showAnimationModal = ref(false);
 const isEditMode = ref(false);
 const newAnimation = ref<{ url: string; text: string; animationId: string | null }>({

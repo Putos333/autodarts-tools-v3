@@ -47,7 +47,7 @@ import { AutodartsToolsConfig, type IConfig } from "@/utils/storage";
 
 const emit = defineEmits(["toggle", "settingChange"]);
 const config = ref<IConfig>();
-const imageUrl = browser.runtime.getURL("/images/gotcha.png");
+const imageUrl = browser.runtime.getURL("/images/gotcha.svg");
 
 async function toggleFeature() {
   if (!config.value) return;

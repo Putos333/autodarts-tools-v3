@@ -122,7 +122,7 @@ import { AutodartsToolsConfig, type IConfig } from "@/utils/storage";
 const emit = defineEmits([ "toggle", "settingChange" ]);
 useStorage("adt:active-settings", "discord-webhooks");
 const config = ref<IConfig>();
-const imageUrl = browser.runtime.getURL("/images/discord-webhooks.png");
+const imageUrl = browser.runtime.getURL("/images/discord-webhooks.svg");
 
 // Computed property for minutes with type handling
 const minutes = computed({
@@ -143,6 +143,8 @@ onMounted(async () => {
       enabled: false,
       minutes: 5,
       stream: false,
+      matchId: '',
+      messageId: '',
     };
   }
 });

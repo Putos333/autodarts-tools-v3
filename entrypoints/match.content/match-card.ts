@@ -462,7 +462,8 @@ async function showOverlay(canvas: HTMLCanvasElement, d: CardData) {
 
   // Persist in Gallery
   try {
-    const gallery = (await browser.storage.local.get(GALLERY_KEY))[GALLERY_KEY] ?? [];
+    const stored = await browser.storage.local.get(GALLERY_KEY);
+    const gallery = (stored[GALLERY_KEY] as any[]) ?? [];
     const dataUrl = canvas.toDataURL('image/png', 0.85);
     gallery.unshift({ matchId: d.matchId, date: d.date, dataUrl, themeId: d.theme.id, rarity: d.theme.rarity });
     while (gallery.length > 30) gallery.pop();
@@ -484,14 +485,16 @@ let processedMatchId: string | null = null;
 
 async function alreadySeen(matchId: string): Promise<boolean> {
   try {
-    const seen = (await browser.storage.local.get(SEEN_MATCHES_KEY))[SEEN_MATCHES_KEY] ?? [];
+    const stored = await browser.storage.local.get(SEEN_MATCHES_KEY);
+    const seen = (stored[SEEN_MATCHES_KEY] as string[]) ?? [];
     return Array.isArray(seen) && seen.includes(matchId);
   } catch (_) { return false; }
 }
 
 async function markSeen(matchId: string) {
   try {
-    const seen = (await browser.storage.local.get(SEEN_MATCHES_KEY))[SEEN_MATCHES_KEY] ?? [];
+    const stored = await browser.storage.local.get(SEEN_MATCHES_KEY);
+    const seen = (stored[SEEN_MATCHES_KEY] as string[]) ?? [];
     if (!seen.includes(matchId)) seen.unshift(matchId);
     while (seen.length > 60) seen.pop();
     await browser.storage.local.set({ [SEEN_MATCHES_KEY]: seen });

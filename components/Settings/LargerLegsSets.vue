@@ -73,7 +73,7 @@ import { AutodartsToolsConfig, type IConfig } from "@/utils/storage";
 const emit = defineEmits([ "toggle", "settingChange" ]);
 const config = ref<IConfig>();
 const sizeValue = ref("");
-const imageUrl = browser.runtime.getURL("/images/larger-legs-sets.png");
+const imageUrl = browser.runtime.getURL("/images/larger-legs-sets.svg");
 
 onMounted(async () => {
   config.value = await AutodartsToolsConfig.getValue();

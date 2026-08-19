@@ -45,7 +45,8 @@ export function getBundledCrowdSampleUrl(event: CrowdEventKey): string | null {
   if (!file) return null;
   try {
     // browser.runtime.getURL is available in every extension context.
-    return browser.runtime.getURL(`/sounds/crowd/${file}`);
+    // Cast to PublicPath compatible string
+    return browser.runtime.getURL(`/sounds/crowd/${file}` as any);
   } catch {
     return null;
   }

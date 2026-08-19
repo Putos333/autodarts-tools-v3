@@ -272,7 +272,7 @@ const game = reactive<{
 const config: Ref<IConfig | null> = ref(null);
 const gameData: Ref<IGameData | null> = ref(null);
 
-const defaultBoardImage = browser.runtime.getURL("/images/board.png");
+const defaultBoardImage = browser.runtime.getURL("/images/board.svg");
 const currentBoardImage = ref<string>("");
 
 const streamingModeButton: Ref<HTMLAnchorElement | null> = ref(null);

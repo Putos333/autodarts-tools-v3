@@ -34,7 +34,7 @@ import { AutodartsToolsConfig } from "@/utils/storage";
 
 const emit = defineEmits([ "toggle", "settingChange" ]);
 const config = ref<IConfig>();
-const imageUrl = browser.runtime.getURL("images/auto-start.png");
+const imageUrl = browser.runtime.getURL("/images/auto-start.svg");
 
 async function toggleFeature() {
   if (!config.value) return;
