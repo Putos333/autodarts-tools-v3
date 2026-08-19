@@ -51,6 +51,16 @@ async function loadEloState() {
   }
 }
 
+/**
+ * Persistiert eine Config-Sektion nach dem kanonischen Contract von
+ * updateConfigIfChanged: frischer Storage-Stand als Vergleichsbasis,
+ * lokaler Ref-Stand als neuer Wert (vgl. Buzzer.vue / Training.vue).
+ */
+async function persistSection(key: "elo" | "precisionMap") {
+  const currentConfig = await AutodartsToolsConfig.getValue();
+  await updateConfigIfChanged(currentConfig, config.value, key);
+}
+
 async function saveDisplayName() {
   const name = (config.value.elo?.displayName || "").trim();
   if (!name) return;
@@ -183,7 +193,7 @@ onMounted(async () => {
           </div>
           <input data-testid="elo-submit-toggle" type="checkbox"
             v-model="config.elo.submitEnabled"
-            @change="updateConfigIfChanged({}, config, 'elo')"
+            @change="persistSection('elo')"
             style="width:24px; height:24px; accent-color:#00C853; cursor:pointer;" />
         </div>
 
@@ -212,7 +222,7 @@ onMounted(async () => {
           <input v-model="config.elo.displayName" data-testid="elo-display-name"
             :placeholder="identity.displayName"
             maxlength="24"
-            @change="updateConfigIfChanged({}, config, 'elo')"
+            @change="persistSection('elo')"
             @blur="saveDisplayName"
             style="flex:1; min-width:200px; background:#1e3a5f; color:#e8eaf0; border:1px solid #2a4a7f; padding:8px 12px; border-radius:4px; font-size:13px;" />
           <button @click="loadEloState" data-testid="elo-refresh"
@@ -262,7 +272,7 @@ onMounted(async () => {
           </div>
           <input data-testid="precision-enabled-toggle" type="checkbox"
             v-model="config.precisionMap.enabled"
-            @change="updateConfigIfChanged({}, config, 'precisionMap')"
+            @change="persistSection('precisionMap')"
             style="width:22px; height:22px; accent-color:#E8002D; cursor:pointer;" />
         </label>
         <label style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
@@ -271,7 +281,7 @@ onMounted(async () => {
             <div style="font-size:11px; color:#8899aa;">Automatischer Overlay-Report mit Heatmap + Coach-Empfehlung.</div>
           </div>
           <input type="checkbox" v-model="config.precisionMap.autoShowAfterMatch"
-            @change="updateConfigIfChanged({}, config, 'precisionMap')"
+            @change="persistSection('precisionMap')"
             style="width:20px; height:20px; accent-color:#E8002D; cursor:pointer;" />
         </label>
         <label style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
@@ -280,7 +290,7 @@ onMounted(async () => {
             <div style="font-size:11px; color:#8899aa;">1080×1920 Bild zum Teilen auf Discord/Twitter/WhatsApp.</div>
           </div>
           <input type="checkbox" v-model="config.precisionMap.shareCardEnabled"
-            @change="updateConfigIfChanged({}, config, 'precisionMap')"
+            @change="persistSection('precisionMap')"
             style="width:20px; height:20px; accent-color:#E8002D; cursor:pointer;" />
         </label>
       </div>
