@@ -22,6 +22,7 @@ import { AutodartsToolsTrainingHistory, AutodartsToolsTrainingHistoryMigrated } 
 import type { TrainingSession } from "@/utils/training-history";
 import { mergeTrainingHistories } from "@/utils/training-history";
 import { getExerciseById } from "@/utils/training-exercises";
+import { getUserIdFromToken } from "@/utils/helpers";
 
 /** Legacy page-localStorage key (pre-R1), read once for a non-destructive migration into browser.storage.local. */
 const LEGACY_HISTORY_KEY = "ad-training-history";
@@ -89,6 +90,23 @@ let live180s = 0;
 let liveCheckoutMisses = 0;
 let liveCheckoutRate = 0;
 
+/**
+ * Resolve the local player's position in a match by userId (Player-Identity-Fix).
+ *
+ * Returns the index of the player whose `userId` matches `myUserId`, or -1 if
+ * not found (e.g. Bot match, guest, or expired token). Falls back to index 0
+ * only when identity cannot be resolved, preserving legacy behavior for the
+ * anonymous/local-single-player case without silently misattributing wins.
+ *
+ * @see getUserIdFromToken() in utils/helpers.ts (JWT sub claim, no network call)
+ */
+function resolveMyPlayerIndex(players: Array<{ userId?: string; index: number }> | undefined, myUserId: string | null): number {
+  if (!players || players.length === 0) return -1;
+  if (!myUserId) return -1; // No identity → do not assume index 0 for stats attribution
+  const found = players.findIndex((p) => p?.userId !== undefined && p.userId === myUserId);
+  return found >= 0 ? found : -1;
+}
+
 export async function trainingMode(): Promise<void> {
   const config = await AutodartsToolsConfig.getValue();
   if (!config.training?.enabled) return;
@@ -102,6 +120,10 @@ export async function trainingMode(): Promise<void> {
   if (config.training.showLiveProgress) {
     createLiveOverlay(config.training);
   }
+
+  // Resolve local player identity once per training session (JWT sub claim).
+  // Player position varies per match — never assume index 0.
+  const myUserId = await getUserIdFromToken();
 
   gameDataWatcherUnwatch = AutodartsToolsGameData.watch(async (gameData: any) => {
     if (!gameData) return;
@@ -124,12 +146,14 @@ export async function trainingMode(): Promise<void> {
     const match = gameData.match;
     if (!match) return;
 
-    // Home player = Index 0 (konsistent mit match-card.ts / career-controller.ts)
-    const myPlayer = match.players?.[0];
+    // Resolve local player per match via userId (Player-Identity-Fix, siehe ROADMAP_DEPENDENCIES.md).
+    // Derselbe Nutzer kann in unterschiedlichen Matches an unterschiedlichen Positionen sitzen.
+    const myIndex = resolveMyPlayerIndex(match.players, myUserId);
+    const myPlayer = myIndex >= 0 ? match.players?.[myIndex] : match.players?.[0];
     if (!myPlayer) return;
 
     // Statistiken aus IMatch.stats[position].matchStats lesen (IPlayer selbst hat kein .stats-Feld)
-    const matchStats = match.stats?.[0]?.matchStats;
+    const matchStats = match.stats?.[myIndex >= 0 ? myIndex : 0]?.matchStats;
     if (matchStats) {
       liveAvg = matchStats.average ?? 0;
       live140Plus = matchStats.plus140 ?? 0;
