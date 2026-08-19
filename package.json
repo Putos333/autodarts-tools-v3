@@ -18,7 +18,7 @@
     "zip": "wxt zip",
     "zip:firefox": "wxt zip -b firefox",
     "compile": "vue-tsc --noEmit",
-    "test": "node --test tests/*.test.mjs",
+    "test": "node --import tsx --test \"tests/*.test.mjs\" \"tests/*.test.ts\"",
     "test:lifecycle": "node --test tests/lifecycle-contracts.test.mjs",
     "postinstall": "wxt prepare"
   },
