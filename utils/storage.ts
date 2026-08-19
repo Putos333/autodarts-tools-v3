@@ -312,6 +312,14 @@ export interface IConfig {
     volume: number;
     variant: 'thud' | 'click' | 'random';
   };
+  // ─── Screenshot-Export ──────────────────────────────────────────────────────
+  screenshot: {
+    enabled: boolean;
+  };
+  // ─── Karriere (KI-Kommentator) ──────────────────────────────────────────────
+  career: {
+    enabled: boolean;
+  };
 }
 
 export interface IWalkonPlayer {
@@ -1080,6 +1088,14 @@ export const defaultConfig: IConfig = {
     enabled: false,
     volume: 70,
     variant: 'random' as 'thud' | 'click' | 'random',
+  },
+  // ─── Screenshot-Export ──────────────────────────────────────────────────────
+  screenshot: {
+    enabled: false,
+  },
+  // ─── Karriere (KI-Kommentator) ──────────────────────────────────────────────
+  career: {
+    enabled: false,
   },
 };
 
