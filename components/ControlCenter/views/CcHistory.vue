@@ -474,7 +474,9 @@ function winnerNameOf(match: ICmrMatchDisplay): string | null {
 }
 
 function isWinnerMatch(match: ICmrMatchDisplay): boolean {
-  return match.finished && match.winnerIndex !== undefined;
+  if (!match.finished || match.winnerIndex === undefined || !myUserId.value) return false;
+  const me = match.players.find((p) => p.userId === myUserId.value);
+  return me !== undefined && me.index === match.winnerIndex;
 }
 
 function modeOf(match: ICmrMatchDisplay): string | null {
