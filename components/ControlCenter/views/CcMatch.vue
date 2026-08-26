@@ -3,7 +3,7 @@
     <!-- Großes Scoreboard bzw. ehrlicher Leerzustand -->
     <div class="cc-col-12">
       <template v-if="hasMatch">
-        <CcMatchScoreboard />
+        <CcMatchHero />
         <div class="cc-btn-row" style="margin-top: 14px;">
           <!-- Nur gerendert, wenn die Match-Route dieser ID belegt ist -->
           <button
@@ -78,6 +78,9 @@
 
     <!-- Historie, rein lesend aus dem gespeicherten Ergebnis-Store -->
     <CcMatchHistory class="cc-col-12" />
+
+    <!-- TEMPORÄR (Phase 5, 301/2-Legs Human Test) — siehe CcMatchHumanTestPanel.vue -->
+    <CcMatchHumanTestPanel class="cc-col-12" />
   </div>
 </template>
 
@@ -89,11 +92,21 @@
  * die Historie aus dem bestehenden Ergebnis-Store — dieser wird ausschließlich
  * gelesen. Keine eigene Match-Logik, keine Änderung an der WebSocket-
  * Verarbeitung.
+ *
+ * RUNTIME-FIX (Phase 5 Match Center Inventur): `CcMatchScoreboard.vue` wurde
+ * hier durch `CcMatchHero.vue` ersetzt. `CcMatchHero.vue` war bereits
+ * vollständig fertiggestellt (inkl. Live-Throw-/Checkout-Route-Zone, letzte
+ * Visits, Momentum), aber nie in eine View eingebunden — laut
+ * tests/match-flow.test.ts Kommentar ("fusioniert in CcMatchHero.vue statt in
+ * der jetzt ungenutzten CcMatchFlow.vue") war das bereits die beabsichtigte
+ * Konsolidierung, nur nie vollzogen. Reine Wiederverwendung vorhandener,
+ * bereits fertiger Komponenten — keine Neuentwicklung, keine Datenänderung.
  */
-import CcMatchScoreboard from "../CcMatchScoreboard.vue";
+import CcMatchHero from "../CcMatchHero.vue";
 import CcPlayersCard from "../CcPlayersCard.vue";
 import CcMatchDetails from "../CcMatchDetails.vue";
 import CcMatchHistory from "../CcMatchHistory.vue";
+import CcMatchHumanTestPanel from "../CcMatchHumanTestPanel.vue";
 import CcCard from "../CcCard.vue";
 import CcEmptyState from "../CcEmptyState.vue";
 import CcStatusPill from "../CcStatusPill.vue";

@@ -21,7 +21,8 @@ import { AutodartsToolsGameData } from "@/utils/game-data-storage";
 import { AutodartsToolsTrainingHistory, AutodartsToolsTrainingHistoryMigrated } from "@/utils/storage";
 import type { TrainingSession } from "@/utils/training-history";
 import { mergeTrainingHistories } from "@/utils/training-history";
-import { getExerciseById } from "@/utils/training-exercises";
+import { getExerciseById, PROGRESS_STORAGE_KEY, type ExerciseProgress, type ProgressMap, type TrainingExercise } from "@/utils/training-exercises";
+import { determineAutoMedal, isMedalImprovement } from "@/utils/training-medals";
 import { getUserIdFromToken } from "@/utils/helpers";
 
 /** Legacy page-localStorage key (pre-R1), read once for a non-destructive migration into browser.storage.local. */
@@ -184,6 +185,17 @@ export async function trainingMode(): Promise<void> {
 
       if (config.training?.trackHistory) {
         await saveToHistory({ goals, exerciseId: activeExercise?.id, exerciseTitle: activeExercise?.title });
+      }
+
+      // RUNTIME-FIX (Autodarts Elite, nächste Phase nach Match Center):
+      // Medaillen-Vergabe war seit v2.9.72 nie verdrahtet (siehe CcTraining.vue-
+      // Hinweis "technisch noch nicht verdrahtet") — die Live-Stats für die
+      // Auswertung liefen hier bereits durch (liveAvg/live140Plus/live180s/
+      // liveCheckoutRate/liveCheckoutMisses, s.o.), nur das Schreiben nach
+      // local:training-exercise-progress fehlte. Unabhängig von trackHistory,
+      // weil das eine separate Einstellung (Sitzungs-Log) ist.
+      if (activeExercise) {
+        await maybeAwardMedal(activeExercise);
       }
 
       // Clear active exercise after match ends
@@ -428,6 +440,50 @@ async function saveToHistory(cfg: { goals: TrainingGoals; exerciseId?: string; e
     await AutodartsToolsTrainingHistory.setValue(history);
   } catch (e) {
     console.error("[training-mode] saveToHistory failed", e);
+  }
+}
+
+// ─── Medaillen-Vergabe (Bronze/Silber/Gold pro Übung) ─────────────────────────
+// Tier-Bestimmung ist reine Logik in utils/training-medals.ts (testbar ohne
+// Browser/WXT) — hier nur das Lesen/Schreiben von browser.storage.local.
+/**
+ * Trägt ein neu erreichtes Tier in local:training-exercise-progress ein — nie
+ * abwertend gegenüber einem bereits vorhandenen besseren Medaillenstand.
+ * `attempts` zählt jeden abgeschlossenen Versuch mit aktiver Übung, auch wenn
+ * kein (automatisch verifizierbares) Tier erreicht wurde. `bestScore` bleibt
+ * unverändert — die 20 Übungen haben je unterschiedliche Zielgrößen, ein
+ * einzelner "Score"-Begriff würde hier einen Wert erfinden, den es nicht gibt.
+ */
+async function maybeAwardMedal(exercise: TrainingExercise): Promise<void> {
+  try {
+    const medal = determineAutoMedal(exercise, {
+      average: liveAvg,
+      count140Plus: live140Plus,
+      count180s: live180s,
+      checkoutRate: liveCheckoutRate,
+      checkoutMisses: liveCheckoutMisses,
+    });
+
+    const key = PROGRESS_STORAGE_KEY.replace("local:", "");
+    const stored = await browser.storage.local.get(key);
+    const progressMap = (stored[key] ?? {}) as ProgressMap;
+    const existing: ExerciseProgress = progressMap[exercise.id] ?? { medal: null, attempts: 0, bestScore: null, lastAttempt: null };
+
+    const improved = isMedalImprovement(medal, existing.medal);
+
+    progressMap[exercise.id] = {
+      ...existing,
+      medal: improved ? medal : existing.medal,
+      attempts: existing.attempts + 1,
+      lastAttempt: new Date().toISOString(),
+    };
+
+    await browser.storage.local.set({ [key]: progressMap });
+    if (improved) {
+      console.log(`[training-mode] Medaille vergeben: ${exercise.id} → ${medal}`);
+    }
+  } catch (e) {
+    console.error("[training-mode] maybeAwardMedal failed", e);
   }
 }
 

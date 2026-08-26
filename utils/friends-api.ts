@@ -74,8 +74,15 @@ export interface IQuickPlayResult {
 }
 
 // ─── Standard-Lobby-Einstellungen ─────────────────────────────────────────────
+//
+// Exportiert (Friends & Party V4), damit der Challenge-Screen die tatsächlich
+// von quickPlay() verwendeten Werte anzeigen kann, statt sie als zweite,
+// potenziell abweichende Konstante zu duplizieren. quickPlay()/quickPlayGroup()
+// akzeptieren zwar bereits einen `settings`-Parameter, die Control-Center-UI
+// ruft sie aber (Stand jetzt) ohne eigene Auswahl auf — die Anzeige ist daher
+// bewusst nur ein Read-out dieser Konstante, kein Eingabe-Control.
 
-const DEFAULT_LOBBY_SETTINGS: ILobbySettings = {
+export const DEFAULT_LOBBY_SETTINGS: ILobbySettings = {
   variant: 'X01',
   x01Settings: {
     startScore: 501,
@@ -116,8 +123,9 @@ export async function getMyUserId(): Promise<string | null> {
  *   - ID:          `userId` bevorzugt, fallback `id`
  *   - Name:        `username` bevorzugt, fallback `displayName` oder `name`
  *   - Avatar:      `avatar`  bevorzugt, fallback `avatarUrl`
- *   - Online-Flag: separater Call gegen `/as/v0/friends/online-status`, weil
- *                  GET /friends selbst KEINE online-Info zurückliefert.
+ *   - Online-Flag: nicht per REST ermittelbar (siehe getOnlineFriendIds()
+ *                  unten) — bleibt `false`, sofern `u.online` nicht direkt
+ *                  im Eintrag mitgeliefert wird.
  */
 export async function getFriends(): Promise<IFriend[]> {
   try {
@@ -126,7 +134,18 @@ export async function getFriends(): Promise<IFriend[]> {
     // wenn das gecachte Token > 15 Min alt ist).
     await ensureFreshAuthToken(2500).catch(() => null);
 
-    const response = await fetchWithAuth(`${API_BASE}/as/v0/friends`);
+    // RUNTIME-FIX (Realtest): `/as/v0/friends` OHNE Trailing-Slash antwortet mit
+    // HTTP 301 auf `/as/v0/friends/`. `fetch()` folgt dem Redirect automatisch,
+    // entfernt dabei aber den `Authorization`-Header (Standard-Verhalten der
+    // Fetch-Spec bei Redirects) — die umgeleitete Anfrage kommt dadurch ohne
+    // Token an und liefert 401, selbst mit einem frischen, gültigen Token. Per
+    // curl gegen die echte API verifiziert: nur die Trailing-Slash-Form
+    // antwortet direkt (ohne Redirect).
+    // TEMP-DIAG (Realtest 2): sichtbar machen, welche URL wirklich raus geht
+    // und was zurückkommt — ohne je den Token-Inhalt zu loggen.
+    console.log(`[ADT-DIAG] FRIENDS_REQUEST_URL: ${API_BASE}/as/v0/friends/`);
+    const response = await fetchWithAuth(`${API_BASE}/as/v0/friends/`);
+    console.log(`[ADT-DIAG] FRIENDS_REQUEST_STATUS: ${response.status}  RESPONSE_STATUS: ${response.ok ? "OK" : "ERROR"}`);
     if (!response.ok) {
       console.error('[Friends] Freundesliste konnte nicht abgerufen werden — HTTP', response.status);
       return [];
@@ -161,29 +180,35 @@ export async function getFriends(): Promise<IFriend[]> {
 }
 
 /**
- * Fragt den `/as/v0/friends/online-status`-Endpoint ab. Autodarts liefert
- * ein Array/Objekt mit den userIds der aktuell online-sichtbaren Freunde.
- * Bei Fehler → leeres Set (alle Freunde werden dann als offline gerendert).
+ * RUNTIME-FIX (Realtest 3): `/as/v0/friends/online-status` ist KEIN Bulk-
+ * Presence-Endpoint für die Freundesliste. Per Reverse-Engineering des
+ * echten Autodarts-Bundles (`assets/index-*.js` von play.autodarts.com)
+ * verifiziert:
+ *
+ *   async setVisibility(t){ await this.axios.put("/friends/online-status",{status:t}) }
+ *   async getVisibility(){ const{data:t}=await this.axios.get("/friends/online-status"); return t }
+ *
+ * Das ist die eigene Sichtbarkeits-Einstellung des eingeloggten Nutzers
+ * (Online/Offline/Incognito) — GET liefert nicht "welche meiner Freunde sind
+ * online", sondern nur den eigenen Status. Selbst Autodarts' eigene Web-App
+ * hat KEINEN REST-Abruf für den Live-Status der Freundesliste: im Bundle
+ * abonniert jede Freund-Zeile den Status einzeln über einen WebSocket-Kanal
+ * (`un.getInstance().subscribe("autodarts.friends", `${userId}.status`, cb)`),
+ * gespeist von Events des Typs `online-status`/`activity`. Es gibt keinen
+ * Snapshot-Endpoint, auch nicht bei Autodarts selbst.
+ *
+ * Diese Erweiterung sieht den `autodarts.friends`-Kanal nie: er wird nur
+ * gesendet, wenn Autodarts' EIGENES Friends-Panel aktiv im selben Tab läuft
+ * und sich pro Freund einzeln einträgt — nicht beim bloßen Öffnen von
+ * play.autodarts.com. Ihn selbst zu abonnieren würde bedeuten, Autodarts'
+ * internes Pub/Sub-Protokoll nachzubauen: eine zweite, parallele Friends-/
+ * Socket-Engine, die hier ausdrücklich nicht gebaut werden soll.
+ *
+ * Deshalb bewusst kein Netzwerk-Call mehr hierher: ein leeres Set ist der
+ * einzige ehrliche Wert, den es für diese Datenquelle geben kann.
  */
 async function getOnlineFriendIds(): Promise<Set<string>> {
-  try {
-    const res = await fetchWithAuth(`${API_BASE}/as/v0/friends/online-status`);
-    if (!res.ok) return new Set();
-    const payload = await res.json();
-    // Formate die wir laut Bundle sehen: entweder Array<{userId,online}>,
-    // oder Array<string>, oder {online: string[]}.
-    if (Array.isArray(payload)) {
-      return new Set(payload.map((p: any) =>
-        typeof p === 'string' ? p : (p.userId ?? p.id ?? '')
-      ).filter(Boolean));
-    }
-    if (payload && Array.isArray(payload.online)) {
-      return new Set(payload.online);
-    }
-    return new Set();
-  } catch (_) {
-    return new Set();
-  }
+  return new Set();
 }
 
 // ─── Head-to-Head Statistiken ─────────────────────────────────────────────────
@@ -558,8 +583,9 @@ export async function quickPlayGroup(
 // manchen Konten nicht unter `username`/`displayName`/`name` liegen. Das Mapping
 // oben fällt dann auf den Literaltext 'Unbekannt' zurück und `online` auf
 // `false` — beides ist von einem echten Wert nicht mehr zu unterscheiden.
-// Ebenso verschluckt es, ob `/as/v0/friends/online-status` überhaupt geantwortet
-// hat: schlägt der Call fehl, erscheinen alle Freunde als "offline".
+// Ebenso verschluckt es, dass es für den Online-Status der Freundesliste
+// überhaupt keinen abrufbaren Endpunkt gibt (siehe getOnlineFriendIds()
+// oben) — dort erscheinen alle Freunde fälschlich als "offline".
 //
 // Diese Funktion ist rein ADDITIV. `getFriends()` und alle bestehenden Aufrufer
 // (u.a. components/Settings/Friends.vue) bleiben unverändert. Sie nutzt exakt
@@ -584,7 +610,12 @@ export interface IFriendsDiagnostic {
   ok: boolean;
   httpStatus: number | null;
   friends: IFriendResolved[];
-  /** Hat `/as/v0/friends/online-status` verwertbar geantwortet? */
+  /**
+   * Immer `false` (RUNTIME-FIX Realtest 3): Autodarts bietet keinen
+   * abrufbaren Endpunkt für den Live-Status der Freundesliste — siehe
+   * getOnlineFriendIds() oben. Feld bleibt erhalten, damit die UI weiterhin
+   * explizit zwischen "unbekannt" und "bestätigt online/offline" trennt.
+   */
   onlineStatusAvailable: boolean;
   /** Feldnamen des ersten Eintrags — macht sichtbar, was Autodarts liefert. */
   sampleKeys: string[];
@@ -660,7 +691,13 @@ export async function getFriendsDiagnostic(): Promise<IFriendsDiagnostic> {
   try {
     await ensureFreshAuthToken(2500).catch(() => null);
 
-    const response = await fetchWithAuth(`${API_BASE}/as/v0/friends`);
+    // RUNTIME-FIX: siehe getFriends() oben — Trailing-Slash zwingend, sonst
+    // 301-Redirect ohne Authorization-Header → falsches 401/"no-auth".
+    // TEMP-DIAG (Realtest 2): dies ist der Pfad, den Friends & Party V4
+    // tatsächlich nutzt (useControlCenterFriends.load() ruft diese Funktion).
+    console.log(`[ADT-DIAG] FRIENDS_REQUEST_URL: ${API_BASE}/as/v0/friends/`);
+    const response = await fetchWithAuth(`${API_BASE}/as/v0/friends/`);
+    console.log(`[ADT-DIAG] FRIENDS_REQUEST_STATUS: ${response.status}  RESPONSE_STATUS: ${response.ok ? "OK" : "ERROR"}`);
     if (!response.ok) {
       return { ...empty, httpStatus: response.status, error: `HTTP ${response.status}` };
     }
@@ -668,26 +705,17 @@ export async function getFriendsDiagnostic(): Promise<IFriendsDiagnostic> {
     const data = await response.json();
     const users: any[] = Array.isArray(data) ? data : (data?.items ?? data?.friends ?? []);
 
-    // Online-Status separat — und wir merken uns, ob er überhaupt kam.
-    let onlineIds = new Set<string>();
-    let onlineStatusAvailable = false;
-    try {
-      const res = await fetchWithAuth(`${API_BASE}/as/v0/friends/online-status`);
-      if (res.ok) {
-        const payload = await res.json();
-        if (Array.isArray(payload)) {
-          onlineIds = new Set(
-            payload
-              .map((p: any) => (typeof p === 'string' ? p : (p?.userId ?? p?.id ?? '')))
-              .filter(Boolean),
-          );
-          onlineStatusAvailable = true;
-        } else if (payload && Array.isArray(payload.online)) {
-          onlineIds = new Set(payload.online);
-          onlineStatusAvailable = true;
-        }
-      }
-    } catch (_) { /* onlineStatusAvailable bleibt false */ }
+    // RUNTIME-FIX (Realtest 3): `/as/v0/friends/online-status` ist die eigene
+    // Sichtbarkeits-Einstellung des Nutzers (getVisibility()/setVisibility()
+    // im echten Autodarts-Bundle), kein Bulk-Presence-Endpoint für Freunde —
+    // siehe ausführliche Begründung bei getOnlineFriendIds() oben. Der echte
+    // Live-Status läuft ausschließlich über den WebSocket-Kanal
+    // "autodarts.friends" (Topic `${userId}.status`), den auch Autodarts'
+    // eigene App nur pro Freund-Zeile abonniert, nie als Liste abruft — und
+    // den diese Erweiterung ohne eine zweite, parallele Socket-Engine nicht
+    // sehen kann. onlineStatusAvailable bleibt daher ehrlich `false`.
+    const onlineIds = new Set<string>();
+    const onlineStatusAvailable = false;
 
     const friends: IFriendResolved[] = users.map((entry: any): IFriendResolved => {
       const id = resolveId(entry);

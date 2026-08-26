@@ -13,8 +13,6 @@ export type TCcSectionId =
   | "match"
   | "training"
   | "party"
-  | "sound"
-  | "lighting"
   | "stats"
   | "history"
   | "settings";
@@ -62,18 +60,6 @@ export const CC_SECTIONS: ICcSection[] = [
     icon: "icon-[pixelarticons--users]",
   },
   {
-    id: "sound",
-    label: "Caller & Sounds",
-    hint: "Status und Schnellumschalter für Caller, Sound-FX und Crowd",
-    icon: "icon-[pixelarticons--volume-3]",
-  },
-  {
-    id: "lighting",
-    label: "WLED / Beleuchtung",
-    hint: "Status und Schnellumschalter für konfigurierte WLED-Effekte",
-    icon: "icon-[pixelarticons--lightbulb]",
-  },
-  {
     id: "stats",
     label: "Statistiken",
     hint: "Kennzahlen und Trends aus deinen gespeicherten Match-Ergebnissen",
@@ -88,7 +74,7 @@ export const CC_SECTIONS: ICcSection[] = [
   {
     id: "settings",
     label: "Einstellungen",
-    hint: "Version, Diagnose und Datenschutz — Details in den klassischen Einstellungen",
+    hint: "Version, Diagnose, Datenschutz, Caller & Sounds, WLED / Beleuchtung",
     icon: "icon-[pixelarticons--sliders]",
   },
 ];

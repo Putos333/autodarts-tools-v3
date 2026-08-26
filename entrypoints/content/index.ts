@@ -75,6 +75,12 @@ export default defineContentScript({
           // v2.9.90: tokenAt-Zeitstempel für Freshness-Check in
           //          utils/auth-refresh.ts::ensureFreshAuthToken().
           auth: { token: authValue, tokenAt: Date.now() },
+        }).then(() => {
+          // ── TEMP-DIAG (Realtest 2, Friends & Party): bestätigt den
+          //    Schreibpfad nach local:globalstatus. Kein Token-Inhalt.
+          console.log(`[ADT-DIAG] TOKEN_STORAGE: YES  key=local:globalstatus  TOKEN_LENGTH: ${typeof authValue === "string" ? authValue.length : 0}`);
+        }).catch(() => {
+          console.log("[ADT-DIAG] TOKEN_STORAGE: NO (setValue fehlgeschlagen)");
         });
       });
     });

@@ -45,6 +45,8 @@
             <CcStatTile v-if="hasBoardSignal" label="Board" :value="boardStatusLabel" accent="accent" />
           </div>
         </div>
+
+        <CcTrainingActiveReflection />
       </CcCard>
     </div>
 
@@ -52,6 +54,12 @@
     <div class="cc-col-12">
       <CcCard title="Schnellstart" subtitle="Deine Top-Übungen — Fortschritt sichtbar, sofort loslegen" icon="icon-[pixelarticons--play]" accent="muted">
         <template #status>
+          <span
+            v-if="lastSession?.exerciseId"
+            class="cc-panel-cta"
+            data-testid="cc-training-repeat-last"
+            @click="repeatLastExercise"
+          ><span class="icon-[pixelarticons--reload]" /> Letzte Übung wiederholen</span>
           <CcStatusPill label="20 Übungen" tone="gold" class="is-sm" />
         </template>
 
@@ -103,9 +111,85 @@
       </div>
     </template>
 
-    <!-- (D) LETZTES TRAINING / FORTSCHRITT -->
+    <!-- (D1) PERFORMANCE -->
+    <div class="cc-col-12">
+      <CcCard title="Trainings-Performance" subtitle="Aggregiert über alle gespeicherten Sessions" icon="icon-[pixelarticons--trending-up]" accent="muted">
+        <div v-if="performance.sessionCount > 0" class="cc-tiles" style="grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));">
+          <CcStatTile label="Sessions" :value="performance.sessionCount" />
+          <CcStatTile label="Ø Average" :value="performance.meanAverage" :decimals="1" />
+          <CcStatTile label="Ø Checkout-Quote" :value="performance.meanCheckoutRate" :decimals="0" unit="%" />
+          <CcStatTile label="Bester Average" :value="personalBests.bestAverage?.value ?? null" :decimals="1" accent="gold" />
+          <CcStatTile label="Meiste 180er / Session" :value="personalBests.best180sInSession?.value ?? null" accent="gold" />
+          <CcStatTile label="Beste Checkout-Quote" :value="personalBests.bestCheckoutRate?.value ?? null" :decimals="0" unit="%" accent="gold" />
+        </div>
+        <CcEmptyState
+          v-else
+          icon="icon-[pixelarticons--trending-up]"
+          title="Noch keine Trainingsdaten für eine Auswertung"
+          text="Sobald deine erste Session gespeichert ist, erscheinen hier Durchschnittswerte und persönliche Bestleistungen."
+        />
+      </CcCard>
+    </div>
+
+    <!-- (D2) FORTSCHRITT & EMPFEHLUNG -->
+    <div class="cc-col-8">
+      <CcCard title="Fortschritt" subtitle="Average der letzten Sessions, chronologisch" icon="icon-[pixelarticons--chart]" accent="muted">
+        <div v-if="progressTrend.length >= 2" class="cc-trend">
+          <svg
+            class="cc-trend-svg"
+            viewBox="0 0 200 60"
+            preserveAspectRatio="none"
+            role="img"
+            :aria-label="`Trainings-Average-Verlauf über ${progressTrend.length} Sessions, von ${progressTrend[0].average.toFixed(1)} bis ${progressTrend[progressTrend.length - 1].average.toFixed(1)}`"
+          >
+            <polyline :points="trainingTrendPoints" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" />
+          </svg>
+          <div class="cc-trend-range">
+            <span>{{ progressTrend[0].average.toFixed(1) }}</span>
+            <span>{{ progressTrend[progressTrend.length - 1].average.toFixed(1) }}</span>
+          </div>
+        </div>
+        <CcEmptyState
+          v-else
+          icon="icon-[pixelarticons--chart]"
+          title="Noch zu wenig Sessions für einen Verlauf"
+          text="Sobald mindestens zwei Trainings-Sessions gespeichert sind, erscheint hier dein Average-Verlauf."
+        />
+      </CcCard>
+    </div>
+
+    <div class="cc-col-4">
+      <CcCard title="Empfehlung" subtitle="Verglichen mit deinem eigenen Schnitt" icon="icon-[pixelarticons--target]" accent="muted">
+        <template v-if="!recommendation.sufficient">
+          <CcEmptyState
+            icon="icon-[pixelarticons--target]"
+            title="Noch zu wenig Sessions"
+            text="Ab 5 gespeicherten Sessions vergleichen wir deine jüngsten Werte mit deinem eigenen Gesamtschnitt."
+          />
+        </template>
+        <template v-else-if="recommendation.reason === 'checkout'">
+          <p class="cc-note">
+            Deine Checkout-Quote der letzten 5 Sessions (<b>{{ recommendation.recentValue!.toFixed(0) }}%</b>)
+            liegt unter deinem eigenen Gesamtschnitt (<b>{{ recommendation.overallValue!.toFixed(0) }}%</b>).
+            Eine Checkout-Übung könnte sich lohnen.
+          </p>
+        </template>
+        <template v-else-if="recommendation.reason === 'scoring'">
+          <p class="cc-note">
+            Dein Average der letzten 5 Sessions (<b>{{ recommendation.recentValue!.toFixed(1) }}</b>)
+            liegt unter deinem eigenen Gesamtschnitt (<b>{{ recommendation.overallValue!.toFixed(1) }}</b>).
+            Eine Scoring-Übung könnte sich lohnen.
+          </p>
+        </template>
+        <template v-else>
+          <p class="cc-note">Deine jüngsten Sessions liegen auf Höhe deines eigenen Schnitts — keine auffällige Schwäche.</p>
+        </template>
+      </CcCard>
+    </div>
+
+    <!-- (D3) LETZTES TRAINING -->
     <div class="cc-col-7">
-      <CcCard title="Letztes Training" subtitle="Verlauf gespeicherter Sessions (Training-Modus)" icon="icon-[pixelarticons--clock]" accent="muted">
+      <CcCard title="Letztes Training" subtitle="Verlauf gespeicherter Sessions (Training-Modus) — Zeile anklicken für Details" icon="icon-[pixelarticons--clock]" accent="muted">
         <div v-if="trainingHistory.length > 0">
           <div class="cc-list" style="max-height: 320px; overflow-y: auto;">
             <div
@@ -113,11 +197,15 @@
               :key="session.date"
               class="cc-result"
               :class="{ 'is-current': session === trainingHistory[0] }"
+              style="cursor: pointer;"
+              data-testid="cc-training-session-row"
+              @click="selectedSession = session === selectedSession ? null : session"
             >
               <div class="cc-result-date">{{ formatDate(session.date) }}</div>
               <div class="cc-result-names">
                 <span>
                   <template v-if="session.exerciseTitle">{{ session.exerciseTitle }} — </template>{{ session.goalsReached }} / {{ session.totalGoals }} Ziele erreicht
+                  <span v-if="isSessionPersonalBest(session, 'average', personalBests)" class="cc-flag" data-testid="cc-training-pb-flag">Bester Average</span>
                 </span>
                 <div class="cc-result-sub">
                   Ø {{ session.average.toFixed(1) }} · {{ session.count140Plus }}× 140+ · {{ session.count180s }}× 180
@@ -127,6 +215,22 @@
               <div class="cc-result-score" :class="session.goalsReached === session.totalGoals ? 'is-gold' : ''">
                 {{ session.goalsReached }}/{{ session.totalGoals }}
               </div>
+            </div>
+          </div>
+
+          <div v-if="selectedSession" class="cc-session-detail" data-testid="cc-training-session-detail">
+            <div class="cc-session-detail-head">
+              <span class="cc-session-detail-title">
+                <template v-if="selectedSession.exerciseTitle">{{ selectedSession.exerciseTitle }} — </template>{{ formatDate(selectedSession.date) }}
+              </span>
+            </div>
+            <div class="cc-tiles" style="grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); margin-top: 6px;">
+              <CcStatTile label="Average" :value="selectedSession.average" :decimals="1" :accent="isSessionPersonalBest(selectedSession, 'average', personalBests) ? 'gold' : 'plain'" />
+              <CcStatTile label="140+" :value="selectedSession.count140Plus" />
+              <CcStatTile label="180er" :value="selectedSession.count180s" :accent="isSessionPersonalBest(selectedSession, 'count180s', personalBests) ? 'gold' : 'plain'" />
+              <CcStatTile label="Checkout-Quote" :value="selectedSession.checkoutRate" :decimals="0" unit="%" :accent="isSessionPersonalBest(selectedSession, 'checkoutRate', personalBests) ? 'gold' : 'plain'" />
+              <CcStatTile label="Fehlversuche" :value="selectedSession.checkoutMisses" />
+              <CcStatTile label="Ziele" :value="`${selectedSession.goalsReached}/${selectedSession.totalGoals}`" />
             </div>
           </div>
         </div>
@@ -179,13 +283,14 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from "vue";
+import { computed, inject, onMounted, ref } from "vue";
 
 import CcCard from "../CcCard.vue";
 import CcStatTile from "../CcStatTile.vue";
 import CcEmptyState from "../CcEmptyState.vue";
 import CcStatusPill from "../CcStatusPill.vue";
 import CcExerciseCard from "../CcExerciseCard.vue";
+import CcTrainingActiveReflection from "../CcTrainingActiveReflection.vue";
 import { openAutodarts, openClassicSettings } from "../open-autodarts";
 import {
   TRAINING_EXERCISES,
@@ -197,12 +302,71 @@ import {
 } from "@/utils/training-exercises";
 import { getTrainingHistory } from "@/entrypoints/match.content/training-mode";
 import { useControlCenterStatus } from "@/composables/useControlCenterStatus";
+import {
+  computePersonalBests,
+  computeProgressTrend,
+  computeTrainingPerformance,
+  computeTrainingRecommendation,
+  isSessionPersonalBest,
+} from "@/utils/training-performance";
+import type { TrainingSession } from "@/utils/training-history";
+
+/** Vom Control-Center-Root via provide() zur Verfügung gestellt (wie CcExerciseCard.vue). */
+type ShowNotification = (message: string, type?: "success" | "error", duration?: number) => void;
+const showNotification = inject<ShowNotification>("cc-notification");
 
 /* ─── Training History ──────────────────────────────────────────────────────── */
 const trainingHistory = ref<Awaited<ReturnType<typeof getTrainingHistory>>>([]);
+const selectedSession = ref<TrainingSession | null>(null);
 
 async function loadHistory(): Promise<void> {
   trainingHistory.value = await getTrainingHistory();
+}
+
+/* ─── Performance / Bestleistungen / Fortschritt / Empfehlung (rein abgeleitet) ── */
+const lastSession = computed<TrainingSession | null>(() => trainingHistory.value[0] ?? null);
+const performance = computed(() => computeTrainingPerformance(trainingHistory.value));
+const personalBests = computed(() => computePersonalBests(trainingHistory.value));
+const progressTrend = computed(() => computeProgressTrend(trainingHistory.value, 8));
+const recommendation = computed(() => computeTrainingRecommendation(trainingHistory.value));
+
+const trainingTrendPoints = computed(() => {
+  const points = progressTrend.value;
+  if (points.length < 2) return "";
+  const values = points.map(p => p.average);
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const range = max - min || 1;
+  const stepX = 200 / (points.length - 1);
+  return points
+    .map((p, i) => {
+      const x = i * stepX;
+      const y = 55 - ((p.average - min) / range) * 50;
+      return `${x.toFixed(1)},${y.toFixed(1)}`;
+    })
+    .join(" ");
+});
+
+/**
+ * Wiederholt exakt denselben echten Start-Workflow wie CcExerciseCard.vue
+ * (setzt nur den bestehenden Storage-Key, keine zweite Engine) — für die
+ * zuletzt tatsächlich gespielte Übung, falls bekannt.
+ */
+async function repeatLastExercise(): Promise<void> {
+  const exerciseId = lastSession.value?.exerciseId;
+  if (!exerciseId) return;
+  const exercise = TRAINING_EXERCISES.find(ex => ex.id === exerciseId);
+  try {
+    await browser.storage.local.set({ "training-active-exercise": exerciseId });
+    showNotification?.(
+      `Übung „${exercise?.title ?? exerciseId}" gestartet. Öffne jetzt play.autodarts.io und beginne ein Match.`,
+      "success",
+      8000,
+    );
+  } catch (error) {
+    console.error("[CcTraining] repeatLastExercise failed", error);
+    showNotification?.("Übung konnte nicht gestartet werden.", "error");
+  }
 }
 
 /* ─── Exercise Progress (Medaillen) ─────────────────────────────────────────── */
@@ -337,3 +501,33 @@ onMounted(async () => {
   await Promise.all([loadHistory(), loadProgress()]);
 });
 </script>
+
+<style scoped>
+.cc-trend {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.cc-trend-svg {
+  width: 100%;
+  height: 80px;
+  color: var(--cc-gold);
+}
+.cc-trend-range {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: var(--cc-text-faint);
+}
+.cc-session-detail {
+  border: 1px solid var(--cc-border-bright);
+  background: var(--cc-surface);
+  border-radius: var(--cc-radius-sm);
+  padding: 12px 14px;
+  margin-top: 10px;
+}
+.cc-session-detail-title {
+  font-family: var(--cc-font-display);
+  font-weight: 700;
+}
+</style>

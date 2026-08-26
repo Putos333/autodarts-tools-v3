@@ -150,8 +150,19 @@ export default defineConfig({
     // TD-02: `drop` gehört zu Vite's Top-Level `esbuild`-Option (UserConfig.esbuild),
     // nicht unter `build.esbuild` (BuildOptions kennt dieses Feld nicht – wurde bisher
     // von Vite stillschweigend ignoriert, siehe node_modules/vite/dist/node/index.d.ts).
+    //
+    // RUNTIME-FIX (Realtest 2, Friends & Party): "console" stand hier ebenfalls in
+    // `drop` und hat dadurch AUSNAHMSLOS jeden console.*-Aufruf aus JEDEM Build
+    // entfernt — auch aus `yarn build`/`yarn build:firefox`, also genau den Builds,
+    // die real via about:debugging geladen werden. Das betraf nicht nur die neuen
+    // [ADT-DIAG]-Logs dieser Untersuchung, sondern ausnahmslos alle console.log/
+    // warn/error-Aufrufe im gesamten Projekt — ein zuverlässiger Realtest mit
+    // Diagnose-Logs war dadurch grundsätzlich unmöglich. `debugger` bleibt entfernt
+    // (unkritisch). TEMPORÄR bis der reale Datenweg vom Nutzer bestätigt ist —
+    // danach kann "console" hier wieder ergänzt werden, wenn stille Production-
+    // Logs gewünscht sind.
     esbuild: {
-      drop: [ "console", "debugger" ],
+      drop: [ "debugger" ],
     },
   }),
 });

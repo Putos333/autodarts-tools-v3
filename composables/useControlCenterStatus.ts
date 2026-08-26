@@ -44,6 +44,12 @@ import {
   getCanonicalMatchResults,
 } from "@/utils/canonical-match-result-storage";
 import type { ICanonicalMatchResult } from "@/utils/canonical-match-result";
+// Checkout-Route-Tabelle: dieselbe Quelle wie CcMatchScoreboard.vue und das
+// bestehende Bogey-Warning-Overlay — eine Tabelle, kein Duplikat.
+import { CHECKOUTS } from "@/entrypoints/match.content/bogey-warning";
+import { deriveCheckoutPath, type ICcCheckoutPath } from "@/utils/checkout-path";
+import { deriveLiveThrow, type ICcLiveThrow } from "@/utils/live-throw";
+import { deriveMomentum, deriveRecentVisits, type ICcMomentum, type ICcRecentVisit } from "@/utils/match-flow";
 
 /** Der Key, den websocket-monitor.content.ts schreibt (kein WXT-Item). */
 const WS_STATUS_KEY = "adt-ws-status";
@@ -78,6 +84,10 @@ export interface ICcPlayer {
   average?: number;
   first9Average?: number;
   total180?: number;
+  /** Anzahl Visits mit 100+ Punkten (`matchStats.plus100`). */
+  plus100?: number;
+  /** Anzahl Visits mit 140+ Punkten (`matchStats.plus140`). */
+  plus140?: number;
   dartsThrown?: number;
   checkoutPercent?: number;
   /**
@@ -493,6 +503,8 @@ export function useControlCenterStatus() {
         average: typeof matchStats?.average === "number" ? matchStats.average : undefined,
         first9Average: typeof matchStats?.first9Average === "number" ? matchStats.first9Average : undefined,
         total180: typeof matchStats?.total180 === "number" ? matchStats.total180 : undefined,
+        plus100: typeof matchStats?.plus100 === "number" ? matchStats.plus100 : undefined,
+        plus140: typeof matchStats?.plus140 === "number" ? matchStats.plus140 : undefined,
         dartsThrown: typeof matchStats?.dartsThrown === "number" ? matchStats.dartsThrown : undefined,
         checkoutPercent: typeof matchStats?.checkoutPercent === "number" ? matchStats.checkoutPercent : undefined,
         checkoutPoints: typeof matchStats?.checkoutPoints === "number" ? matchStats.checkoutPoints : undefined,
@@ -581,6 +593,25 @@ export function useControlCenterStatus() {
     return { left: list[0], right: list[1], extra: Math.max(0, list.length - 2) };
   });
 
+  /** Live-Checkout-Route für den Match Hero (Wave 2) — siehe utils/checkout-path.ts. */
+  const checkoutPath = computed<ICcCheckoutPath>(() => deriveCheckoutPath(match.value, isX01.value, CHECKOUTS));
+
+  /** Live-Throw-Area für den Match Hero (Wave 2, Slice 1) — siehe utils/live-throw.ts. */
+  const liveThrow = computed<ICcLiveThrow>(() => deriveLiveThrow(match.value));
+
+  /** Letzte abgeschlossene Visits (Wave 2, Slice 2) — siehe utils/match-flow.ts. */
+  const recentVisits = computed<ICcRecentVisit[]>(() => deriveRecentVisits(match.value));
+
+  /**
+   * Momentum (Wave 2, Slice 2): der zuletzt abgeschlossene Visit des aktiven
+   * Spielers gegen dessen eigenen Match-Average — bewusst kein Trend über
+   * mehrere Visits (siehe Kommentar in utils/match-flow.ts).
+   */
+  const momentum = computed<ICcMomentum>(() => {
+    const activePlayer = players.value.find(p => p.isActive);
+    return deriveMomentum(liveThrow.value.previousVisit?.score, activePlayer?.average);
+  });
+
   /** "Legs 1 : 2" bzw. "Sets 1 : 2" — nur aus gemeldeten Werten. */
   const heroScoreLine = computed(() => {
     const pair = heroPair.value;
@@ -667,6 +698,8 @@ export function useControlCenterStatus() {
         stat("first9", "First 9", player?.first9Average, 2),
         stat("checkout", "Checkout", player?.checkoutPercent, 1, "plain", "%"),
         stat("total180", "180er", player?.total180, 0, "gold"),
+        stat("plus140", "140+", player?.plus140, 0),
+        stat("plus100", "100+", player?.plus100, 0),
         stat("highFinish", "High Finish", player?.checkoutPoints, 0, "gold"),
         stat("darts", "Darts", player?.dartsThrown, 0),
       ];
@@ -683,6 +716,8 @@ export function useControlCenterStatus() {
       stat("first9", "First 9", player?.first9Average, 2),
       stat("checkout", "Checkout", player?.checkoutPercent, 1, "plain", "%"),
       stat("total180", "180er", player?.total180, 0, "gold"),
+      stat("plus140", "140+", player?.plus140, 0),
+      stat("plus100", "100+", player?.plus100, 0),
       stat("highFinish", "High Finish", player?.checkoutPoints, 0, "gold"),
     ].filter(entry => entry.value !== null);
 
@@ -839,12 +874,17 @@ export function useControlCenterStatus() {
 
   // ── Backend ───────────────────────────────────────────────────────────────
 
+  // RUNTIME-FIX (Realtest 2): "Backend" allein liest sich wie "Autodarts" oder
+  // "Friends & Party" — es ist aber ausschließlich der optionale KI-Kommentator-
+  // Backend-Ping (pingBackend() oben, /api/marathon/health), unabhängig von
+  // Autodarts-Login und Freundesliste. Zwei reale Tests haben das verwechselt.
+  // Label eindeutig gemacht, Semantik/Zustände unverändert.
   const backendLabel = computed(() => {
     switch (backendState.value) {
-      case "ok": return `Backend erreichbar${backendLatencyMs.value !== null ? ` · ${backendLatencyMs.value} ms` : ""}`;
-      case "error": return "Backend nicht erreichbar";
-      case "checking": return "Backend wird geprüft …";
-      default: return "Backend nicht geprüft";
+      case "ok": return `KI-Backend erreichbar${backendLatencyMs.value !== null ? ` · ${backendLatencyMs.value} ms` : ""}`;
+      case "error": return "KI-Backend nicht erreichbar";
+      case "checking": return "KI-Backend wird geprüft …";
+      default: return "KI-Backend nicht geprüft";
     }
   });
 
@@ -910,6 +950,10 @@ export function useControlCenterStatus() {
     heroPair,
     heroScoreLine,
     matchTitle,
+    checkoutPath,
+    liveThrow,
+    recentVisits,
+    momentum,
 
     // Quick-Stats
     focusPlayer,

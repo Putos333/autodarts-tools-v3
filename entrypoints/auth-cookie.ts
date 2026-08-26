@@ -46,6 +46,10 @@ export default defineUnlistedScript(() => {
     if (!token || token === lastToken) return;
     lastToken = token;
     console.log("[Auth] access_token captured / refreshed");
+    // ── TEMP-DIAG (Realtest 2, Friends & Party): sicherer, nicht-sensitiver
+    //    Log der Erfassungsstufe. Gibt NIE den Token-Inhalt aus, nur ob und
+    //    wie lang. Nach Bestätigung des Realbetriebs wieder entfernbar.
+    console.log(`[ADT-DIAG] TOKEN_CAPTURED: YES  TOKEN_LENGTH: ${token.length}  origin=${window.location.origin}`);
     window.dispatchEvent(new CustomEvent("auth-cookie-available", {
       detail: { authValue: token },
     }));

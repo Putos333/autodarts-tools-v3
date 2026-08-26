@@ -16,6 +16,18 @@
       </CcCard>
     </div>
 
+    <!-- (B0) CALLER & SOUNDS / WLED — hierher verschoben aus der Haupt-
+         navigation (Elite Home Dashboard, Wave 2). Unveränderte Komponenten,
+         nur an anderer Stelle eingehängt: der ursprüngliche Autodarts Caller
+         bleibt die bevorzugte Ansage-Quelle, diese Umschalter sind Setup, kein
+         täglicher Einstieg. -->
+    <div class="cc-col-12">
+      <CcSound />
+    </div>
+    <div class="cc-col-12">
+      <CcLighting />
+    </div>
+
     <!-- (B) VERSION -->
     <div class="cc-col-4">
       <CcCard title="Version" icon="icon-[pixelarticons--info-box]" accent="muted">
@@ -72,6 +84,8 @@ import { onBeforeUnmount, onMounted, ref } from "vue";
 import CcCard from "../CcCard.vue";
 import CcStatTile from "../CcStatTile.vue";
 import CcEmptyState from "../CcEmptyState.vue";
+import CcSound from "./CcSound.vue";
+import CcLighting from "./CcLighting.vue";
 import { openClassicSettings } from "../open-autodarts";
 import { AutodartsToolsConfig, AutodartsToolsTrainingHistory, defaultConfig, type IConfig } from "@/utils/storage";
 import { getCanonicalMatchResults } from "@/utils/canonical-match-result-storage";
