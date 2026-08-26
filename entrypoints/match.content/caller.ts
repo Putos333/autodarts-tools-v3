@@ -883,9 +883,6 @@ function playSound(trigger: string): void {
           const randomIndex = Math.floor(Math.random() * matchingSounds.length);
           const soundToPlay = matchingSounds[randomIndex];
 
-          console.log("soundToPlay");
-          console.log(soundToPlay);
-
           // Add to queue
           if (soundToPlay.url || soundToPlay.base64 || soundToPlay.soundId || soundToPlay.tts) {
             soundQueue.push({

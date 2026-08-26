@@ -21,8 +21,8 @@
         <p class="cc-note" style="font-size: 13px;">
           Alle Werte hier stammen aus denselben gespeicherten Ergebnissen wie im
           <a href="#history" style="color: var(--cc-gold); text-decoration: underline;">Verlauf</a>. Fehlende
-          Werte werden ehrlich als „–" angezeigt, nie als 0. „Siege/Niederlagen" beziehen sich auf
-          Spieler-Position 1 im Match — dieselbe Konvention wie im Verlauf.
+          Werte werden ehrlich als „–" angezeigt, nie als 0. „Siege/Niederlagen" werden über deine
+          gespeicherte Nutzer-ID (Player-Identity-Fix) ermittelt — nicht über eine feste Spieler-Position.
         </p>
       </CcCard>
     </div>
@@ -89,13 +89,13 @@
           <CcStatTile
             label="Siege"
             :value="overview.summary.wins"
-            hint="Spieler-Position 1"
+            hint="Deine Nutzer-ID"
             accent="accent"
           />
           <CcStatTile
             label="Niederlagen"
             :value="overview.summary.losses"
-            hint="Spieler-Position 1"
+            hint="Deine Nutzer-ID"
             accent="plain"
           />
           <CcStatTile

@@ -38,7 +38,7 @@
           <CcStatTile label="Vollständig" :value="kpis.complete" accent="accent" />
           <CcStatTile label="Teilweise" :value="kpis.partial" accent="accent" />
           <CcStatTile label="Minimal" :value="kpis.minimal" accent="plain" />
-          <CcStatTile label="Siege" :value="kpis.wins" hint="Matches mit Sieg (Spieler 1)" accent="gold" />
+          <CcStatTile label="Siege" :value="kpis.wins" hint="Deine Nutzer-ID" accent="gold" />
           <CcStatTile label="Ø Average" :value="kpis.avgAverage" :decimals="1" hint="Aus vollständigen Matches" accent="accent" />
         </div>
       </div>

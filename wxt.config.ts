@@ -1,6 +1,6 @@
 import { URL, fileURLToPath } from "node:url";
 
-import { defineConfig } from "wxt";
+import { defineConfig, type ConfigEnv } from "wxt";
 import vue from "@vitejs/plugin-vue";
 import AutoImport from "unplugin-auto-import/vite";
 import Component from "unplugin-vue-components/vite";
@@ -22,7 +22,11 @@ export default defineConfig({
       vueTemplate: true,
     },
   },
-  manifest: {
+  // `manifest` als Funktion: Chrome erwartet laut Schema `author: {email}`,
+  // Firefox validiert `author` dagegen strikt als String (sonst Manifest-
+  // Warnung "Expected string instead of {...}"). Der Rest des Manifests ist
+  // für beide Ziele identisch, daher nur `author` pro Browser unterschieden.
+  manifest: ({ browser }: ConfigEnv) => ({
     host_permissions: [
       "*://play.autodarts.io/*",
       "*://play.autodarts.com/*",
@@ -37,6 +41,7 @@ export default defineConfig({
     permissions: [
       "storage",
       "activeTab",
+      "alarms",
       // "background",
     ],
     background: {
@@ -62,7 +67,7 @@ export default defineConfig({
       },
     },
     homepage_url: "https://darts-caller-ext.emergent.host",
-    author: { email: "community@autodarts.tools" },
+    author: browser === "firefox" ? "community@autodarts.tools" : { email: "community@autodarts.tools" },
     // content_scripts: [
     //   {
     //     matches: [ "*://play.autodarts.io/*" ],
@@ -87,7 +92,7 @@ export default defineConfig({
         matches: [ "*://play.autodarts.io/*", "*://play.autodarts.com/*" ],
       },
     ],
-  },
+  }),
   dev: {
     reloadCommand: "Alt+T",
   },

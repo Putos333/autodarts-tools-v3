@@ -56,6 +56,15 @@ watch(currentUrl, async (newURL, oldURL) => {
       if (Date.now() < toolsOpeningGuardUntil) return;
       configVisible.value = false;
     }
+
+    // P0-FIX: Nach SPA-Navigation auf eine Seite MIT Sidebar (Match/Lobby/Boards)
+    // initMenu() erneut aufrufen, damit der Sidebar-Eintrag "Tools" nachgerüstet wird.
+    // Auf der Login-Seite gab es keinen Settings-Link → nur FAB. Nach Login existiert
+    // die Sidebar, aber initMenu() lief nie wieder.
+    const isMainAppPage = /\/(matches|boards|lobbies|lobbynew|history|tournament)(?:\/|$)/i.test(newURL);
+    if (isMainAppPage) {
+      initMenu().catch(console.error);
+    }
   }
 });
 

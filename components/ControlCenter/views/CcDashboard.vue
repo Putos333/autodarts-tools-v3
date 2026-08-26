@@ -16,6 +16,9 @@
     <CcPlayersCard class="cc-col-7" />
     <CcMatchDetails class="cc-col-5" />
 
+    <!-- ── TOOLS-STATUS (welche Features aktiv sind, read-only) ─────────── -->
+    <CcToolsStatus class="cc-col-12" />
+
     <!-- ── KURZÜBERSICHT (Bilanz + letztes Training, aus lokal gespeicherten Daten) ── -->
     <CcDashboardSummary class="cc-col-12" />
   </div>
@@ -35,5 +38,6 @@ import CcConnectionCard from "../CcConnectionCard.vue";
 import CcQuickStats from "../CcQuickStats.vue";
 import CcPlayersCard from "../CcPlayersCard.vue";
 import CcMatchDetails from "../CcMatchDetails.vue";
+import CcToolsStatus from "../CcToolsStatus.vue";
 import CcDashboardSummary from "../CcDashboardSummary.vue";
 </script>

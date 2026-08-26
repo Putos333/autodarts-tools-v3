@@ -154,7 +154,7 @@ const games = [
     difficulty: 'mittel',
     difficultyLabel: '⭐⭐ Mittel',
     players: '1–4 Spieler',
-    image: '/regelwerk/img_x01.png',
+    image: '/regelwerk/img_x01.svg',
     goal: 'Jeder Spieler startet mit der gleichen Punktzahl (meist 501). Das Ziel ist es, diese Punkte exakt auf 0 herunterzuspielen. Wer zuerst auf 0 ist, gewinnt das Leg.',
     steps: [
       'Beide Spieler starten mit 501 Punkten.',
@@ -186,7 +186,7 @@ const games = [
     difficulty: 'mittel',
     difficultyLabel: '⭐⭐ Mittel',
     players: '2–4 Spieler',
-    image: '/regelwerk/img_cricket.png',
+    image: '/regelwerk/img_cricket.svg',
     goal: 'Du musst die Zahlen 15 bis 20 sowie das Bullseye jeweils dreimal treffen ("schließen") und am Ende die meisten Punkte haben.',
     steps: [
       'Beide Spieler starten mit 0 Punkten.',
@@ -218,7 +218,7 @@ const games = [
     difficulty: 'schwer',
     difficultyLabel: '⭐⭐⭐ Schwer',
     players: '1–4 Spieler',
-    image: '/regelwerk/img_bobs27.png',
+    image: '/regelwerk/img_bobs27.svg',
     goal: 'Überlebe alle 21 Doppel-Felder (D1 bis D20 plus Bullseye), ohne dass dein Punktestand unter 0 fällt.',
     steps: [
       'Du startest mit 27 Punkten.',
@@ -250,7 +250,7 @@ const games = [
     difficulty: 'leicht',
     difficultyLabel: '⭐ Leicht',
     players: '2–8 Spieler',
-    image: '/regelwerk/img_aroundclock.png',
+    image: '/regelwerk/img_aroundclock.svg',
     goal: 'Triff alle Zahlen von 1 bis 20 in der richtigen Reihenfolge und beende das Spiel mit dem Bullseye.',
     steps: [
       'Beide Spieler starten bei der Zahl 1.',
@@ -273,7 +273,7 @@ const games = [
     difficulty: 'leicht',
     difficultyLabel: '⭐ Einfach',
     players: '1 Spieler',
-    image: '/regelwerk/img_training.png',
+    image: '/regelwerk/img_training.svg',
     goal: 'Setze dir vor dem Spiel persönliche Ziele (Average, 180er, Checkout-Quote) und verfolge deinen Fortschritt live während des Matches.',
     steps: [
       'Öffne das Erweiterungsmenü und gehe auf den Tab "Training".',
@@ -297,7 +297,7 @@ const games = [
     difficulty: 'leicht',
     difficultyLabel: '⭐ Einfach',
     players: '2–4 Spieler',
-    image: '/regelwerk/img_buzzer.png',
+    image: '/regelwerk/img_buzzer.svg',
     goal: 'Jeder Spieler nutzt sein Smartphone als Buzzer. Wer zuerst drückt, darf als nächstes werfen – perfekt für gesellige Dart-Abende!',
     steps: [
       'Öffne das Erweiterungsmenü und gehe auf den Tab "Party-Buzzer".',
@@ -321,7 +321,7 @@ const games = [
     difficulty: 'leicht',
     difficultyLabel: '⭐ Automatisch',
     players: '2 Spieler',
-    image: '/regelwerk/img_handicap.png',
+    image: '/regelwerk/img_handicap.svg',
     goal: 'Das System gleicht Unterschiede im Spielniveau automatisch aus, damit auch Anfänger gegen Profis eine faire Chance haben.',
     steps: [
       'Das System vergleicht automatisch die historischen Averages beider Spieler.',

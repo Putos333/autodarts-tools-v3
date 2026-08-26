@@ -344,6 +344,76 @@ Unlock-Verhalten bei einem einzigen Klick auftritt.
 
 ---
 
+## Phase I Erweiterte Tests — Regression-Check für R7 & Training History
+
+Diese Tests decken die statisch behobenen Punkte aus Big Factory Mission Part 2 ab (2026-08-20). Sie erfordern echte Matches oder Reload-Szenarien.
+
+---
+
+### Test U — Reload/Restart Recovery (R7-Fix) — Priorität: P0
+
+**VORAUSSETZUNG:** Ein Match ist gelaufen (oder wird im Boardsimulator gestartet), Control Center zeigt das Match an. Extension ist installiert und aktiv.
+**AKTION:**
+1. Starte ein Match (Board oder Simulator) und lass mindestens 1–2 Darts werfen, damit `local:game-data` befüllt wird.
+2. Öffne Control Center (neuer Tab: `about:debugging` → Extension → "Control Center" oder Popup → "Öffnen") und prüfe: Match-Daten sind sichtbar (Spieler, Score, Average).
+3. **Reload der Autodarts-Seite** (Strg+R oder F5) — **nicht** Extension-Reload, nur Seiten-Reload.
+4. Warte bis Seite geladen ist, Extension sich neu initialisiert (Console: "Autodarts Tools: Observer: No Active Match found" oder "Clearing match").
+5. Öffne Control Center erneut.
+**ERWARTET:** Control Center zeigt **kein** "aktives Match" mehr (keine Geister-Daten vom alten Match), sondern sauberen Startzustand (leeres Match oder "Kein aktives Match").
+**FEHLERBILD:** Control Center zeigt noch alte Spieler/Scores/Averages vom vor dem Reload beendeten Match — `local:game-data` wurde nicht geleert.
+**WAS NOTIEREN:** Ob alte Daten sichtbar sind, Console-Logs zu `clearMatch`/`setValue(defaultGameData)`.
+
+---
+
+### Test V — Bull-off-Übergang (R7-Fix: NICHT leeren) — Priorität: P1
+
+**VORAUSSETZUNG:** Match läuft, Bull-off wird geworfen (Übergang zwischen Legs).
+**AKTION:**
+1. Match mit mehreren Legs (Best of 3+) spielen.
+2. Wenn Bull-off kommt: Console beobachten auf "Clearing match" / `fromBullOff=true`.
+3. Nach Bull-off (neues Leg startet): Control Center prüfen.
+**ERWARTET:** Match-Daten bleiben **erhalten** (kein Leeren von `local:game-data` während Bull-off), Overlay/Control Center flackert nicht unnötig.
+**FEHLERBILD:** `local:game-data` wird beim Bull-off geleert → Control Center kurz leer, dann neu befüllt (sichtbares Flackern).
+**WAS NOTIEREN:** Ob Flackern auftritt, Console-Logs zu `fromBullOff`.
+
+---
+
+### Test W — Training History Migration (Legacy → local:) — Priorität: P1
+
+**VORAUSSETZUNG:** Browser mit **alter** Trainings-History im page-localStorage (`localStorage['ad-training-history']` existiert, mind. 1 Eintrag), Extension **noch nie** nach v3.0 Migration gelaufen (oder `AutodartsToolsTrainingHistoryMigrated` Flag manuell gelöscht in DevTools → Application → Local Storage → `extension://...` → `adt-training-history-migrated` löschen).
+**AKTION:**
+1. DevTools → Application → Local Storage → `https://play.autodarts.io` → prüfen: `ad-training-history` existiert mit Einträgen.
+2. Extension installieren/laden, Training in Settings aktivieren.
+3. Ein Match starten (oder Simulator), Training-Modus läuft mit (Overlay erscheint).
+4. Match beenden.
+5. DevTools → Application → Local Storage → `extension://<extension-id>` → prüfen: `local:training-history` existiert UND `adt-training-history-migrated` = `true`.
+6. Control Center → Einstellungen → Training → Verlauf öffnen.
+**ERWARTET:** Alle Legacy-Einträge sind in Control Center sichtbar (nach Datum absteigend, max 50), `adt-training-history-migrated` = `true`, `ad-training-history` im page-localStorage bleibt unangetastet (nur gelesen, nicht gelöscht).
+**FEHLERBILD:** Control Center zeigt leeren Verlauf, obwohl Legacy-Daten da waren; oder `adt-training-history-migrated` bleibt `false`; oder Duplikate im Verlauf.
+**WAS NOTIEREN:** Anzahl Einträge vor/nach Migration, `adt-training-history-migrated` Wert, evtl. Console-Fehler `[training-mode] migrateLegacyTrainingHistory failed`.
+
+---
+
+### Test X — mergeTrainingHistories Dedup (gleiches Datum) — Priorität: P2
+
+**VORAUSSETZUNG:** Wie Test W, aber: `local:training-history` hat **bereits** Einträge, und Legacy-Daten enthalten **dasselbe Datum** (ISO-String identisch).
+**AKTION:** Gleicher Ablauf wie Test W, aber Legacy-Daten manuell so präparieren, dass ein Datum mit aktuellem Eintrag kollidiert.
+**ERWARTET:** Kein Duplikat — der **aktuelle** Eintrag (aus `local:training-history`) gewinnt, Legacy-Eintrag mit gleichem Datum wird verworfen.
+**FEHLERBILD:** Zwei Einträge mit identischem Datum im Verlauf.
+**WAS NOTIEREN:** Ob Duplikat auftritt.
+
+---
+
+### Test Y — Training History MaxEntries Cap (50) — Priorität: P2
+
+**VORAUSSETZUNG:** `local:training-history` hat bereits 45 Einträge, Legacy liefert 10 Einträge (gesamt 55, Cap = 50).
+**AKTION:** Migration durchlaufen lassen (Test W), dann Control Center Verlauf prüfen.
+**ERWARTET:** Genau 50 Einträge (neueste 50 nach Datum), ältere 5 verworfen.
+**FEHLERBILD:** Mehr als 50 Einträge im Verlauf.
+**WAS NOTIEREN:** Exakte Anzahl Einträge nach Migration.
+
+---
+
 ## Nach dem Testen
 
 Fasse alle notierten Fehler in einer kurzen Liste zusammen (Test-Buchstabe +

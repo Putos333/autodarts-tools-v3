@@ -1159,6 +1159,14 @@ export const AutodartsToolsTrainingHistoryMigrated: WxtStorageItem<boolean, any>
   },
 );
 
+/** Training exercise progress (per-exercise progress tracking) */
+export const AutodartsToolsTrainingProgress: WxtStorageItem<Record<string, any>, any> = storage.defineItem(
+  "local:training-exercise-progress",
+  {
+    defaultValue: {},
+  },
+);
+
 /**
  * Map to track locks for each config key to prevent concurrent updates
  */

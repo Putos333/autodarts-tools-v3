@@ -646,7 +646,7 @@ async function fetchPresets() {
       + 'presets.json';
     console.log("Autodarts Tools: WLED: loading presets from", presetUrl);
     availablePresetsOptions.value = [{ value: newEffect.value.preset, label: 'failed to fetch presets' }];
-    window.fetch(presetUrl)
+    await window.fetch(presetUrl)
       .then((resp) => resp.json())
       .then((data: Record<string, { n: string }>) => {
         if (data && typeof data === 'object') {
@@ -658,6 +658,9 @@ async function fetchPresets() {
         } else {
           console.error('Autodarts Tools: WLED: Invalid response format. Expected an object.', data);
         }
+      })
+      .catch((error) => {
+        console.error('Autodarts Tools: WLED: Error fetching presets:', error);
       });
   } catch (error) {
     console.error('Autodarts Tools: WLED: Error fetching presets:', error);

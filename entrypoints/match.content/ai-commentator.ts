@@ -376,7 +376,8 @@ async function processGameData(gameData: IGameData, oldGameData: IGameData): Pro
       const ownIndex = ownUserId
         ? players.findIndex(p => p.userId === ownUserId)
         : -1;
-      const legPlayerIndex = ownIndex >= 0 ? ownIndex : 0;
+      if (ownIndex < 0) return; // Identity not resolved — skip leg stats
+      const legPlayerIndex = ownIndex;
       const playerStats = match.stats?.[legPlayerIndex];
       const legStats = playerStats?.legStats;
       const playerName = players[legPlayerIndex]?.name ?? config.aiCommentator?.playerName1 ?? 'Spieler';

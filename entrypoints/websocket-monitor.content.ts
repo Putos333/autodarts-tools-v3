@@ -11,14 +11,11 @@ export default defineContentScript({
 
     // Set up event listeners BEFORE injecting the script to avoid race conditions
     // This is critical for WXT 0.20.13+ where injectScript waits for script to load
-    ctx.addEventListener(window, "websocket-incoming", (event: Event) => {
+    const handleIncoming = (event: Event) => {
       const customEvent = event as CustomEvent;
       const { data } = customEvent.detail;
-
-      // Only process string data that can be parsed as JSON
       if (typeof data === "string") {
         try {
-          // Try to parse JSON data
           const jsonData = JSON.parse(data);
           console.log("[Content Script] Parsed JSON data:", jsonData);
           processWebSocketMessage(jsonData.channel, jsonData.data).catch(console.error);
@@ -26,24 +23,34 @@ export default defineContentScript({
           // Not JSON data, don't log
         }
       }
-    });
-
-    // Listen for outgoing WebSocket messages
-    ctx.addEventListener(window, "websocket-outgoing", (event: Event) => {
+    };
+    const handleOutgoing = (event: Event) => {
       const customEvent = event as CustomEvent;
       const { data } = customEvent.detail;
-
-      // Only process string data that can be parsed as JSON
       if (typeof data === "string") {
         try {
-          // Try to parse JSON data
-          const jsonData = JSON.parse(data);
+          JSON.parse(data);
           // Commented out logging for outgoing messages
-          // console.log("[Content Script] Sent Parsed JSON:", jsonData);
         } catch (e) {
           // Not JSON data, don't log
         }
       }
+    };
+    const handleStatus = (event: Event) => {
+      const customEvent = event as CustomEvent;
+      const { status } = customEvent.detail;
+      console.log("[Content Script] WebSocket status:", status);
+    };
+
+    ctx.addEventListener(window, "websocket-incoming", handleIncoming);
+    ctx.addEventListener(window, "websocket-outgoing", handleOutgoing);
+    ctx.addEventListener(window, "autodarts-ws-status", handleStatus);
+
+    // Cleanup on content script unload (SPA navigation or extension update)
+    ctx.onInvalidated?.(() => {
+      window.removeEventListener("websocket-incoming", handleIncoming);
+      window.removeEventListener("websocket-outgoing", handleOutgoing);
+      window.removeEventListener("autodarts-ws-status", handleStatus);
     });
 
     // v2.9.87 — Verbindungsstatus in storage.local schreiben, Popup + UI lesen davon.

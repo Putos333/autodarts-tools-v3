@@ -5,7 +5,7 @@
         <div class="cc-detail-heading">Bilanz</div>
         <div v-if="summary.totalMatches > 0" class="cc-tiles" style="grid-template-columns: repeat(2, minmax(0, 1fr));">
           <CcStatTile label="Matches" :value="summary.totalMatches" accent="gold" />
-          <CcStatTile label="Win Rate" :value="winRatePercent" unit="%" hint="Spieler-Position 1" />
+          <CcStatTile label="Win Rate" :value="winRatePercent" unit="%" hint="Deine Nutzer-ID" />
         </div>
         <p v-else class="cc-note" style="font-size: 12px;">Noch keine gespeicherten Matches.</p>
       </div>

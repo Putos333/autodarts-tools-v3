@@ -43,9 +43,11 @@ async function migrateLegacyTrainingHistory(): Promise<void> {
       const current = await AutodartsToolsTrainingHistory.getValue();
       await AutodartsToolsTrainingHistory.setValue(mergeTrainingHistories(current, legacy));
     }
+    // Only mark as migrated AFTER successful parse+merge
     await AutodartsToolsTrainingHistoryMigrated.setValue(true);
   } catch (e) {
     console.error("[training-mode] migrateLegacyTrainingHistory failed", e);
+    // Don't set migration flag on failure — allows retry on next match
   }
 }
 
@@ -149,11 +151,12 @@ export async function trainingMode(): Promise<void> {
     // Resolve local player per match via userId (Player-Identity-Fix, siehe ROADMAP_DEPENDENCIES.md).
     // Derselbe Nutzer kann in unterschiedlichen Matches an unterschiedlichen Positionen sitzen.
     const myIndex = resolveMyPlayerIndex(match.players, myUserId);
-    const myPlayer = myIndex >= 0 ? match.players?.[myIndex] : match.players?.[0];
+    if (myIndex < 0) return; // Identity not resolved in this match — skip stats attribution
+    const myPlayer = match.players?.[myIndex];
     if (!myPlayer) return;
 
     // Statistiken aus IMatch.stats[position].matchStats lesen (IPlayer selbst hat kein .stats-Feld)
-    const matchStats = match.stats?.[myIndex >= 0 ? myIndex : 0]?.matchStats;
+    const matchStats = match.stats?.[myIndex]?.matchStats;
     if (matchStats) {
       liveAvg = matchStats.average ?? 0;
       live140Plus = matchStats.plus140 ?? 0;

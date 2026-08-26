@@ -20,7 +20,7 @@ const BOGEY_NUMBERS = new Set([159, 162, 163, 165, 166, 168, 169]);
 
 // ─── Checkout-Tabelle (Double Out, häufigste Wege) ────────────────────────────
 
-const CHECKOUTS: Record<number, string> = {
+export const CHECKOUTS: Record<number, string> = {
   170: "T20 T20 Bull",  168: "T20 T20 T12",  167: "T20 T19 Bull",
   166: "T20 T18 Bull",  165: "T20 T19 T12",  164: "T20 T18 T10",
   163: "T20 T19 T10",   162: "T20 T18 T12",  161: "T20 T17 Bull",

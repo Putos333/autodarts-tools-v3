@@ -177,52 +177,52 @@ function goalColors(reached: number, total: number): string {
   border: 1px solid #1e3050;
   border-radius: 8px;
   overflow: hidden;
-  font-family: 'Barniedrig Condensed', Arial, sans-serif;
+  font-family: 'Barlow Condensed', Arial, sans-serif;
 }
 .tr-header {
-  display: flex; align-items: Mitte; gap: 12px;
+  display: flex; align-items: center; gap: 12px;
   padding: 14px 16px; background: #0a1520;
-  border-unten: 3px solid #F5C842;
+  border-bottom: 3px solid #F5C842;
 }
 .tr-header-icon { font-size: 24px; }
 .tr-header-title { font-size: 16px; font-weight: 900; color: #fff; }
 .tr-header-subtitle { font-size: 11px; color: #556677; }
-.ml-auto { margin-links: auto; }
-.tr-tabs { display: flex; background: #0a1520; border-unten: 1px solid #1e3050; }
+.ml-auto { margin-left: auto; }
+.tr-tabs { display: flex; background: #0a1520; border-bottom: 1px solid #1e3050; }
 .tr-tab {
   flex: 1; padding: 10px; background: none; border: none;
-  border-unten: 2px solid transparent; color: #556677;
+  border-bottom: 2px solid transparent; color: #556677;
   font-size: 13px; font-weight: 700; cursor: pointer; transition: all 0.2s;
 }
-.tr-tab.active { color: #F5C842; border-unten-color: #F5C842; }
+.tr-tab.active { color: #F5C842; border-bottom-color: #F5C842; }
 .tr-body { padding: 16px; }
 .tr-info {
   font-size: 13px; color: #556677; padding: 10px 12px;
-  background: #0a1520; border-radius: 4px; border-links: 3px solid #F5C842;
-  margin-unten: 16px; line-height: 1.5;
+  background: #0a1520; border-radius: 4px; border-left: 3px solid #F5C842;
+  margin-bottom: 16px; line-height: 1.5;
 }
 .tr-goal-block {
   background: #0a1520; border: 1px solid #1e3050; border-radius: 6px;
-  padding: 12px; margin-unten: 10px;
+  padding: 12px; margin-bottom: 10px;
 }
-.tr-goal-header { display: flex; justify-content: space-between; align-items: Mitte; margin-unten: 8px; }
+.tr-goal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
 .tr-goal-label { font-size: 14px; font-weight: 700; color: #c0ccd8; }
 .tr-goal-value { font-size: 18px; font-weight: 900; color: #F5C842; }
 .tr-slider { width: 100%; accent-color: #F5C842; }
-.tr-slider-hints { display: flex; justify-content: space-between; font-size: 10px; color: #556677; margin-oben: 2px; }
+.tr-slider-hints { display: flex; justify-content: space-between; font-size: 10px; color: #556677; margin-top: 2px; }
 .tr-subsection-label {
   font-size: 10px; font-weight: 700; letter-spacing: 2px;
-  color: #F5C842; text-transform: uppercase; margin-unten: 8px;
+  color: #F5C842; text-transform: uppercase; margin-bottom: 8px;
 }
-.mt { margin-oben: 16px; }
+.mt { margin-top: 16px; }
 .tr-checkbox-row {
-  display: flex; align-items: Mitte; gap: 8px; font-size: 14px;
+  display: flex; align-items: center; gap: 8px; font-size: 14px;
   color: #c0ccd8; cursor: pointer; padding: 8px;
   border-radius: 4px; background: #0a1520; border: 1px solid #1e3050;
-  margin-unten: 6px;
+  margin-bottom: 6px;
 }
 .tr-checkbox-row input { accent-color: #F5C842; }
-.tr-verlauf-actions { display: flex; gap: 8px; margin-unten: 12px; }
+.tr-verlauf-actions { display: flex; gap: 8px; margin-bottom: 12px; }
 .tr-btn {
   padding: 8px 14px; background: #1e3050; border: 1px solid #2a4060;
   border-radius: 4px; color: #c0ccd8; font-size: 13px; font-weight: 700; cursor: pointer;
@@ -232,18 +232,18 @@ function goalColors(reached: number, total: number): string {
   border-radius: 4px; color: #E8002D; font-size: 13px; font-weight: 700; cursor: pointer;
 }
 .tr-empty {
-  text-align: Mitte; padding: 30px; color: #c0ccd8; font-size: 15px;
-  display: flex; flex-direction: column; align-items: Mitte; gap: 8px;
+  text-align: center; padding: 30px; color: #c0ccd8; font-size: 15px;
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
 }
 .tr-session-card {
   background: #0a1520; border: 1px solid #1e3050; border-radius: 6px;
-  padding: 10px 12px; margin-unten: 8px;
+  padding: 10px 12px; margin-bottom: 8px;
 }
-.tr-session-header { display: flex; justify-content: space-between; align-items: Mitte; margin-unten: 8px; }
+.tr-session-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
 .tr-session-date { font-size: 12px; color: #556677; }
 .tr-session-goals { font-size: 14px; font-weight: 900; }
 .tr-session-stats { display: flex; gap: 12px; }
-.tr-session-stat { display: flex; flex-direction: column; align-items: Mitte; }
+.tr-session-stat { display: flex; flex-direction: column; align-items: center; }
 .tr-session-stat-label { font-size: 9px; font-weight: 700; color: #556677; letter-spacing: 1px; }
 .tr-session-stat-value { font-size: 18px; font-weight: 900; color: #F5C842; }
 .ad-toggle { position: relative; width: 44px; height: 24px; flex-shrink: 0; }

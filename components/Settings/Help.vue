@@ -6,7 +6,7 @@
         <span class="help-icon">❓</span>
         <div>
           <h1 class="help-title">HILFE & ANLEITUNG</h1>
-          <p class="help-subtitle">Autodarts Tools – Extended Bearbeitenion by Arnonym2302</p>
+          <p class="help-subtitle">Autodarts Tools – Extended Edition by Arnonym2302</p>
         </div>
       </div>
       <div class="help-search">
@@ -968,22 +968,22 @@ const filteredFeatures = computed(() => {
   background: #0D1B2A;
   min-height: 100vh;
   color: #fff;
-  font-family: 'Barniedrig Condensed', 'Arial Narrow', sans-serif;
+  font-family: 'Barlow Condensed', 'Arial Narrow', sans-serif;
 }
 
 .help-header {
   background: linear-gradient(135deg, #0D1B2A 0%, #1a2d42 100%);
-  border-unten: 3px solid #E8002D;
+  border-bottom: 3px solid #E8002D;
   padding: 20px 24px;
   display: flex;
-  align-items: Mitte;
+  align-items: center;
   justify-content: space-between;
   gap: 16px;
 }
 
 .help-header-links {
   display: flex;
-  align-items: Mitte;
+  align-items: center;
   gap: 16px;
 }
 
@@ -1033,12 +1033,12 @@ const filteredFeatures = computed(() => {
   gap: 6px;
   padding: 16px 24px;
   background: rgba(255,255,255,0.03);
-  border-unten: 1px solid rgba(255,255,255,0.1);
+  border-bottom: 1px solid rgba(255,255,255,0.1);
 }
 
 .help-nav-btn {
   display: flex;
-  align-items: Mitte;
+  align-items: center;
   gap: 6px;
   padding: 8px 14px;
   background: rgba(255,255,255,0.07);
@@ -1076,11 +1076,11 @@ const filteredFeatures = computed(() => {
 
 .feature-header {
   display: flex;
-  align-items: Mitte;
+  align-items: center;
   gap: 20px;
-  margin-unten: 28px;
-  padding-unten: 20px;
-  border-unten: 2px solid rgba(255,255,255,0.1);
+  margin-bottom: 28px;
+  padding-bottom: 20px;
+  border-bottom: 2px solid rgba(255,255,255,0.1);
 }
 
 .feature-header-icon {
@@ -1088,8 +1088,8 @@ const filteredFeatures = computed(() => {
   width: 70px;
   height: 70px;
   display: flex;
-  align-items: Mitte;
-  justify-content: Mitte;
+  align-items: center;
+  justify-content: center;
   background: rgba(255,255,255,0.05);
   border-radius: 12px;
   border: 1px solid rgba(255,255,255,0.1);
@@ -1112,7 +1112,7 @@ const filteredFeatures = computed(() => {
 }
 
 .feature-badge {
-  margin-links: auto;
+  margin-left: auto;
   padding: 6px 14px;
   border-radius: 20px;
   font-size: 0.75rem;
@@ -1131,7 +1131,7 @@ const filteredFeatures = computed(() => {
   display: flex;
   flex-direction: column;
   gap: 16px;
-  margin-unten: 32px;
+  margin-bottom: 32px;
 }
 
 .step-card {
@@ -1154,13 +1154,13 @@ const filteredFeatures = computed(() => {
   background: #E8002D;
   border-radius: 50%;
   display: flex;
-  align-items: Mitte;
-  justify-content: Mitte;
+  align-items: center;
+  justify-content: center;
   font-size: 1rem;
   font-weight: 900;
   color: #fff;
   flex-shrink: 0;
-  margin-oben: 2px;
+  margin-top: 2px;
 }
 
 .step-content {
@@ -1184,10 +1184,10 @@ const filteredFeatures = computed(() => {
 }
 
 .step-tip {
-  margin-oben: 10px;
+  margin-top: 10px;
   padding: 8px 12px;
   background: rgba(245,200,66,0.1);
-  border-links: 3px solid #F5C842;
+  border-left: 3px solid #F5C842;
   border-radius: 4px;
   font-size: 0.9rem;
   color: #F5C842;
@@ -1197,10 +1197,10 @@ const filteredFeatures = computed(() => {
 }
 
 .step-warning {
-  margin-oben: 10px;
+  margin-top: 10px;
   padding: 8px 12px;
   background: rgba(232,0,45,0.1);
-  border-links: 3px solid #E8002D;
+  border-left: 3px solid #E8002D;
   border-radius: 4px;
   font-size: 0.9rem;
   color: #ff6b6b;
@@ -1210,7 +1210,7 @@ const filteredFeatures = computed(() => {
 }
 
 .step-code {
-  margin-oben: 10px;
+  margin-top: 10px;
   padding: 8px 12px;
   background: rgba(0,0,0,0.4);
   border-radius: 6px;
@@ -1220,7 +1220,7 @@ const filteredFeatures = computed(() => {
 }
 
 .faq-section {
-  margin-oben: 8px;
+  margin-top: 8px;
 }
 
 .faq-title {
@@ -1230,12 +1230,12 @@ const filteredFeatures = computed(() => {
   letter-spacing: 2px;
   text-transform: uppercase;
   margin: 0 0 16px 0;
-  padding-unten: 10px;
-  border-unten: 1px solid rgba(255,255,255,0.1);
+  padding-bottom: 10px;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
 }
 
 .faq-item {
-  margin-unten: 8px;
+  margin-bottom: 8px;
   border: 1px solid rgba(255,255,255,0.1);
   border-radius: 8px;
   overflow: hidden;
@@ -1249,11 +1249,11 @@ const filteredFeatures = computed(() => {
   color: #fff;
   font-size: 0.95rem;
   font-weight: 700;
-  text-align: links;
+  text-align: left;
   cursor: pointer;
   display: flex;
   justify-content: space-between;
-  align-items: Mitte;
+  align-items: center;
   transition: background 0.2s;
 }
 
@@ -1273,12 +1273,12 @@ const filteredFeatures = computed(() => {
   color: rgba(255,255,255,0.75);
   font-size: 0.95rem;
   line-height: 1.6;
-  border-oben: 1px solid rgba(255,255,255,0.08);
+  border-top: 1px solid rgba(255,255,255,0.08);
 }
 
 .help-empty {
   padding: 60px 24px;
-  text-align: Mitte;
+  text-align: center;
   color: rgba(255,255,255,0.4);
   font-size: 1.1rem;
 }

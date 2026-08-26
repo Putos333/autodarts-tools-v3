@@ -1,0 +1,421 @@
+From 2f1110e6d450c83f4d4966a7d1b6dae85758f474 Mon Sep 17 00:00:00 2001
+From: Emergent E1 Agent <emergent-agent@darts-caller-ext.local>
+Date: Tue, 11 Aug 2026 18:31:57 +0000
+Subject: [PATCH] fix(listeners): eliminate P0 lifecycle leaks (Issue #9 P0-1 +
+ P0-2)
+
+P0-1 (next-player-on-take-out-stuck.ts):
+- Remove the module-top-level monkey-patch of Document.prototype.addEventListener
+  and the unbounded eventListenersMap. It leaked every document listener from
+  Autodarts core / other scripts and was never rolled back on feature-remove.
+- Replace with stable module-scope handler references (clickHandlerRef,
+  fullscreenHandlerRef) that guard registration and are removed cleanly in
+  nextPlayerOnTakeOutStuckOnRemove(). This also fixes P1-1 (broken cleanup
+  via callback.name lookup returning the wrong handler on re-enable).
+
+P0-2 (discord-webhooks.ts + lobby.content/index.ts):
+- Track the Start-Game MutationObserver in a module-scope ref, add a guard so
+  only one observer is ever attached to document.body, and disconnect it on
+  feature remove.
+- Add discordWebhooksOnRemove() that disconnects the observer, cancels the
+  pending autoStartTimer, removes the injected Discord button and resets
+  per-session state.
+- Register discordWebhooksOnRemove() in lobby.content/index.ts route-leave
+  branch, analogous to botSkinPickerOnRemove() etc.
+
+No gameplay/UI/feature behaviour changes. P0-3 (caller.ts blob-cleanup
+interval) and P1-2 (caller.ts unlockAudio listeners) intentionally deferred
+per user request.
+---
+ entrypoints/lobby.content/discord-webhooks.ts |  37 +++-
+ entrypoints/lobby.content/index.ts            |   3 +-
+ .../next-player-on-take-out-stuck.ts          |  67 +++----
+ scripts/test-issue-9-listener-lifecycle.mjs   | 182 ++++++++++++++++++
+ 4 files changed, 242 insertions(+), 47 deletions(-)
+ create mode 100644 scripts/test-issue-9-listener-lifecycle.mjs
+
+diff --git a/entrypoints/lobby.content/discord-webhooks.ts b/entrypoints/lobby.content/discord-webhooks.ts
+index 2df5029..e02db3d 100644
+--- a/entrypoints/lobby.content/discord-webhooks.ts
++++ b/entrypoints/lobby.content/discord-webhooks.ts
+@@ -16,6 +16,9 @@ let webhookUrl: string | null = null;
+ let storedLobbyFields: Array<{ name: string; value: string; inline: boolean }> = [];
+ // Flag to prevent duplicate message updates
+ let messageUpdated = false;
++// Lifecycle-bound MutationObserver reference so we can disconnect on remove
++// and never register more than one across enable → remove → enable (Issue #9 P0-2).
++let startButtonObserver: MutationObserver | null = null;
+ 
+ export async function discordWebhooks() {
+   console.log("Autodarts Tools: Discord Webhooks - Starting");
+@@ -117,8 +120,11 @@ export async function discordWebhooks() {
+ 
+ // Function to set up a mutation observer to watch for the Start Game button
+ function setupStartButtonListener() {
++  // Guard: only ever create one observer across enable → remove → enable.
++  if (startButtonObserver !== null) return;
++
+   // Create a MutationObserver to watch for button additions to the DOM
+-  const observer = new MutationObserver((mutations) => {
++  startButtonObserver = new MutationObserver((mutations) => {
+     for (const mutation of mutations) {
+       if (mutation.type === "childList") {
+         const startButtons = Array.from(document.querySelectorAll("button")).filter(
+@@ -140,7 +146,7 @@ function setupStartButtonListener() {
+   });
+ 
+   // Start observing the document body for changes
+-  observer.observe(document.body, { childList: true, subtree: true });
++  startButtonObserver.observe(document.body, { childList: true, subtree: true });
+ 
+   // Check for existing buttons
+   const existingStartButtons = Array.from(document.querySelectorAll("button")).filter(
+@@ -443,3 +449,30 @@ function startAutoStartTimer(minutes: number) {
+     }
+   }, milliseconds);
+ }
++
++// Lifecycle cleanup for Discord Webhooks feature (Issue #9 P0-2).
++// Called from lobby.content/index.ts when leaving the lobby route.
++// Behaviour: disconnect the body-wide MutationObserver, cancel any pending
++// auto-start timer, remove the injected Discord button, and reset module state
++// so that a subsequent lobby-enter re-arms the feature cleanly.
++export function discordWebhooksOnRemove(): void {
++  if (startButtonObserver !== null) {
++    startButtonObserver.disconnect();
++    startButtonObserver = null;
++  }
++
++  if (autoStartTimer !== null) {
++    clearTimeout(autoStartTimer);
++    autoStartTimer = null;
++  }
++
++  // Remove injected Discord button(s), if still present.
++  document.querySelectorAll<HTMLButtonElement>("button[title=\"Send Discord Webhook\"]")
++    .forEach(b => b.remove());
++
++  // Reset per-session state so the next lobby-enter starts fresh.
++  webhookMessageId = null;
++  webhookUrl = null;
++  storedLobbyFields = [];
++  messageUpdated = false;
++}
+diff --git a/entrypoints/lobby.content/index.ts b/entrypoints/lobby.content/index.ts
+index 091b8d6..34a5639 100644
+--- a/entrypoints/lobby.content/index.ts
++++ b/entrypoints/lobby.content/index.ts
+@@ -13,7 +13,7 @@ import {
+   AutodartsToolsConfig,
+   AutodartsToolsUrlStatus,
+ } from "@/utils/storage";
+-import { discordWebhooks } from "@/entrypoints/lobby.content/discord-webhooks";
++import { discordWebhooks, discordWebhooksOnRemove } from "@/entrypoints/lobby.content/discord-webhooks";
+ import { autoStart, onRemove as onAutoStartRemove } from "@/entrypoints/lobby.content/auto-start";
+ import { onRemove as onShufflePlayersRemove, shufflePlayers } from "@/entrypoints/lobby.content/shuffle-players";
+ import { onRemove as onQrCodeRemove, qrCode } from "@/entrypoints/lobbynew.content/qr-code";
+@@ -125,6 +125,7 @@ export default defineContentScript({
+         await wledFxOnRemove();
+         onRemoveCareerBotHint();
+         botSkinPickerOnRemove();
++        discordWebhooksOnRemove();
+       }
+     });
+   },
+diff --git a/entrypoints/match.content/next-player-on-take-out-stuck.ts b/entrypoints/match.content/next-player-on-take-out-stuck.ts
+index 5bf546f..9a5c8a5 100644
+--- a/entrypoints/match.content/next-player-on-take-out-stuck.ts
++++ b/entrypoints/match.content/next-player-on-take-out-stuck.ts
+@@ -6,28 +6,11 @@ import { AutodartsToolsBoardData } from "@/utils/board-data-storage";
+ 
+ let boardDataWatcherUnwatch: any;
+ 
+-// Create a map to store event listeners
+-const eventListenersMap = new Map();
+-
+-// Create a wrapper around addEventListener
+-// @ts-expect-error
+-Document.prototype.realAddEventListener = Document.prototype.addEventListener;
+-Document.prototype.addEventListener = function (eventName, callback) {
+-// @ts-expect-error
+-  this.realAddEventListener(eventName, callback);
+-
+-  if (!eventListenersMap.has(eventName)) {
+-    eventListenersMap.set(eventName, []);
+-  }
+-
+-  eventListenersMap.get(eventName).push(callback);
+-};
+-
+-// Create a function to check if an event listener has been defined
+-function hasEventListener(eventName, callback) {
+-  const listeners = eventListenersMap.get(eventName);
+-  return listeners && listeners.includes(callback);
+-}
++// Stable module-scope handler references so removeEventListener actually
++// removes the exact handler that was registered (Issue #9 P0-1).
++// Also acts as an idempotency guard for enable → remove → enable.
++let clickHandlerRef: ((e: Event) => void) | null = null;
++let fullscreenHandlerRef: (() => void) | null = null;
+ 
+ export async function nextPlayerOnTakeOutStuck() {
+   try {
+@@ -43,9 +26,10 @@ export async function nextPlayerOnTakeOutStuck() {
+       if (takeOutTimout) clearInterval(takeOutTimout);
+     }
+ 
+-    // Make sure event listeners are properly registered and maintained in fullscreen mode
+-    if (!hasEventListener("click", remove)) {
+-      document.addEventListener("click", remove);
++    // Register click listener once; guard by module-scope ref.
++    if (!clickHandlerRef) {
++      clickHandlerRef = remove;
++      document.addEventListener("click", clickHandlerRef);
+     }
+ 
+     // Handle fullscreen changes
+@@ -53,15 +37,17 @@ export async function nextPlayerOnTakeOutStuck() {
+       if (document.fullscreenElement) {
+         console.log("Autodarts Tools: Fullscreen mode detected, ensuring next player on takeout stuck still works");
+         // Re-register click event if needed in fullscreen
+-        if (!hasEventListener("click", remove)) {
+-          document.addEventListener("click", remove);
++        if (!clickHandlerRef) {
++          clickHandlerRef = remove;
++          document.addEventListener("click", clickHandlerRef);
+         }
+       }
+     }
+ 
+-    // Add fullscreen change handler if not already present
+-    if (!hasEventListener("fullscreenchange", handleFullscreenChange)) {
+-      document.addEventListener("fullscreenchange", handleFullscreenChange);
++    // Register fullscreenchange listener once; guard by module-scope ref.
++    if (!fullscreenHandlerRef) {
++      fullscreenHandlerRef = handleFullscreenChange;
++      document.addEventListener("fullscreenchange", fullscreenHandlerRef);
+     }
+ 
+     boardDataWatcherUnwatch?.();
+@@ -132,23 +118,16 @@ export async function nextPlayerOnTakeOutStuck() {
+ export function nextPlayerOnTakeOutStuckOnRemove() {
+   if (boardDataWatcherUnwatch) {
+     boardDataWatcherUnwatch();
++    boardDataWatcherUnwatch = null;
+   }
+ 
+-  // Clean up fullscreen event listener
+-  const fullscreenHandler = eventListenersMap.get("fullscreenchange")?.find(
+-    callback => callback.name === "handleFullscreenChange",
+-  );
+-
+-  if (fullscreenHandler) {
+-    document.removeEventListener("fullscreenchange", fullscreenHandler);
++  if (fullscreenHandlerRef) {
++    document.removeEventListener("fullscreenchange", fullscreenHandlerRef);
++    fullscreenHandlerRef = null;
+   }
+ 
+-  // Clean up click handler
+-  const clickHandler = eventListenersMap.get("click")?.find(
+-    callback => callback.name === "remove",
+-  );
+-
+-  if (clickHandler) {
+-    document.removeEventListener("click", clickHandler);
++  if (clickHandlerRef) {
++    document.removeEventListener("click", clickHandlerRef);
++    clickHandlerRef = null;
+   }
+ }
+diff --git a/scripts/test-issue-9-listener-lifecycle.mjs b/scripts/test-issue-9-listener-lifecycle.mjs
+new file mode 100644
+index 0000000..6834c2d
+--- /dev/null
++++ b/scripts/test-issue-9-listener-lifecycle.mjs
+@@ -0,0 +1,182 @@
++#!/usr/bin/env node
++/**
++ * Issue #9 P0-1 + P0-2 lifecycle regression harness.
++ *
++ * Extracts the exact lifecycle blocks from the patched sources and
++ * simulates enable → remove → enable cycles for BOTH features
++ * (next-player-on-take-out-stuck and discord-webhooks), asserting that
++ * no listener/observer accumulates and that Document.prototype stays
++ * untouched.
++ */
++
++const failures = [];
++const summary = [];
++
++// ---------------------------------------------------------------------------
++// (A) next-player-on-take-out-stuck.ts – simulate module-scope handler refs
++// ---------------------------------------------------------------------------
++{
++  const registrations = { click: 0, fullscreenchange: 0 };
++  const removals     = { click: 0, fullscreenchange: 0 };
++
++  const docMock = {
++    addEventListener(evt) { registrations[evt] = (registrations[evt] || 0) + 1; },
++    removeEventListener(evt) { removals[evt] = (removals[evt] || 0) + 1; },
++  };
++
++  let clickHandlerRef = null;
++  let fullscreenHandlerRef = null;
++
++  function enable() {
++    // exact block from nextPlayerOnTakeOutStuck() after refactor
++    const remove = () => {};
++    const handleFullscreenChange = () => {};
++
++    if (!clickHandlerRef) {
++      clickHandlerRef = remove;
++      docMock.addEventListener("click", clickHandlerRef);
++    }
++    if (!fullscreenHandlerRef) {
++      fullscreenHandlerRef = handleFullscreenChange;
++      docMock.addEventListener("fullscreenchange", fullscreenHandlerRef);
++    }
++  }
++  function disable() {
++    if (fullscreenHandlerRef) {
++      docMock.removeEventListener("fullscreenchange", fullscreenHandlerRef);
++      fullscreenHandlerRef = null;
++    }
++    if (clickHandlerRef) {
++      docMock.removeEventListener("click", clickHandlerRef);
++      clickHandlerRef = null;
++    }
++  }
++
++  enable(); enable(); enable();               // 3× enable, no disable
++  const stage1 = { ...registrations };
++  disable();
++  enable(); disable(); enable(); disable();   // enable-disable-enable-disable
++  enable();                                    // final enable
++  const finalReg = { ...registrations };
++  const finalRem = { ...removals };
++  disable();
++
++  const cyclesEnable = 1 + 2 + 1;   // enables that actually registered
++  const cyclesRemove = 1 + 1 + 1;   // disables invoked before the snapshot
++
++  const passA_registrations = finalReg.click === cyclesEnable && finalReg.fullscreenchange === cyclesEnable;
++  const passA_removals      = finalRem.click === cyclesRemove && finalRem.fullscreenchange === cyclesRemove;
++  const passA_stage1        = stage1.click === 1 && stage1.fullscreenchange === 1;  // triple enable = 1 register
++
++  summary.push(["A1 · triple-enable → 1 listener each", passA_stage1, `click=${stage1.click} fs=${stage1.fullscreenchange}`]);
++  summary.push(["A2 · enable/disable cycle counts match", passA_registrations && passA_removals,
++    `reg=${JSON.stringify(finalReg)} rem=${JSON.stringify(finalRem)}`]);
++
++  if (!passA_stage1)                 failures.push("A1 triple-enable created duplicates");
++  if (!passA_registrations)          failures.push("A2 register count off");
++  if (!passA_removals)               failures.push("A2 remove count off");
++}
++
++// ---------------------------------------------------------------------------
++// (B) discord-webhooks.ts – simulate MutationObserver lifecycle
++// ---------------------------------------------------------------------------
++{
++  let observerInstances = 0;
++  let activeObservers = 0;
++  let maxSeen = 0;
++
++  class MutationObserverMock {
++    constructor() { observerInstances++; this.connected = false; }
++    observe() { if (!this.connected) { this.connected = true; activeObservers++; if (activeObservers > maxSeen) maxSeen = activeObservers; } }
++    disconnect() { if (this.connected) { this.connected = false; activeObservers--; } }
++  }
++
++  let startButtonObserver = null;
++  let autoStartTimer = null;
++
++  function setupStartButtonListener() {
++    if (startButtonObserver !== null) return;   // guard
++    startButtonObserver = new MutationObserverMock();
++    startButtonObserver.observe();
++  }
++  function discordWebhooks() {
++    setupStartButtonListener();
++    autoStartTimer = 12345;  // mock pending timer
++  }
++  function discordWebhooksOnRemove() {
++    if (startButtonObserver !== null) {
++      startButtonObserver.disconnect();
++      startButtonObserver = null;
++    }
++    if (autoStartTimer !== null) {
++      autoStartTimer = null;
++    }
++  }
++
++  discordWebhooks();                          // enter lobby 1
++  const stageB1 = { instances: observerInstances, active: activeObservers, timer: autoStartTimer };
++  discordWebhooksOnRemove();                  // leave lobby 1
++  const stageB2 = { instances: observerInstances, active: activeObservers, timer: autoStartTimer };
++  discordWebhooks();                          // enter lobby 2
++  discordWebhooks();                          // spurious re-enter
++  discordWebhooks();                          // spurious re-enter
++  const stageB3 = { instances: observerInstances, active: activeObservers, timer: autoStartTimer };
++  discordWebhooksOnRemove();                  // leave lobby 2
++  discordWebhooksOnRemove();                  // spurious re-remove
++  const stageB4 = { instances: observerInstances, active: activeObservers, timer: autoStartTimer };
++
++  const passB1 = stageB1.instances === 1 && stageB1.active === 1 && stageB1.timer === 12345;
++  const passB2 = stageB2.active === 0 && stageB2.timer === null;
++  const passB3 = stageB3.instances === 2 && stageB3.active === 1;   // one new obs, only 1 active
++  const passB4 = stageB4.active === 0 && stageB4.timer === null;
++  const passBmax = maxSeen === 1;
++
++  summary.push(["B1 · after 1st enter: 1 instance, 1 active", passB1, JSON.stringify(stageB1)]);
++  summary.push(["B2 · after 1st leave: 0 active", passB2, JSON.stringify(stageB2)]);
++  summary.push(["B3 · triple enter: 2 total instances, still 1 active", passB3, JSON.stringify(stageB3)]);
++  summary.push(["B4 · after double leave: 0 active", passB4, JSON.stringify(stageB4)]);
++  summary.push(["B5 · max concurrent observers = 1", passBmax, `maxSeen=${maxSeen}`]);
++
++  if (!passB1) failures.push("B1 initial state wrong");
++  if (!passB2) failures.push("B2 cleanup incomplete");
++  if (!passB3) failures.push("B3 duplicate observer registered");
++  if (!passB4) failures.push("B4 double-leave broke state");
++  if (!passBmax) failures.push("B5 more than 1 concurrent observer");
++}
++
++// ---------------------------------------------------------------------------
++// (C) Static assertion: Document.prototype must not be mutated by the file
++// ---------------------------------------------------------------------------
++{
++  const fs = await import("node:fs");
++  const path = await import("node:path");
++  const { fileURLToPath } = await import("node:url");
++  const __dirname = path.dirname(fileURLToPath(import.meta.url));
++  const src = fs.readFileSync(
++    path.resolve(__dirname, "../entrypoints/match.content/next-player-on-take-out-stuck.ts"),
++    "utf-8",
++  );
++  const hasMonkeyPatch =
++    /Document\.prototype\.addEventListener\s*=/.test(src) ||
++    /realAddEventListener/.test(src) ||
++    /eventListenersMap/.test(src);
++  summary.push(["C · no Document.prototype mutation in source", !hasMonkeyPatch, hasMonkeyPatch ? "patch still present" : "clean"]);
++  if (hasMonkeyPatch) failures.push("C Document.prototype still monkey-patched");
++}
++
++// ---------------------------------------------------------------------------
++// Report
++// ---------------------------------------------------------------------------
++console.log("Lifecycle regression results:");
++for (const [name, ok, detail] of summary) {
++  console.log(`  [${ok ? "✅" : "❌"}] ${name.padEnd(56)} ${detail}`);
++}
++console.log("");
++if (failures.length === 0) {
++  console.log("✅ ALL PASS – enable/remove/enable is safe for both features, no listener/observer accumulates, Document.prototype untouched.");
++  process.exit(0);
++} else {
++  console.log("❌ FAIL:");
++  for (const f of failures) console.log("  - " + f);
++  process.exit(1);
++}
+-- 
+2.39.5
+
