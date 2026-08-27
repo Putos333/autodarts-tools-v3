@@ -35,6 +35,10 @@ const FADE_DURATION = 300; // ms
 const FADE_IN_DELAY = 50; // ms
 
 let updateInterval: NodeJS.Timeout | null = null;
+// `disposed` guards the race where the shadow-root UI is torn down while the
+// `await AutodartsToolsConfig.getValue()` below is still pending.
+let disposed = false;
+let unwatchGameData: (() => void) | undefined;
 
 // State
 const isShowingAnimation = ref(false);
@@ -83,7 +87,8 @@ onMounted(async () => {
 
   try {
     config.value = await AutodartsToolsConfig.getValue();
-    AutodartsToolsGameData.watch((gameData: IGameData) => {
+    if (disposed) return;
+    unwatchGameData = AutodartsToolsGameData.watch((gameData: IGameData) => {
       processGameData(gameData);
     });
 
@@ -102,8 +107,11 @@ onMounted(async () => {
 
 // Clean up interval on unmount
 onUnmounted(() => {
+  disposed = true;
   if (updateInterval) clearInterval(updateInterval);
   window.removeEventListener("resize", updateBoardPosition);
+  unwatchGameData?.();
+  unwatchGameData = undefined;
 
   // Clean up cached object URLs
   for (const url of Object.values(animationCache.value)) {

@@ -53,3 +53,35 @@ describe("Elite Settings — Integration Regression", () => {
     }
   });
 });
+
+/**
+ * Runtime-Test 2026-08-27 (echter Extension-Build, gemockte chrome.storage-
+ * APIs, reale Storage-Transitions statt Quelltext-Simulation) hat zwei Bugs
+ * gefunden, die dieselbe Watcher-Leak-Race betreffen wie oben bei
+ * CcToolsStatus.vue — beide Regressionen unten fixiert, hier gegen erneutes
+ * Auftreten gepinnt.
+ */
+describe("Elite Settings — Runtime-Test-Fixes 2026-08-27", () => {
+  it("useControlCenterStatus.ts hält den Auth-Status (authTokenAt) live nach — ohne Watcher blieb 'Autodarts Auth' nach einem echten Login auf 'Kein Token' stehen", async () => {
+    const text = await source("composables/useControlCenterStatus.ts");
+    assert.match(text, /AutodartsToolsGlobalStatus\.watch\(\(value: IGlobalStatus\) => \{/);
+    assert.match(text, /authTokenAt\.value = typeof tokenAt === "number" \? tokenAt : null;/);
+    // Watcher muss auch tatsächlich abgeräumt werden (detach()-Teardown).
+    assert.match(text, /\(\) => unwatchAuth\?\.\(\),/);
+  });
+
+  /** Dieselbe Disposed-Guard-Prüfung wie oben bei CcToolsStatus.vue, für die beiden anderen in CcSettings.vue eingebetteten Komponenten. */
+  function assertDisposedGuard(text: string): void {
+    assert.match(text, /let disposed = false;/);
+    assert.match(text, /await loadConfig\(\);\s*if \(disposed\) return;\s*unwatch = AutodartsToolsConfig\.watch/);
+    assert.match(text, /onBeforeUnmount\(\(\) => \{\s*disposed = true;\s*unwatch\?\.\(\);/);
+  }
+
+  it("CcSound.vue räumt seinen Config-Watcher auch bei Unmount während des initialen Ladens auf (Lifecycle Contract)", async () => {
+    assertDisposedGuard(await source("components/ControlCenter/views/CcSound.vue"));
+  });
+
+  it("CcLighting.vue räumt seinen Config-Watcher auch bei Unmount während des initialen Ladens auf (Lifecycle Contract)", async () => {
+    assertDisposedGuard(await source("components/ControlCenter/views/CcLighting.vue"));
+  });
+});

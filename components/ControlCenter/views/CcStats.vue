@@ -289,15 +289,19 @@ function formTitle(entry: IRecentFormEntry): string {
 }
 
 /* ─── Init & Cleanup ─────────────────────────────────────────────────────────── */
+let disposed = false;
+
 onMounted(async () => {
   applyPendingGameModeFilter();
   await Promise.all([ loadResults(), loadMyUserId() ]);
+  if (disposed) return;
   unwatch = AutodartsToolsCanonicalMatchResults.watch(() => {
     void loadResults();
   });
 });
 
 onBeforeUnmount(() => {
+  disposed = true;
   unwatch?.();
   unwatch = undefined;
 });

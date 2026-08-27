@@ -81,11 +81,15 @@ async function loadGlobalStatus(): Promise<void> {
   }
 }
 
+let disposed = false;
+
 onMounted(async () => {
   await loadGlobalStatus();
+  if (disposed) return;
   unwatchGlobalStatus = AutodartsToolsGlobalStatus.watch(() => void loadGlobalStatus());
 });
 onBeforeUnmount(() => {
+  disposed = true;
   unwatchGlobalStatus?.();
   unwatchGlobalStatus = undefined;
 });

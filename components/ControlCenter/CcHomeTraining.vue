@@ -47,11 +47,15 @@ async function loadTrainingHistory(): Promise<void> {
   }
 }
 
+let disposed = false;
+
 onMounted(async () => {
   await loadTrainingHistory();
+  if (disposed) return;
   unwatchTraining = AutodartsToolsTrainingHistory.watch(() => void loadTrainingHistory());
 });
 onBeforeUnmount(() => {
+  disposed = true;
   unwatchTraining?.();
   unwatchTraining = undefined;
 });

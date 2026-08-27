@@ -93,13 +93,17 @@ function formatDate(iso: string): string {
   }
 }
 
+let disposed = false;
+
 onMounted(async () => {
   await Promise.all([ loadResults(), loadTrainingHistory(), loadMyUserId() ]);
+  if (disposed) return;
   unwatchCmr = AutodartsToolsCanonicalMatchResults.watch(() => void loadResults());
   unwatchTraining = AutodartsToolsTrainingHistory.watch(() => void loadTrainingHistory());
 });
 
 onBeforeUnmount(() => {
+  disposed = true;
   unwatchCmr?.();
   unwatchTraining?.();
   unwatchCmr = undefined;

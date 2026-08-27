@@ -125,14 +125,18 @@ function toggleCaller(): void { void toggleSection("caller"); }
 function toggleSoundFx(): void { void toggleSection("soundFx"); }
 function toggleCrowd(): void { void toggleSection("crowd"); }
 
+let disposed = false;
+
 onMounted(async () => {
   await loadConfig();
+  if (disposed) return;
   unwatch = AutodartsToolsConfig.watch(() => {
     void loadConfig();
   });
 });
 
 onBeforeUnmount(() => {
+  disposed = true;
   unwatch?.();
   unwatch = undefined;
 });

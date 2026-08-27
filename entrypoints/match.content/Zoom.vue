@@ -183,6 +183,17 @@ function setupResizeObserver() {
 
 let resizeObserver: ResizeObserver | null = null;
 
+// Lifecycle-owned resources beyond what the existing onUnmounted below
+// already handles (resize listener + resizeObserver). `disposed` guards the
+// race where the shadow-root UI is torn down while the awaits in onMounted
+// are still pending — both watch() calls are registered after several
+// awaits, so without this guard a late-arriving unmount could still leave a
+// listener registered after `onUnmounted` already ran.
+let disposed = false;
+let unwatchBoardImages: (() => void) | undefined;
+let unwatchGameData: (() => void) | undefined;
+let removeCenterZoomResize: (() => void) | undefined;
+
 function updateZoomDivs() {
   if (position.value !== "center") return;
   if (throws.value === 0) return resetZoomDivs();
@@ -299,9 +310,10 @@ onMounted(async () => {
   await AutodartsToolsBoardImages.setValue({
     images: [],
   });
+  if (disposed) return;
 
   if (config.value.zoom.mode === "live") {
-    AutodartsToolsBoardImages.watch((_boardImages: IBoardImages) => {
+    unwatchBoardImages = AutodartsToolsBoardImages.watch((_boardImages: IBoardImages) => {
       const lastImage = _boardImages.images[_boardImages.images.length - 1];
       if (lastImage && throws.value > 0) boardImages.value[throws.value - 1] = lastImage;
 
@@ -313,7 +325,7 @@ onMounted(async () => {
   }
 
   // Also update the AutodartsToolsGameData.watch to call updateZoomDivs
-  AutodartsToolsGameData.watch(async (_gameData: IGameData, _previousGameData: IGameData) => {
+  unwatchGameData = AutodartsToolsGameData.watch(async (_gameData: IGameData, _previousGameData: IGameData) => {
     if (!_gameData.match?.turns?.length) return;
 
     // Store the game data for checkout availability checking
@@ -387,6 +399,8 @@ onMounted(async () => {
 });
 
 onUnmounted(() => {
+  disposed = true;
+
   // Clean up event listeners and observers
   window.removeEventListener("resize", checkNavigationWidth);
 
@@ -394,6 +408,13 @@ onUnmounted(() => {
     resizeObserver.disconnect();
     resizeObserver = null;
   }
+
+  unwatchBoardImages?.();
+  unwatchGameData?.();
+  removeCenterZoomResize?.();
+  unwatchBoardImages = undefined;
+  unwatchGameData = undefined;
+  removeCenterZoomResize = undefined;
 });
 
 async function initCenterZoom() {
@@ -458,13 +479,15 @@ async function initCenterZoom() {
     leftPosition.value = rect.left;
 
     // Listen for window resize to update the position
-    window.addEventListener("resize", () => {
+    const onCenterZoomResize = () => {
       const updatedTurnElement = document.querySelector("#ad-ext-turn");
       if (updatedTurnElement) {
         const updatedRect = updatedTurnElement.getBoundingClientRect();
         leftPosition.value = updatedRect.left;
       }
-    });
+    };
+    window.addEventListener("resize", onCenterZoomResize);
+    removeCenterZoomResize = () => window.removeEventListener("resize", onCenterZoomResize);
   }
 }
 

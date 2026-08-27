@@ -500,14 +500,18 @@ function qualityTone(quality: ICmrMatchDisplay["quality"]): ReturnType<typeof ge
 }
 
 /* ─── Init & Cleanup ────────────────────────────────────────────────────────── */
+let disposed = false;
+
 onMounted(async () => {
   await Promise.all([ loadResults(), loadMyUserId() ]);
+  if (disposed) return;
   unwatch = AutodartsToolsCanonicalMatchResults.watch(() => {
     void loadResults();
   });
 });
 
 onBeforeUnmount(() => {
+  disposed = true;
   unwatch?.();
   unwatch = undefined;
 });

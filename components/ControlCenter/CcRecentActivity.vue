@@ -67,11 +67,15 @@ async function loadMyUserId(): Promise<void> {
   }
 }
 
+let disposed = false;
+
 onMounted(async () => {
   await Promise.all([ loadResults(), loadMyUserId() ]);
+  if (disposed) return;
   unwatchCmr = AutodartsToolsCanonicalMatchResults.watch(() => void loadResults());
 });
 onBeforeUnmount(() => {
+  disposed = true;
   unwatchCmr?.();
   unwatchCmr = undefined;
 });

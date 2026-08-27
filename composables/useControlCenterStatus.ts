@@ -34,7 +34,7 @@ import { AutodartsToolsBoardData, defaultBoardData, type IBoard } from "@/utils/
 import { AutodartsToolsGameData, defaultGameData, type IGameData } from "@/utils/game-data-storage";
 import { AutodartsToolsLobbyData } from "@/utils/lobby-data-storage";
 import type { ILobbies } from "@/utils/websocket-helpers";
-import { AutodartsToolsConfig, AutodartsToolsGlobalStatus, AutodartsToolsUrlStatus } from "@/utils/storage";
+import { AutodartsToolsConfig, AutodartsToolsGlobalStatus, AutodartsToolsUrlStatus, type IGlobalStatus } from "@/utils/storage";
 import { getBackendUrl } from "@/utils/backend-url";
 import type { IMatch } from "@/utils/websocket-helpers";
 // Nur LESEND: das Canonical Match Result (P2) bleibt unverändert, das Control
@@ -255,6 +255,14 @@ function attach(): void {
   const unwatchResults = AutodartsToolsCanonicalMatchResults.watch(() => {
     void readRecentResults();
   });
+  // Auth-Token-Alter live nachführen (Runtime-Test 2026-08-27: ohne diesen
+  // Watcher blieb "Autodarts Auth" nach einem frischen Login auf "Kein Token"
+  // stehen, bis irgendetwas anderes refresh() erneut auslöste — board/game/
+  // lobby/url werden längst so beobachtet, tokenAt war die einzige Lücke).
+  const unwatchAuth = AutodartsToolsGlobalStatus.watch((value: IGlobalStatus) => {
+    const tokenAt = value?.auth?.tokenAt;
+    authTokenAt.value = typeof tokenAt === "number" ? tokenAt : null;
+  });
   browser.storage.onChanged.addListener(onStorageChanged);
   const ticker = setInterval(() => { now.value = Date.now(); }, TICK_MS);
 
@@ -264,6 +272,7 @@ function attach(): void {
     () => unwatchLobby?.(),
     () => unwatchUrl?.(),
     () => unwatchResults?.(),
+    () => unwatchAuth?.(),
     () => browser.storage.onChanged.removeListener(onStorageChanged),
     () => clearInterval(ticker),
   );

@@ -48,11 +48,15 @@ async function loadConfig(): Promise<void> {
   }
 }
 
+let disposed = false;
+
 onMounted(async () => {
   await loadConfig();
+  if (disposed) return;
   unwatchConfig = AutodartsToolsConfig.watch(() => void loadConfig());
 });
 onBeforeUnmount(() => {
+  disposed = true;
   unwatchConfig?.();
   unwatchConfig = undefined;
 });

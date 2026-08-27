@@ -320,6 +320,18 @@ const possibleCheckout = computed(() => {
   return result;
 });
 
+// Lifecycle-owned resources — this component has no `onBeforeUnmount` in its
+// original form, so none of these ever got torn down when the shadow-root
+// UI is removed at match end (app.unmount() calls it, but there was nothing
+// to call). See lifecycle-contracts.test.mjs for the regression pinning
+// this. `disposed` guards the race where the shadow-root UI is torn down
+// while the two `await`s below are still pending (unmount would otherwise
+// run before these variables are even assigned).
+let disposed = false;
+let unwatchGameData: (() => void) | undefined;
+let unwatchBoardImages: (() => void) | undefined;
+let stopDraggable: (() => void) | undefined;
+
 // Custom drag handlers
 function initDraggable() {
   let startX = 0;
@@ -410,8 +422,9 @@ function initDraggable() {
 onMounted(async () => {
   config.value = await AutodartsToolsConfig.getValue();
   gameData.value = await AutodartsToolsGameData.getValue();
+  if (disposed) return;
 
-  AutodartsToolsGameData.watch((value) => {
+  unwatchGameData = AutodartsToolsGameData.watch((value) => {
     gameData.value = value;
 
     // Update game title when game data changes
@@ -419,7 +432,7 @@ onMounted(async () => {
   });
 
   // Set up board image watcher
-  AutodartsToolsBoardImages.watch((boardImages: IBoardImages) => {
+  unwatchBoardImages = AutodartsToolsBoardImages.watch((boardImages: IBoardImages) => {
     if (boardImages.images.length > 0) {
       currentBoardImage.value = boardImages.images[boardImages.images.length - 1];
     }
@@ -443,17 +456,31 @@ onMounted(async () => {
 
     // Initialize draggable elements after the DOM is updated
     nextTick(() => {
-      initDraggable();
+      if (disposed) return;
+      stopDraggable?.();
+      stopDraggable = initDraggable();
     });
   } catch (e) {
     console.error("Autodarts Tools: Streaming Mode - initialization error", e);
   }
 });
 
+onBeforeUnmount(() => {
+  disposed = true;
+  unwatchGameData?.();
+  unwatchBoardImages?.();
+  stopDraggable?.();
+  unwatchGameData = undefined;
+  unwatchBoardImages = undefined;
+  stopDraggable = undefined;
+});
+
 // Watch for reference changes and re-initialize dragging
 watch([ coordsElement, scoreBoardElement ], () => {
   nextTick(() => {
-    initDraggable();
+    if (disposed) return;
+    stopDraggable?.();
+    stopDraggable = initDraggable();
   });
 });
 
