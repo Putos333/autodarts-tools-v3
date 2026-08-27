@@ -303,22 +303,24 @@ async function runTesten() {
           style="background:#001a0d; border:1px solid #00C853; border-radius:5px; padding:12px 14px; margin-bottom:12px; font-size:12px; line-height:1.7;">
           <div style="font-weight:700; color:#00C853; margin-bottom:8px; font-size:13px;">🛡️ So wird dein API-Key geschützt:</div>
           <table style="width:100%; border-collapse:collapse;">
-            <tr>
-              <td style="color:#8899aa; padding:3px 0; width:130px;">📍 Speicherort:</td>
-              <td style="color:#c8d4e0;">{{ storageInfo.location }}</td>
-            </tr>
-            <tr>
-              <td style="color:#8899aa; padding:3px 0;">🔐 Verschlüsselung:</td>
-              <td style="color:#c8d4e0;">{{ storageInfo.encryption }}</td>
-            </tr>
-            <tr>
-              <td style="color:#8899aa; padding:3px 0;">☁️ Cloud-Sync:</td>
-              <td style="color:#c8d4e0;">{{ storageInfo.syncStatus }}</td>
-            </tr>
-            <tr>
-              <td style="color:#8899aa; padding:3px 0;">🗑️ Löschung:</td>
-              <td style="color:#c8d4e0;">{{ storageInfo.deleteInfo }}</td>
-            </tr>
+            <tbody>
+              <tr>
+                <td style="color:#8899aa; padding:3px 0; width:130px;">📍 Speicherort:</td>
+                <td style="color:#c8d4e0;">{{ storageInfo.location }}</td>
+              </tr>
+              <tr>
+                <td style="color:#8899aa; padding:3px 0;">🔐 Verschlüsselung:</td>
+                <td style="color:#c8d4e0;">{{ storageInfo.encryption }}</td>
+              </tr>
+              <tr>
+                <td style="color:#8899aa; padding:3px 0;">☁️ Cloud-Sync:</td>
+                <td style="color:#c8d4e0;">{{ storageInfo.syncStatus }}</td>
+              </tr>
+              <tr>
+                <td style="color:#8899aa; padding:3px 0;">🗑️ Löschung:</td>
+                <td style="color:#c8d4e0;">{{ storageInfo.deleteInfo }}</td>
+              </tr>
+            </tbody>
           </table>
           <div style="margin-top:10px; color:#556677; font-size:11px;">
             ℹ️ Der Verschlüsselungsschlüssel wird automatisch auf diesem Gerät generiert und verlässt deinen Browser niemals. Selbst wenn jemand Zugriff auf die Erweiterungsdaten bekommt, sieht er nur unlesbaren Ciphertext.
