@@ -106,7 +106,7 @@ import CcConnectionCard from "../CcConnectionCard.vue";
 import CcToolsStatus from "../CcToolsStatus.vue";
 import { openClassicSettings } from "../open-autodarts";
 import { AutodartsToolsConfig, AutodartsToolsTrainingHistory, defaultConfig, type IConfig } from "@/utils/storage";
-import { getCanonicalMatchResults } from "@/utils/canonical-match-result-storage";
+import { AutodartsToolsCanonicalMatchResults, getCanonicalMatchResults } from "@/utils/canonical-match-result-storage";
 
 import packageConfig from "../../../package.json";
 
@@ -142,6 +142,8 @@ async function loadDiagnostics(): Promise<void> {
 }
 
 let disposed = false;
+let unwatchCmr: (() => void) | undefined;
+let unwatchTrainingHistory: (() => void) | undefined;
 
 onMounted(async () => {
   await Promise.all([ loadConfig(), loadDiagnostics() ]);
@@ -149,11 +151,21 @@ onMounted(async () => {
   unwatchConfig = AutodartsToolsConfig.watch(() => {
     void loadConfig();
   });
+  // Issue #13, P2-6: Match-/Trainings-Counts wurden nur beim Mount geladen —
+  // ein in einem anderen Autodarts-Tab abgeschlossenes Match/Training blieb
+  // hier bis Navigation/Reload unsichtbar. Dieselben Stores beobachten wie
+  // CcHistory.vue/CcTraining.vue es bereits tun.
+  unwatchCmr = AutodartsToolsCanonicalMatchResults.watch(() => void loadDiagnostics());
+  unwatchTrainingHistory = AutodartsToolsTrainingHistory.watch(() => void loadDiagnostics());
 });
 
 onBeforeUnmount(() => {
   disposed = true;
   unwatchConfig?.();
   unwatchConfig = undefined;
+  unwatchCmr?.();
+  unwatchCmr = undefined;
+  unwatchTrainingHistory?.();
+  unwatchTrainingHistory = undefined;
 });
 </script>

@@ -298,6 +298,27 @@ test('CcHistory.vue winnerNameOf() has no array-position fallback', async () => 
  * AutodartsToolsTrainingHistory, storage.onChanged for the raw progress key),
  * and tear both down on unmount — same shape as CcHistory.vue/useControlCenterStatus.ts.
  */
+/**
+ * Issue #13, P2-6: CcSettings.vue's diagnostic counters (cmrCount,
+ * trainingHistoryCount) were only loaded once in onMounted alongside config
+ * — unlike config itself (already watched via AutodartsToolsConfig.watch()),
+ * a match/training completed in another Autodarts tab left the counters
+ * stale until navigation/reload. Fix: watch the same two stores CcHistory.vue
+ * and CcTraining.vue already watch, torn down the same way as unwatchConfig.
+ */
+test('CcSettings.vue watches CMR results and training history for its diagnostic counters', async () => {
+  const text = await source('components/ControlCenter/views/CcSettings.vue');
+  assertContains(text, [
+    /import \{ AutodartsToolsCanonicalMatchResults, getCanonicalMatchResults \} from "@\/utils\/canonical-match-result-storage";/,
+    /let unwatchCmr: \(\(\) => void\) \| undefined;/,
+    /let unwatchTrainingHistory: \(\(\) => void\) \| undefined;/,
+    /unwatchCmr = AutodartsToolsCanonicalMatchResults\.watch\(\(\) => void loadDiagnostics\(\)\);/,
+    /unwatchTrainingHistory = AutodartsToolsTrainingHistory\.watch\(\(\) => void loadDiagnostics\(\)\);/,
+    /unwatchCmr\?\.\(\);/,
+    /unwatchTrainingHistory\?\.\(\);/,
+  ], 'CcSettings.vue');
+});
+
 test('CcTraining.vue watches training history and progress instead of loading once on mount', async () => {
   const text = await source('components/ControlCenter/views/CcTraining.vue');
   assertContains(text, [
