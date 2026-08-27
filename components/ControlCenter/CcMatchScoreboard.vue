@@ -46,6 +46,10 @@
           <div class="cc-hero-remaining-label">{{ scoreLabel }}</div>
           <div class="cc-sb-score is-red">{{ heroPair.left.remaining ?? "–" }}</div>
         </div>
+        <div v-if="checkoutRouteFor(heroPair.left.remaining)" class="cc-checkout-route" data-testid="cc-checkout-route-left">
+          <span class="cc-checkout-route-label">Checkout</span>
+          <span class="cc-checkout-route-path">{{ checkoutRouteFor(heroPair.left.remaining) }}</span>
+        </div>
         <CcPlayerStatGrid :player="heroPair.left" :any-sets="anySets" :stats="statKeys" />
       </div>
 
@@ -81,6 +85,10 @@
           <div class="cc-hero-remaining-label">{{ scoreLabel }}</div>
           <div class="cc-sb-score is-blue">{{ heroPair.right.remaining ?? "–" }}</div>
         </div>
+        <div v-if="checkoutRouteFor(heroPair.right.remaining)" class="cc-checkout-route" data-testid="cc-checkout-route-right">
+          <span class="cc-checkout-route-label">Checkout</span>
+          <span class="cc-checkout-route-path">{{ checkoutRouteFor(heroPair.right.remaining) }}</span>
+        </div>
         <CcPlayerStatGrid :player="heroPair.right" :any-sets="anySets" :stats="statKeys" />
       </div>
     </div>
@@ -98,6 +106,10 @@
         <div v-if="showScore" class="cc-sb-score-block">
           <div class="cc-hero-remaining-label">{{ scoreLabel }}</div>
           <div class="cc-sb-score is-red">{{ players[0].remaining ?? "–" }}</div>
+        </div>
+        <div v-if="checkoutRouteFor(players[0].remaining)" class="cc-checkout-route" data-testid="cc-checkout-route-single">
+          <span class="cc-checkout-route-label">Checkout</span>
+          <span class="cc-checkout-route-path">{{ checkoutRouteFor(players[0].remaining) }}</span>
         </div>
         <CcPlayerStatGrid :player="players[0]" :any-sets="anySets" :stats="statKeys" />
       </div>
@@ -139,6 +151,7 @@ import CcPlayerBadge from "./CcPlayerBadge.vue";
 import CcStatusPill from "./CcStatusPill.vue";
 import CcPlayerStatGrid from "./CcPlayerStatGrid.vue";
 import { useControlCenterStatus, type ICcPlayer } from "@/composables/useControlCenterStatus";
+import { CHECKOUTS } from "@/entrypoints/match.content/bogey-warning";
 
 const {
   liveness,
@@ -172,6 +185,18 @@ const eyebrow = computed(() => {
 /** Punkte-/Restanzeige nur, wenn sie für diese Variante gemeldet ist. */
 const showScore = computed(() => showRemaining.value || showPoints.value);
 
+/**
+ * Checkout-Route für einen realen Restwert. Reine Ableitung aus der von
+ * Autodarts gemeldeten `remaining` — keine erfundenen Daten, keine eigene
+ * Autoscoring-Logik. Nutzt dieselbe Tabelle wie das bestehende Bogey-Warning-
+ * Overlay (`entrypoints/match.content/bogey-warning.ts`), nur hier zusätzlich
+ * für die Elite-Scoreboard-Ansicht gelesen. Nur bei X01 sinnvoll.
+ */
+function checkoutRouteFor(remaining: number | undefined): string | null {
+  if (!isX01.value || remaining === undefined) return null;
+  return CHECKOUTS[remaining] ?? null;
+}
+
 const startValue = computed(() => {
   const baseScore = matchSettings.value?.baseScore;
   return baseScore !== null && baseScore !== undefined ? String(baseScore) : null;
@@ -202,7 +227,7 @@ const progressLabel = computed(() => {
  * nur die Werte, die für mindestens einen Spieler wirklich gemeldet sind.
  */
 const statKeys = computed<string[]>(() => {
-  if (isX01.value) return [ "average", "legs", "sets", "darts", "total180" ];
+  if (isX01.value) return [ "average", "first9", "checkout", "legs", "sets", "darts", "total180" ];
 
   const list = players.value;
   const reported = (pick: (player: ICcPlayer) => number | undefined) =>

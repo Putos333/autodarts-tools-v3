@@ -272,7 +272,7 @@ async function processGameData(
     nextEffect = effect;
   }
 
-  currentBoardId = gameData.match.players?.[gameData.match.player].boardId;
+  currentBoardId = gameData.match.players?.[gameData.match.player]?.boardId;
 
   if (
     config.wledFx.boardIds.length > 0

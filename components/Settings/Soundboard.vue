@@ -119,7 +119,7 @@ const emit = defineEmits([ "toggle", "settingChange" ]);
 useStorage("adt:active-settings", "soundboard");
 
 const config = ref<IConfig>();
-const imageUrl = browser.runtime.getURL("/images/soundboard.png");
+const imageUrl = browser.runtime.getURL("/images/soundboard.svg");
 
 const soundButtons = [
   { icon: "👏", label: "Applaus" },

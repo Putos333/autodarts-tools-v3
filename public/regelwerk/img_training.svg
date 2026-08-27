@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300">
+  <rect fill="#1a2d42" width="400" height="300"/>
+  <rect x="120" y="80" width="160" height="140" rx="10" fill="none" stroke="#00C853" stroke-width="4"/>
+  <path d="M150 160 L180 130 L230 190" stroke="#00C853" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  <circle cx="160" cy="170" r="15" fill="none" stroke="#F5C842" stroke-width="3"/>
+  <circle cx="240" cy="170" r="15" fill="none" stroke="#F5C842" stroke-width="3"/>
+  <text x="200" y="260" text-anchor="middle" font-family="Arial, sans-serif" font-size="24" font-weight="bold" fill="#F5C842">Trainings-Modus</text>
+</svg>

@@ -40,17 +40,17 @@
           <div
             v-for="(player, index) in result.players"
             :key="`${result.matchId}-${player.index}-${index}`"
-            :class="[ 'cc-hist-row', isWinner(result, player, index) && 'is-winner' ]"
+            :class="[ 'cc-hist-row', isWinner(result, player) && 'is-winner' ]"
           >
             <CcPlayerBadge
               :name="player.name ?? `Spieler ${index + 1}`"
               :is-bot="player.isBot === true"
-              :variant="isWinner(result, player, index) ? 'gold' : index === 0 ? 'red' : 'blue'"
+              :variant="isWinner(result, player) ? 'gold' : index === 0 ? 'red' : 'blue'"
               size="sm"
             />
             <span class="cc-hist-name">
               {{ player.name ?? `Spieler ${index + 1}` }}
-              <span v-if="isWinner(result, player, index)" class="cc-hist-crown" title="Gewinner">★</span>
+              <span v-if="isWinner(result, player)" class="cc-hist-crown" title="Gewinner">★</span>
             </span>
             <span class="cc-hist-stat">
               <span class="cc-hist-stat-label">Legs</span>
@@ -155,9 +155,9 @@ function hasSets(result: ICanonicalMatchResult): boolean {
   return result.players.some(player => player.sets !== undefined);
 }
 
-function isWinner(result: ICanonicalMatchResult, player: ICmrPlayer, position: number): boolean {
+function isWinner(result: ICanonicalMatchResult, player: ICmrPlayer): boolean {
   if (result.winnerIndex === undefined) return false;
-  return player.index === result.winnerIndex || position === result.winnerIndex;
+  return player.index === result.winnerIndex;
 }
 
 function qualityClass(quality: string): string {

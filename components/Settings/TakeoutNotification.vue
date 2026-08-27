@@ -55,7 +55,7 @@ import { AutodartsToolsConfig, type IConfig } from "@/utils/storage";
 
 const emit = defineEmits([ "toggle", "settingChange" ]);
 const config = ref<IConfig>();
-const imageUrl = browser.runtime.getURL("/images/takeout-notification.png");
+const imageUrl = browser.runtime.getURL("/images/takeout-notification.svg");
 
 async function toggleFeature() {
   if (!config.value) return;

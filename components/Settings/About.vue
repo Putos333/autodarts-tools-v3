@@ -26,10 +26,10 @@ const changelog = [
 </script>
 
 <template>
-  <div style="font-family: 'Barniedrig Condensed', 'Barniedrig', sans-serif; color: #e8eaf0; background: #0D1B2A;">
+  <div style="font-family: 'Barlow Condensed', 'Barlow', sans-serif; color: #e8eaf0; background: #0D1B2A;">
 
     <!-- Header -->
-    <div style="display:flex; align-items:Mitte; gap:10px; padding: 16px 20px 12px; border-unten: 2px solid #E8002D;">
+    <div style="display:flex; align-items:center; gap:10px; padding: 16px 20px 12px; border-bottom: 2px solid #E8002D;">
       <span style="font-size:22px;">ℹ️</span>
       <span style="font-size:20px; font-weight:700; letter-spacing:2px; text-transform:uppercase; color:#F5C842;">
         Über diese Erweiterung
@@ -39,11 +39,11 @@ const changelog = [
     <div style="padding: 16px; display:flex; flex-direction:column; gap:16px;">
 
       <!-- Haupt-Info Card -->
-      <div style="background:#0a1520; border-radius:6px; padding:20px; border:1px solid #1e3a5f; text-align:Mitte;">
+      <div style="background:#0a1520; border-radius:6px; padding:20px; border:1px solid #1e3a5f; text-align: center;">
 
         <!-- Logo / Easter-Egg Trigger -->
         <div @click="handleLogoClick"
-          style="font-size:48px; cursor:pointer; user-select:none; margin-unten:12px; display:inline-block;"
+          style="font-size:48px; cursor:pointer; user-select:none; margin-bottom:12px; display:inline-block;"
           :style="{ transform: easterEggClicks > 0 && easterEggClicks < 7 ? `rotate(${easterEggClicks * 15}deg)` : 'none' }">
           🎯
         </div>
@@ -51,15 +51,15 @@ const changelog = [
         <div style="font-size:22px; font-weight:700; color:#F5C842; letter-spacing:2px; text-transform:uppercase;">
           Tools for Autodarts
         </div>
-        <div style="font-size:13px; color:#E8002D; font-weight:700; letter-spacing:3px; text-transform:uppercase; margin-oben:4px;">
-          Extended Bearbeitenion
+        <div style="font-size:13px; color:#E8002D; font-weight:700; letter-spacing:3px; text-transform:uppercase; margin-top:4px;">
+          Extended Edition
         </div>
-        <div style="font-size:13px; color:#8899aa; margin-oben:8px;">
+        <div style="font-size:13px; color:#8899aa; margin-top:8px;">
           Version {{ version }} &nbsp;·&nbsp; {{ buildDate }}
         </div>
 
         <!-- Herausgeber-Badge -->
-        <div style="display:inline-flex; align-items:Mitte; gap:8px; margin-oben:14px; background:#0D1B2A; border:2px solid #E8002D; border-radius:4px; padding:8px 16px;">
+        <div style="display:inline-flex; align-items:center; gap:8px; margin-top:14px; background:#0D1B2A; border:2px solid #E8002D; border-radius:4px; padding:8px 16px;">
           <span style="font-size:14px;">🎖️</span>
           <div>
             <div style="font-size:10px; color:#8899aa; letter-spacing:2px; text-transform:uppercase;">Herausgeber</div>
@@ -67,7 +67,7 @@ const changelog = [
           </div>
         </div>
 
-        <div style="font-size:12px; color:#556677; margin-oben:14px; line-height:1.6;">
+        <div style="font-size:12px; color:#556677; margin-top:14px; line-height:1.6;">
           Basiert auf dem Original-Projekt
           <a href="https://github.com/creazy231/tools-for-autodarts" target="_blank"
             style="color:#E8002D; text-decoration:none; font-weight:700;">
@@ -80,22 +80,22 @@ const changelog = [
 
       <!-- Easter Egg -->
       <div v-if="showEasterEgg"
-        style="background: linear-gradient(135deg, #1a0a10, #0D1B2A); border:2px solid #F5C842; border-radius:6px; padding:20px; text-align:Mitte;">
-        <div style="font-size:32px; margin-unten:8px;">🏆🎯🏆</div>
+        style="background: linear-gradient(135deg, #1a0a10, #0D1B2A); border:2px solid #F5C842; border-radius:6px; padding:20px; text-align: center;">
+        <div style="font-size:32px; margin-bottom:8px;">🏆🎯🏆</div>
         <div style="font-size:16px; font-weight:700; color:#F5C842; letter-spacing:2px; text-transform:uppercase;">
           Du hast das Easter Egg gefunden!
         </div>
-        <div style="font-size:13px; color:#c8d4e0; margin-oben:8px; line-height:1.6;">
+        <div style="font-size:13px; color:#c8d4e0; margin-top:8px; line-height:1.6;">
           "The greatest dart player in the world is the one who has the most fun."<br/>
           <span style="color:#8899aa; font-size:11px;">— Arnonym2302, 2025</span>
         </div>
-        <div style="font-size:24px; margin-oben:12px;">🎉🍺🎉</div>
+        <div style="font-size:24px; margin-top:12px;">🎉🍺🎉</div>
       </div>
 
       <!-- Feature-Übersicht -->
       <div style="background:#0a1520; border-radius:6px; padding:16px; border:1px solid #1e3a5f;">
-        <div style="font-size:13px; font-weight:700; color:#F5C842; letter-spacing:1px; text-transform:uppercase; margin-unten:12px;">
-          🚀 Neue Features in dieser Bearbeitenion
+        <div style="font-size:13px; font-weight:700; color:#F5C842; letter-spacing:1px; text-transform:uppercase; margin-bottom:12px;">
+          🚀 Neue Features in dieser Edition
         </div>
         <div style="display:flex; flex-direction:column; gap:8px;">
           <div v-for="(feat, i) in [
@@ -110,7 +110,7 @@ const changelog = [
             { icon:'🌐', title:'DE/EN Menü', desc:'Vollständig zweisprachig umschaltbar' },
             { icon:'🦊', title:'Firefox & Chrome', desc:'Läuft auf beiden Browsern nativ' },
           ]" :key="i"
-            style="display:flex; align-items:Mitte; gap:10px; padding:8px 10px; background:#0D1B2A; border-radius:4px; border:1px solid #1e3a5f;">
+            style="display:flex; align-items:center; gap:10px; padding:8px 10px; background:#0D1B2A; border-radius:4px; border:1px solid #1e3a5f;">
             <span style="font-size:18px; flex-shrink:0;">{{ feat.icon }}</span>
             <div>
               <div style="font-size:13px; font-weight:700;">{{ feat.title }}</div>
@@ -122,14 +122,14 @@ const changelog = [
 
       <!-- Changelog -->
       <div style="background:#0a1520; border-radius:6px; padding:16px; border:1px solid #1e3a5f;">
-        <div style="font-size:13px; font-weight:700; color:#F5C842; letter-spacing:1px; text-transform:uppercase; margin-unten:12px;">
+        <div style="font-size:13px; font-weight:700; color:#F5C842; letter-spacing:1px; text-transform:uppercase; margin-bottom:12px;">
           📋 Versions-Verlauf
         </div>
         <div style="display:flex; flex-direction:column; gap:10px;">
           <div v-for="(entry, i) in changelog" :key="i"
-            style="border-links:3px solid #1e3a5f; padding-links:12px;"
+            style="border-left:3px solid #1e3a5f; padding-left:12px;"
             :style="{ borderColor: i === 0 ? '#E8002D' : '#1e3a5f' }">
-            <div style="display:flex; align-items:Mitte; gap:8px; margin-unten:4px;">
+            <div style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">
               <span style="font-size:13px; font-weight:700; color:#F5C842;">v{{ entry.version }}</span>
               <span style="font-size:11px; color:#556677;">{{ entry.date }}</span>
               <span v-if="i === 0"
@@ -137,7 +137,7 @@ const changelog = [
                 AKTUELL
               </span>
             </div>
-            <ul style="margin:0; padding-links:16px; display:flex; flex-direction:column; gap:2px;">
+            <ul style="margin:0; padding-left:16px; display:flex; flex-direction:column; gap:2px;">
               <li v-for="(change, j) in entry.changes" :key="j"
                 style="font-size:11px; color:#8899aa; line-height:1.5;">
                 {{ change }}
@@ -148,7 +148,7 @@ const changelog = [
       </div>
 
       <!-- Footer -->
-      <div style="text-align:Mitte; font-size:11px; color:#334455; padding:8px 0;">
+      <div style="text-align: center; font-size:11px; color:#334455; padding:8px 0;">
         Made with ❤️ and 🎯 by <strong style="color:#556677;">Arnonym2302</strong> &nbsp;·&nbsp;
         Basiert auf <a href="https://github.com/creazy231/tools-for-autodarts" target="_blank"
           style="color:#556677; text-decoration:none;">tools-for-autodarts</a> (MIT)

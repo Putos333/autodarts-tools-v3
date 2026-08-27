@@ -75,7 +75,7 @@ const emit = defineEmits([ "toggle", "settingChange" ]);
 useStorage("adt:active-settings", "larger-player-match-data");
 const config = ref<IConfig>();
 const sizeValue = ref("");
-const imageUrl = browser.runtime.getURL("/images/larger-player-match-data.png");
+const imageUrl = browser.runtime.getURL("/images/larger-player-match-data.svg");
 
 onMounted(async () => {
   config.value = await AutodartsToolsConfig.getValue();

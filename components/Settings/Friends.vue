@@ -479,7 +479,7 @@ function formatDate(dateStr: string): string {
 <style scoped>
 /* ── Basis ─────────────────────────────────────────────────────────────────── */
 .friends-panel {
-  font-family: 'Barniedrig Condensed', 'Arial Narrow', Arial, sans-serif;
+  font-family: 'Barlow Condensed', 'Arial Narrow', Arial, sans-serif;
   color: #e8eaf0;
   position: relative;
 }
@@ -487,8 +487,8 @@ function formatDate(dateStr: string): string {
 /* ── Benachrichtigung ───────────────────────────────────────────────────────── */
 .notification {
   position: fixed;
-  oben: 20px;
-  rechts: 20px;
+  top: 20px;
+  right: 20px;
   z-index: 99999;
   padding: 14px 24px;
   border-radius: 6px;
@@ -506,9 +506,9 @@ function formatDate(dateStr: string): string {
 /* ── Header ─────────────────────────────────────────────────────────────────── */
 .panel-header {
   display: flex;
-  align-items: Mitte;
+  align-items: center;
   justify-content: space-between;
-  margin-unten: 16px;
+  margin-bottom: 16px;
 }
 .panel-title { display: flex; align-items: baseline; gap: 12px; }
 .title-accent {
@@ -538,17 +538,17 @@ function formatDate(dateStr: string): string {
 .lobby-settings {
   background: #0a1520;
   border: 1px solid #1e3050;
-  border-links: 3px solid #E8002D;
+  border-left: 3px solid #E8002D;
   border-radius: 6px;
   padding: 12px 16px;
-  margin-unten: 20px;
+  margin-bottom: 20px;
 }
 .settings-label {
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 2px;
   color: #E8002D;
-  margin-unten: 10px;
+  margin-bottom: 10px;
   text-transform: uppercase;
 }
 .settings-row { display: flex; gap: 12px; flex-wrap: wrap; }
@@ -571,8 +571,8 @@ function formatDate(dateStr: string): string {
 .loading-state, .empty-state {
   display: flex;
   flex-direction: column;
-  align-items: Mitte;
-  justify-content: Mitte;
+  align-items: center;
+  justify-content: center;
   gap: 12px;
   padding: 40px 20px;
   color: #8899aa;
@@ -581,13 +581,13 @@ function formatDate(dateStr: string): string {
   width: 32px;
   height: 32px;
   border: 3px solid #1e3050;
-  border-oben-color: #E8002D;
+  border-top-color: #E8002D;
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
 }
 .empty-icon { font-size: 40px; }
 .empty-text { font-size: 18px; font-weight: 700; color: #e8eaf0; }
-.empty-hint { font-size: 14px; text-align: Mitte; }
+.empty-hint { font-size: 14px; text-align: center; }
 
 /* ── Abschnitts-Labels ──────────────────────────────────────────────────────── */
 .section-label {
@@ -598,22 +598,22 @@ function formatDate(dateStr: string): string {
   text-transform: uppercase;
 }
 .section-label.online { color: #00C853; }
-.section-label.offline { color: #556677; margin-oben: 16px; }
+.section-label.offline { color: #556677; margin-top: 16px; }
 
 /* ── Freundeskarte ──────────────────────────────────────────────────────────── */
 .friend-card {
   display: flex;
-  align-items: Mitte;
+  align-items: center;
   gap: 14px;
   background: #0d1b2a;
   border: 1px solid #1e3050;
   border-radius: 8px;
   padding: 12px 16px;
-  margin-unten: 8px;
+  margin-bottom: 8px;
   transition: border-color 0.2s;
 }
-.friend-card.online { border-links: 3px solid #00C853; }
-.friend-card.offline { border-links: 3px solid #334; opacity: 0.7; }
+.friend-card.online { border-left: 3px solid #00C853; }
+.friend-card.offline { border-left: 3px solid #334; opacity: 0.7; }
 .friend-card.online:hover { border-color: #00C853; background: #0f2030; }
 
 /* Avatar */
@@ -635,16 +635,16 @@ function formatDate(dateStr: string): string {
   border-radius: 50%;
   background: #1e3050;
   display: flex;
-  align-items: Mitte;
-  justify-content: Mitte;
+  align-items: center;
+  justify-content: center;
   font-size: 22px;
   font-weight: 900;
   color: #E8002D;
 }
 .status-dot {
   position: absolute;
-  unten: 2px;
-  rechts: 2px;
+  bottom: 2px;
+  right: 2px;
   width: 12px;
   height: 12px;
   border-radius: 50%;
@@ -656,12 +656,12 @@ function formatDate(dateStr: string): string {
 /* Infos */
 .friend-info { flex: 1; min-width: 0; }
 .friend-name { font-size: 18px; font-weight: 800; color: #fff; letter-spacing: 0.5px; }
-.friend-status { font-size: 13px; color: #8899aa; margin-oben: 2px; }
+.friend-status { font-size: 13px; color: #8899aa; margin-top: 2px; }
 .friend-status.in-match { color: #F5C842; }
-.friend-stats { font-size: 13px; color: #556677; margin-oben: 2px; }
+.friend-stats { font-size: 13px; color: #556677; margin-top: 2px; }
 
 /* Aktionen */
-.friend-actions { display: flex; gap: 8px; align-items: Mitte; flex-shrink: 0; }
+.friend-actions { display: flex; gap: 8px; align-items: center; flex-shrink: 0; }
 .btn-h2h {
   background: #0a1520;
   border: 1px solid #2a3f5a;
@@ -688,8 +688,8 @@ function formatDate(dateStr: string): string {
   transition: all 0.2s;
   min-width: 100px;
   display: flex;
-  align-items: Mitte;
-  justify-content: Mitte;
+  align-items: center;
+  justify-content: center;
   gap: 6px;
 }
 .btn-quickplay:hover:not(:disabled) { background: #ff1a3d; transform: scale(1.03); }
@@ -698,7 +698,7 @@ function formatDate(dateStr: string): string {
   width: 16px;
   height: 16px;
   border: 2px solid rgba(255,255,255,0.3);
-  border-oben-color: #fff;
+  border-top-color: #fff;
   border-radius: 50%;
   animation: spin 0.7s linear infinite;
 }
@@ -710,14 +710,14 @@ function formatDate(dateStr: string): string {
   background: rgba(0,0,0,0.8);
   z-index: 99998;
   display: flex;
-  align-items: Mitte;
-  justify-content: Mitte;
+  align-items: center;
+  justify-content: center;
   padding: 20px;
 }
 .modal-content {
   background: #0d1b2a;
   border: 1px solid #1e3050;
-  border-oben: 4px solid #E8002D;
+  border-top: 4px solid #E8002D;
   border-radius: 10px;
   width: 100%;
   max-width: 560px;
@@ -725,7 +725,7 @@ function formatDate(dateStr: string): string {
   overflow-y: auto;
   padding: 24px;
 }
-.modal-header { position: relative; margin-unten: 20px; }
+.modal-header { position: relative; margin-bottom: 20px; }
 .modal-title {
   font-size: 13px;
   font-weight: 900;
@@ -742,8 +742,8 @@ function formatDate(dateStr: string): string {
 }
 .modal-close {
   position: absolute;
-  oben: 0;
-  rechts: 0;
+  top: 0;
+  right: 0;
   background: none;
   border: 1px solid #334;
   color: #8899aa;
@@ -754,27 +754,27 @@ function formatDate(dateStr: string): string {
   font-size: 16px;
 }
 .modal-close:hover { border-color: #E8002D; color: #E8002D; }
-.modal-loading { display: flex; align-items: Mitte; gap: 12px; color: #8899aa; padding: 20px 0; }
-.modal-empty { color: #8899aa; text-align: Mitte; padding: 30px 0; font-size: 16px; }
+.modal-loading { display: flex; align-items: center; gap: 12px; color: #8899aa; padding: 20px 0; }
+.modal-empty { color: #8899aa; text-align: center; padding: 30px 0; font-size: 16px; }
 
 /* H2H Punkteboard */
 .h2h-scoreboard {
   display: flex;
-  align-items: Mitte;
-  justify-content: Mitte;
+  align-items: center;
+  justify-content: center;
   gap: 20px;
   background: #0a1520;
   border: 1px solid #1e3050;
   border-radius: 8px;
   padding: 20px;
-  margin-unten: 12px;
+  margin-bottom: 12px;
 }
-.h2h-player { text-align: Mitte; flex: 1; }
+.h2h-player { text-align: center; flex: 1; }
 .h2h-player-name { font-size: 13px; font-weight: 700; letter-spacing: 2px; color: #8899aa; text-transform: uppercase; }
 .h2h-wins { font-size: 52px; font-weight: 900; color: #F5C842; line-height: 1; margin: 4px 0; }
 .h2h-avg { font-size: 15px; color: #8899aa; }
 .h2h-divider { font-size: 36px; font-weight: 900; color: #334; }
-.h2h-total { text-align: Mitte; font-size: 14px; color: #556677; margin-unten: 20px; }
+.h2h-total { text-align: center; font-size: 14px; color: #556677; margin-bottom: 20px; }
 
 /* Match-Liste */
 .h2h-matches-label {
@@ -782,21 +782,21 @@ function formatDate(dateStr: string): string {
   font-weight: 700;
   letter-spacing: 2px;
   color: #E8002D;
-  margin-unten: 8px;
+  margin-bottom: 8px;
   text-transform: uppercase;
 }
 .h2h-match-row {
   display: flex;
-  align-items: Mitte;
+  align-items: center;
   gap: 12px;
   padding: 10px 12px;
   border-radius: 6px;
-  margin-unten: 4px;
+  margin-bottom: 4px;
   font-size: 14px;
-  border-links: 3px solid transparent;
+  border-left: 3px solid transparent;
 }
-.h2h-match-row.win { background: rgba(0,200,83,0.08); border-links-color: #00C853; }
-.h2h-match-row.loss { background: rgba(232,0,45,0.06); border-links-color: #E8002D; }
+.h2h-match-row.win { background: rgba(0,200,83,0.08); border-left-color: #00C853; }
+.h2h-match-row.loss { background: rgba(232,0,45,0.06); border-left-color: #E8002D; }
 .match-date { color: #556677; min-width: 80px; }
 .match-result { font-weight: 800; color: #fff; min-width: 50px; }
 .match-avg { color: #8899aa; flex: 1; }

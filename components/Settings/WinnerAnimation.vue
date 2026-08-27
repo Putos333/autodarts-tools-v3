@@ -62,7 +62,7 @@ import { AutodartsToolsConfig, type IConfig } from "@/utils/storage";
 const emit = defineEmits([ "toggle", "settingChange" ]);
 useStorage("adt:active-settings", "winner-animation");
 const config = ref<IConfig>();
-const imageUrl = browser.runtime.getURL("/images/winner-animation.png");
+const imageUrl = browser.runtime.getURL("/images/winner-animation.svg");
 
 onMounted(async () => {
   config.value = await AutodartsToolsConfig.getValue();

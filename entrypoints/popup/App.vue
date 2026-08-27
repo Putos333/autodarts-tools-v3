@@ -26,6 +26,7 @@ const coinUnlocked = ref<string[]>([]);
 const showShop = ref<boolean>(false);
 
 const config = ref<any>(null);
+const activeMode = ref<"autodarts" | "elite">("autodarts");
 
 const toggles = ref({
   caller: false,
@@ -63,7 +64,29 @@ onMounted(async () => {
   await pingBackend();
   await readWsStatus();
   await readCoins();
+  await readLastMode();
 });
+
+// ── AUTODARTS / ELITE — Signature-Umschalter ─────────────────────────────
+async function readLastMode() {
+  try {
+    const r = await browser.storage.local.get("adt-popup-mode");
+    const m = (r as any)["adt-popup-mode"];
+    if (m === "elite" || m === "autodarts") activeMode.value = m;
+  } catch { /* ignore */ }
+}
+
+async function selectMode(mode: "autodarts" | "elite") {
+  activeMode.value = mode;
+  try {
+    await browser.storage.local.set({ "adt-popup-mode": mode });
+  } catch { /* ignore */ }
+  if (mode === "elite") {
+    openControlCenter();
+  } else {
+    openAutodarts();
+  }
+}
 
 async function readCoins() {
   try {
@@ -348,6 +371,30 @@ const wsLabel = computed(() => {
       </div>
     </header>
 
+    <!-- AUTODARTS / ELITE — Signature-Umschalter -->
+    <div class="mode-switch" role="group" aria-label="Bereich wählen" data-testid="mode-switch">
+      <button
+        class="mode-btn mode-autodarts"
+        :class="{ active: activeMode === 'autodarts' }"
+        :aria-pressed="activeMode === 'autodarts'"
+        @click="selectMode('autodarts')"
+        data-testid="btn-play"
+      >
+        <span class="mode-icon">🎯</span>
+        <span>Autodarts</span>
+      </button>
+      <button
+        class="mode-btn mode-elite"
+        :class="{ active: activeMode === 'elite' }"
+        :aria-pressed="activeMode === 'elite'"
+        @click="selectMode('elite')"
+        data-testid="btn-control-center"
+      >
+        <span class="mode-icon">⚡</span>
+        <span>Elite</span>
+      </button>
+    </div>
+
     <!-- Coin Shop (togglable) -->
     <div v-if="showShop" class="shop" data-testid="coin-shop">
       <div class="shop-header">
@@ -420,16 +467,8 @@ const wsLabel = computed(() => {
       </button>
     </div>
 
-    <!-- Control Center (eigene Extension-Seite) -->
-    <button class="btn cc-open" @click="openControlCenter" data-testid="btn-control-center">
-      🎛️ Control Center öffnen
-    </button>
-
     <!-- Actions -->
     <div class="actions">
-      <button class="btn primary" @click="openAutodarts" data-testid="btn-play">
-        Autodarts öffnen
-      </button>
       <button class="btn ghost" @click="openOptions" data-testid="btn-settings">
         Einstellungen
       </button>
@@ -638,14 +677,53 @@ const wsLabel = computed(() => {
 }
 .toggle:not(.on) .toggle-state { color: #6b7385; }
 
-.cc-open {
-  width: 100%;
-  margin-bottom: 8px;
-  background: linear-gradient(90deg, #F5C842, #E8002D);
-  color: #0d1b2a;
-  font-size: 12px;
+.mode-switch {
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  margin-bottom: 14px;
+  background: rgba(0,0,0,0.3);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 10px;
 }
-.cc-open:hover { filter: brightness(1.08); }
+.mode-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px 8px;
+  border: none;
+  border-radius: 7px;
+  background: transparent;
+  color: #8992a8;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, box-shadow 0.15s, transform 0.1s;
+}
+.mode-btn:hover { color: #e8eaf0; background: rgba(255,255,255,0.07); }
+.mode-btn:active { transform: scale(0.98); }
+.mode-btn:focus-visible {
+  outline: 2px solid #F5C842;
+  outline-offset: 2px;
+}
+.mode-btn.mode-autodarts.active {
+  background: #e8eaf0;
+  color: #0d1b2a;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+}
+.mode-btn.mode-elite { color: #F5C842; }
+.mode-btn.mode-elite:hover { color: #ffe08a; background: rgba(245,200,66,0.1); }
+.mode-btn.mode-elite.active {
+  background: linear-gradient(90deg, #F5C842 0%, #E8002D 100%);
+  color: #0d1b2a;
+  box-shadow: 0 3px 12px rgba(232,0,45,0.4);
+}
+.mode-icon { font-size: 14px; line-height: 1; }
 
 .actions {
   display: flex;

@@ -12,10 +12,15 @@ export async function migrationConfig() {
 async function migrateConfig(currentConfigVersion: number) {
   console.log("Autodarts Tools: Migrating config...");
 
-  const config = await AutodartsToolsConfig.getValue();
+  let config = await AutodartsToolsConfig.getValue();
+  if (!config || typeof config.version !== "number") {
+    console.warn("[migration] Config invalid or missing version — skipping migration");
+    return;
+  }
 
   while (currentConfigVersion < defaultConfig.version) {
-    switch (currentConfigVersion) {
+    try {
+      switch (currentConfigVersion) {
       case 1:
         // Migration from version 1 to version 2
         config.version = 2;
@@ -187,6 +192,10 @@ async function migrateConfig(currentConfigVersion: number) {
 
     await AutodartsToolsConfig.setValue(config);
     currentConfigVersion++;
+  } catch (e) {
+    console.error("[migration] Migration failed at version", currentConfigVersion, e);
+    return; // Stop on error — don't retry silently
+  }
   }
 
   console.log("Autodarts Tools: Migration config done");

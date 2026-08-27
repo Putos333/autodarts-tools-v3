@@ -1,6 +1,7 @@
 import { AutodartsToolsBoardData, type IBoard } from "./board-data-storage";
 import { AutodartsToolsBoardImages } from "./board-image-storage";
 import { type IDedupeState, createDedupeState, shouldProcessSnapshot } from "./event-dedupe";
+import { AutodartsToolsFriendPresence } from "./friend-presence-storage";
 import { AutodartsToolsGameData } from "./game-data-storage";
 import { AutodartsToolsLobbyData } from "./lobby-data-storage";
 import { AutodartsToolsTournamentData, type ITournament } from "./tournament-data-storage";
@@ -249,25 +250,41 @@ export async function processWebSocketMessage(channel: string, data: ILobbies | 
       // Ohne stabile data.id wird nicht unterdrückt (fail open).
       if (!shouldProcessSnapshot(matchSnapshotDedupe, data.id, data, gameData.match)) return;
 
+      let mergedMatch: IMatch;
       if ((data as IMatch).activated !== undefined) {
         // Merge activated state with existing match data
-        AutodartsToolsGameData.setValue({
-          ...gameData,
-          match: gameData.match
-            ? {
-                ...gameData.match,
-                activated: (data as IMatch).activated,
-              }
-            : {
-                ...data as IMatch,
-              },
-        });
+        mergedMatch = gameData.match
+          ? { ...gameData.match, activated: (data as IMatch).activated }
+          : { ...data as IMatch };
+        AutodartsToolsGameData.setValue({ ...gameData, match: mergedMatch });
       } else {
         // Replace entire match data
-        AutodartsToolsGameData.setValue({
-          ...gameData,
-          match: data as IMatch,
-        });
+        mergedMatch = data as IMatch;
+        AutodartsToolsGameData.setValue({ ...gameData, match: mergedMatch });
+      }
+
+      // TEMP-DIAG (Phase 5, Human Test 301/2 Legs): sicherer Diagnose-Log für
+      // den realen Spielverlauf — niemals Tokens/Cookies, nur bereits public
+      // sichtbare Matchdaten. `event` unterscheidet grob zwischen Aktivierungs-
+      // phase, Matchende und regulärem Snapshot; Feinunterscheidung (Wurf/
+      // Spielerwechsel/Leg-Ende) übernimmt CcMatchHumanTestPanel.vue rein
+      // lesend aus genau diesen bereits vorhandenen Daten — kein zweiter
+      // Auswertungspfad.
+      {
+        const activePlayerIndex = typeof mergedMatch.player === "number" ? mergedMatch.player : -1;
+        const activePlayer = mergedMatch.players?.[activePlayerIndex];
+        const event = (data as IMatch).activated !== undefined
+          ? "activated"
+          : mergedMatch.finished === true
+            ? "finished"
+            : "snapshot";
+        console.log(
+          `[AD-ELITE MATCH]\nevent=${event}\nmatchId=${mergedMatch.id ?? "–"}\n`
+          + `player=${activePlayer?.name ?? activePlayer?.id ?? "–"}\n`
+          + `score=${typeof mergedMatch.turnScore === "number" ? mergedMatch.turnScore : "–"}\n`
+          + `remaining=${typeof mergedMatch.gameScores?.[activePlayerIndex] === "number" ? mergedMatch.gameScores[activePlayerIndex] : "–"}\n`
+          + `leg=${typeof mergedMatch.leg === "number" ? mergedMatch.leg : "–"}`,
+        );
       }
 
       break;
@@ -338,6 +355,59 @@ export async function processWebSocketMessage(channel: string, data: ILobbies | 
       data = data as ITournament;
 
       AutodartsToolsTournamentData.setValue(data);
+
+      break;
+    }
+    case "autodarts.friends": {
+      // RUNTIME-FIX (Realtest 4): Live-Presence pro Freund. Kein neuer
+      // Capture-Layer — dieser generische WebSocket-Hook (websocket-capture.ts)
+      // sieht bereits jede Nachricht der Seite; hier wird nur ein weiterer,
+      // bislang unbehandelter Kanal ausgewertet (fiel bis jetzt in den
+      // `default`-Zweig als "Unknown channel").
+      //
+      // Herkunft laut echtem Autodarts-Bundle (assets/index-*.js,
+      // play.autodarts.com), Reverse-Engineering, nicht erfunden:
+      //   static onFriendStatusUpdate(t,n){ return un.getInstance().subscribe(
+      //     "autodarts.friends", `${t}.status`, n) }
+      //   ...switch(l.type){
+      //     case D4.Status: r(c=>({...c,[l.userId]:{...c[l.userId],status:l.status}}));
+      //     case D4.Activity: r(c=>({...c,[l.userId]:{...c[l.userId],activity:l.activity}}));
+      //   }
+      //   cc = { Online:"Online", Offline:"Offline", Incognito:"Incognito" }
+      //
+      // Autodarts' eigener Client abonniert das pro Freund einzeln — welche
+      // Form die Nachricht auf DIESEM (Extension-seitig generisch mitgelesenen)
+      // Kanal exakt hat, ist ohne echten Login nicht gegen echten Traffic
+      // verifizierbar. Deshalb TEMPORÄR das [AD-ELITE PRESENCE]-Rohlog, damit
+      // ein Mensch mit echtem Autodarts-Login die Feldnamen in den DevTools
+      // bestätigen kann — niemals Tokens/Cookies, nur die Presence-Felder.
+      const raw = data as any;
+      console.log("[AD-ELITE PRESENCE] raw autodarts.friends payload:", JSON.stringify(raw)?.slice(0, 300));
+
+      const userId: unknown = raw?.userId;
+      const status: unknown = raw?.status;
+      const KNOWN_STATUSES = [ "Online", "Offline", "Incognito" ];
+
+      // Nur echte Status-Events verarbeiten (Activity-Events tragen keinen
+      // `status`-String und werden hier bewusst nicht in einen Status
+      // umgedeutet — kein erfundener Wert). `userId` kommt aus geparstem,
+      // externem WebSocket-JSON — `__proto__`/`constructor`/`prototype` als
+      // Objekt-Key ausschließen, bevor er unten als [userId]-Key verwendet wird.
+      const UNSAFE_KEYS = [ "__proto__", "constructor", "prototype" ];
+      if (
+        typeof userId !== "string" || !userId || UNSAFE_KEYS.includes(userId)
+        || typeof status !== "string" || !KNOWN_STATUSES.includes(status)
+      ) {
+        break;
+      }
+
+      console.log(`[AD-ELITE PRESENCE]\nuserId=${userId}\nstatus=${status}\nsource=autodarts.friends`);
+
+      const presence = await AutodartsToolsFriendPresence.getValue();
+      await AutodartsToolsFriendPresence.setValue({
+        ...presence,
+        [userId]: { status: status as "Online" | "Offline" | "Incognito", at: Date.now() },
+      });
 
       break;
     }

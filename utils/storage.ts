@@ -312,6 +312,14 @@ export interface IConfig {
     volume: number;
     variant: 'thud' | 'click' | 'random';
   };
+  // ─── Screenshot-Export ──────────────────────────────────────────────────────
+  screenshot: {
+    enabled: boolean;
+  };
+  // ─── Karriere (KI-Kommentator) ──────────────────────────────────────────────
+  career: {
+    enabled: boolean;
+  };
 }
 
 export interface IWalkonPlayer {
@@ -1081,6 +1089,14 @@ export const defaultConfig: IConfig = {
     volume: 70,
     variant: 'random' as 'thud' | 'click' | 'random',
   },
+  // ─── Screenshot-Export ──────────────────────────────────────────────────────
+  screenshot: {
+    enabled: false,
+  },
+  // ─── Karriere (KI-Kommentator) ──────────────────────────────────────────────
+  career: {
+    enabled: false,
+  },
 };
 
 export const AutodartsToolsConfig: WxtStorageItem<IConfig, any> = storage.defineItem(
@@ -1140,6 +1156,14 @@ export const AutodartsToolsTrainingHistoryMigrated: WxtStorageItem<boolean, any>
   "local:training-history-migrated-v1",
   {
     defaultValue: false,
+  },
+);
+
+/** Training exercise progress (per-exercise progress tracking) */
+export const AutodartsToolsTrainingProgress: WxtStorageItem<Record<string, any>, any> = storage.defineItem(
+  "local:training-exercise-progress",
+  {
+    defaultValue: {},
   },
 );
 

@@ -16,6 +16,18 @@
       </CcCard>
     </div>
 
+    <!-- (B0) CALLER & SOUNDS / WLED — hierher verschoben aus der Haupt-
+         navigation (Elite Home Dashboard, Wave 2). Unveränderte Komponenten,
+         nur an anderer Stelle eingehängt: der ursprüngliche Autodarts Caller
+         bleibt die bevorzugte Ansage-Quelle, diese Umschalter sind Setup, kein
+         täglicher Einstieg. -->
+    <div class="cc-col-12">
+      <CcSound />
+    </div>
+    <div class="cc-col-12">
+      <CcLighting />
+    </div>
+
     <!-- (B) VERSION -->
     <div class="cc-col-4">
       <CcCard title="Version" icon="icon-[pixelarticons--info-box]" accent="muted">
@@ -48,6 +60,22 @@
       </CcCard>
     </div>
 
+    <!-- (D2) VERBINDUNG + TOOLS-STATUS — vollständig fertige Komponenten,
+         bislang in keiner View eingebunden (Inventur bestätigt: kein Import,
+         kein Tag-Verweis irgendwo). Beide lesen ausschließlich bereits
+         vorhandene, reale Quellen (useControlCenterStatus / AutodartsToolsConfig)
+         — keine neue Logik, keine neue Datenquelle. Passt exakt zum bereits
+         bestehenden Zweck dieser View ("Version, Diagnose und Datenschutz").
+         Adressiert außerdem direkt die aus Realtest 1/2 bekannte Verwechslung
+         von KI-Backend/Autodarts-WebSocket/Auth-Status durch klar getrennte
+         Zeilen pro Kanal. -->
+    <div class="cc-col-7">
+      <CcConnectionCard />
+    </div>
+    <div class="cc-col-5">
+      <CcToolsStatus />
+    </div>
+
     <!-- (E) LINK -->
     <div class="cc-col-12">
       <CcCard title="Weitere Einstellungen" icon="icon-[pixelarticons--external-link]" accent="muted">
@@ -72,6 +100,10 @@ import { onBeforeUnmount, onMounted, ref } from "vue";
 import CcCard from "../CcCard.vue";
 import CcStatTile from "../CcStatTile.vue";
 import CcEmptyState from "../CcEmptyState.vue";
+import CcSound from "./CcSound.vue";
+import CcLighting from "./CcLighting.vue";
+import CcConnectionCard from "../CcConnectionCard.vue";
+import CcToolsStatus from "../CcToolsStatus.vue";
 import { openClassicSettings } from "../open-autodarts";
 import { AutodartsToolsConfig, AutodartsToolsTrainingHistory, defaultConfig, type IConfig } from "@/utils/storage";
 import { getCanonicalMatchResults } from "@/utils/canonical-match-result-storage";
@@ -109,14 +141,18 @@ async function loadDiagnostics(): Promise<void> {
   }
 }
 
+let disposed = false;
+
 onMounted(async () => {
   await Promise.all([ loadConfig(), loadDiagnostics() ]);
+  if (disposed) return;
   unwatchConfig = AutodartsToolsConfig.watch(() => {
     void loadConfig();
   });
 });
 
 onBeforeUnmount(() => {
+  disposed = true;
   unwatchConfig?.();
   unwatchConfig = undefined;
 });

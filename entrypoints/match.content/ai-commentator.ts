@@ -370,13 +370,21 @@ async function processGameData(gameData: IGameData, oldGameData: IGameData): Pro
     const legChanged = currentLeg !== lastLegCount || currentSet !== lastSetCount;
 
     if (legChanged && !match.finished) {
+      // Leg-Zähler MÜSSEN unabhängig davon fortgeschrieben werden, ob die
+      // eigene Identität auflösbar ist — sonst bleibt `legChanged` dauerhaft
+      // true und dieser Zweig (inkl. seines `return`) blockiert ab hier jeden
+      // weiteren Kommentar für den Rest des Matches (Bug H1, PR #16 Review).
+      lastLegCount = currentLeg;
+      lastSetCount = currentSet;
+
       // Leg ist gerade beendet worden – Statistiken des eigenen Spielers ansagen
       if (!ownUserId) ownUserId = await getUserIdFromToken();
       const players = match.players ?? [];
       const ownIndex = ownUserId
         ? players.findIndex(p => p.userId === ownUserId)
         : -1;
-      const legPlayerIndex = ownIndex >= 0 ? ownIndex : 0;
+      if (ownIndex < 0) return; // Identity not resolved — skip leg stats announcement only
+      const legPlayerIndex = ownIndex;
       const playerStats = match.stats?.[legPlayerIndex];
       const legStats = playerStats?.legStats;
       const playerName = players[legPlayerIndex]?.name ?? config.aiCommentator?.playerName1 ?? 'Spieler';
@@ -385,8 +393,6 @@ async function processGameData(gameData: IGameData, oldGameData: IGameData): Pro
         await speakLegStats(legStats, playerName);
       }
 
-      lastLegCount = currentLeg;
-      lastSetCount = currentSet;
       return; // Kein weiterer Kommentar in diesem Zyklus
     }
   }

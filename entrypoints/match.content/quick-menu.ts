@@ -34,7 +34,9 @@ const BUILTIN_PRESETS: SoundPreset[] = [
 async function loadCustomPresets(): Promise<SoundPreset[]> {
   try {
     const r = await browser.storage.local.get(PRESETS_KEY);
-    return r[PRESETS_KEY] ? JSON.parse(r[PRESETS_KEY]) : [];
+    const raw = r[PRESETS_KEY];
+    if (!raw) return [];
+    return typeof raw === 'string' ? JSON.parse(raw) : [];
   } catch (_) { return []; }
 }
 async function saveCustomPresets(presets: SoundPreset[]) {

@@ -34,7 +34,7 @@ import { AutodartsToolsConfig, type IConfig } from "@/utils/storage";
 const emit = defineEmits([ "toggle", "settingChange" ]);
 useStorage("adt:active-settings", "external-boards");
 const config = ref<IConfig>();
-const imageUrl = browser.runtime.getURL("/images/external-boards.png");
+const imageUrl = browser.runtime.getURL("/images/external-boards.svg");
 
 onMounted(async () => {
   config.value = await AutodartsToolsConfig.getValue();

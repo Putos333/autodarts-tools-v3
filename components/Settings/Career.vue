@@ -1126,7 +1126,7 @@ const rankingsTableRows = computed(() => {
             <div>
               <div style="font-size: 11px; color: #F5C842; letter-spacing: 3px; text-transform: uppercase; font-weight: 900;">Saisonkalender {{ season.year }}</div>
               <div style="font-size: 14px; color: #FFFFFF; margin-top: 2px;">
-                {{ season.completedTournaments.length }} von {{ PDC_TOURNAMENT_CALENDAR.filter(t => availableTournaments.some(x => x.id === t.id) || season.completedTournaments.some(c => c.tournamentId === t.id)).length }} Turniere gespielt
+                {{ season?.completedTournaments.length ?? 0 }} von {{ PDC_TOURNAMENT_CALENDAR.filter(t => availableTournaments.some(x => x.id === t.id) || season?.completedTournaments.some(c => c.tournamentId === t.id)).length }} Turniere gespielt
               </div>
             </div>
             <div v-if="nextTournament && !seasonFinished" style="text-align: right;">

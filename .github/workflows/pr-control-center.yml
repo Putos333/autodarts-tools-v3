@@ -1,0 +1,63 @@
+name: pr-control-center
+
+# Pull-Request-Gate ausschließlich für PRs gegen feature/control-center.
+#
+# Führt die fünf bereits lokal verifizierten Checks über die bestehenden
+# package.json-Scripts aus (keine neuen Scripts, keine neuen Dependencies,
+# kein Testframework-Wechsel). Bewusst additiv und vollständig isoliert von
+# build-firefox.yml / release.yml — kein gemeinsamer Trigger, kein
+# gemeinsamer Job, keine gemeinsame Datei. Root Cause für 0 CI-Checks auf
+# PR #16 war ein reiner Trigger-Branch-Filter-Mismatch: weder
+# build-firefox.yml (pull_request nur gegen develop) noch release.yml (nur
+# push auf main/tools-2.0.0) reagieren auf PRs gegen feature/control-center.
+#
+# Kein Gate hier nutzt continue-on-error — jeder Fehler lässt den Workflow
+# tatsächlich fehlschlagen.
+
+on:
+  pull_request:
+    branches:
+      - 'feature/control-center'
+
+concurrency:
+  group: pr-control-center-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    name: Control Center PR Gates
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'yarn'
+
+      - name: Install dependencies (frozen lockfile)
+        run: yarn install --frozen-lockfile
+        env:
+          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
+
+      - name: Unit Tests
+        run: yarn test
+
+      - name: Lifecycle Contract Tests
+        run: yarn test:lifecycle
+
+      - name: TypeScript
+        run: yarn compile
+
+      - name: Firefox MV2 Build
+        run: yarn build:firefox
+
+      - name: Chrome MV3 Build
+        run: yarn build

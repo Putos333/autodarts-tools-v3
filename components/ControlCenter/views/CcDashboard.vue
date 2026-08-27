@@ -1,39 +1,55 @@
 <template>
-  <div class="cc-grid" data-testid="cc-dashboard">
-    <!-- ── LIVE / MATCH HERO ───────────────────────────────────────────── -->
-    <div class="cc-col-12">
-      <CcMatchHero />
+  <div class="cc-home" data-testid="cc-dashboard">
+    <!-- ── 1. HERO BAND ─────────────────────────────────────────────────── -->
+    <CcHeroBand />
+
+    <!-- ── 2. QUICK PLAY ────────────────────────────────────────────────── -->
+    <CcQuickPlay />
+
+    <!-- ── 3. AKTIVITÄT — state-dependent: Live Match Teaser oder letztes Match ── -->
+    <div>
+      <div class="cc-section-title">Aktivität</div>
+      <CcLiveMatchTeaser v-if="hasMatch && !matchFinished" />
+      <CcRecentActivity v-else />
     </div>
 
-    <!-- ── BOARD │ VERBINDUNG │ QUICK STATS ────────────────────────────────
-         Drei kompakte Karten auf breiten Schirmen, zwei ab 1440px,
-         eine auf Mobil — das füllt 16:9-Flächen ohne Leerraum. -->
-    <CcBoardCard class="cc-col-4" />
-    <CcConnectionCard class="cc-col-4" />
-    <CcQuickStats class="cc-col-4" />
+    <!-- ── 4. PERFORMANCE ──────────────────────────────────────────────── -->
+    <div>
+      <div class="cc-section-title">Performance</div>
+      <CcPerformanceStrip />
+    </div>
 
-    <!-- ── SPIELER │ LETZTES / AKTUELLES MATCH ─────────────────────────── -->
-    <CcPlayersCard class="cc-col-7" />
-    <CcMatchDetails class="cc-col-5" />
+    <!-- ── 5+6. FREUNDE / PARTY  +  TRAINING ───────────────────────────── -->
+    <div class="cc-home-split">
+      <CcHomeFriends />
+      <CcHomeTraining />
+    </div>
 
-    <!-- ── KURZÜBERSICHT (Bilanz + letztes Training, aus lokal gespeicherten Daten) ── -->
-    <CcDashboardSummary class="cc-col-12" />
+    <!-- ── 7. BOARD / SYSTEM (quiet footer) ────────────────────────────── -->
+    <CcSystemStatusFooter />
   </div>
 </template>
 
 <script setup lang="ts">
 /**
- * Dashboard — reine Komposition.
+ * Elite Home Dashboard (Wave 2) — reine Komposition, wie zuvor.
  *
- * Jede Karte holt sich ihre Daten selbst aus `useControlCenterStatus()`, das
- * per Refcount ein geteilter Singleton ist. Dadurch bleibt diese Datei ein
- * Layout und nichts weiter.
+ * Jede Teilkomponente holt sich ihre Daten selbst (über das geteilte
+ * `useControlCenterStatus()`-Singleton oder ihren eigenen Storage-Zugriff,
+ * je nachdem, was die jeweilige bestehende Komponente schon so macht).
+ * Ersetzt die vorherige mehrkartige Zusammenstellung (Board/Verbindung/
+ * Quick Stats/Players/MatchDetails/ToolsStatus/DashboardSummary) durch die
+ * genehmigte, fusionierte Elite-Home-Dashboard-Ansicht.
  */
-import CcMatchHero from "../CcMatchHero.vue";
-import CcBoardCard from "../CcBoardCard.vue";
-import CcConnectionCard from "../CcConnectionCard.vue";
-import CcQuickStats from "../CcQuickStats.vue";
-import CcPlayersCard from "../CcPlayersCard.vue";
-import CcMatchDetails from "../CcMatchDetails.vue";
-import CcDashboardSummary from "../CcDashboardSummary.vue";
+import CcHeroBand from "../CcHeroBand.vue";
+import CcQuickPlay from "../CcQuickPlay.vue";
+import CcLiveMatchTeaser from "../CcLiveMatchTeaser.vue";
+import CcRecentActivity from "../CcRecentActivity.vue";
+import CcPerformanceStrip from "../CcPerformanceStrip.vue";
+import CcHomeFriends from "../CcHomeFriends.vue";
+import CcHomeTraining from "../CcHomeTraining.vue";
+import CcSystemStatusFooter from "../CcSystemStatusFooter.vue";
+import { useControlCenterStatus } from "@/composables/useControlCenterStatus";
+
+const { hasMatch, matchFinished } = useControlCenterStatus();
 </script>

@@ -185,18 +185,18 @@ async function restoreTournamentState() {
       TM_MARATHON_KEY, TM_MARATHON_START_KEY,
     ]);
     if (result[TM_TOURNAMENT_KEY] && result[TM_TOURNAMENT_KEY] !== 'null') {
-      selectedTournament.value = JSON.parse(result[TM_TOURNAMENT_KEY]);
+      selectedTournament.value = JSON.parse(result[TM_TOURNAMENT_KEY] as string);
     }
-    if (result[TM_ROUND_KEY]) selectedRound.value = result[TM_ROUND_KEY];
-    if (result[TM_DIFFICULTY_KEY]) selectedDifficulty.value = result[TM_DIFFICULTY_KEY];
+    if (result[TM_ROUND_KEY]) selectedRound.value = result[TM_ROUND_KEY] as string;
+    if (result[TM_DIFFICULTY_KEY]) selectedDifficulty.value = result[TM_DIFFICULTY_KEY] as CareerDifficulty;
     if (result[TM_BRACKET_KEY] && result[TM_BRACKET_KEY] !== 'null') {
-      bracket.value = JSON.parse(result[TM_BRACKET_KEY]);
+      bracket.value = JSON.parse(result[TM_BRACKET_KEY] as string);
     }
     if (typeof result[TM_MARATHON_KEY] === 'boolean') {
-      marathonMode.value = result[TM_MARATHON_KEY];
+      marathonMode.value = result[TM_MARATHON_KEY] as boolean;
     }
     if (typeof result[TM_MARATHON_START_KEY] === 'number') {
-      marathonStartTs.value = result[TM_MARATHON_START_KEY];
+      marathonStartTs.value = result[TM_MARATHON_START_KEY] as number;
     }
   } catch (e) { /* ignorieren */ }
 }
@@ -240,7 +240,7 @@ onMounted(async () => {
   // v2.9.79: Auto-Continue nach Turnier-Sieg
   try {
     const acReq = await browser.storage.local.get('tm-auto-continue-request');
-    const req = acReq['tm-auto-continue-request'];
+    const req = acReq['tm-auto-continue-request'] as { ts?: number } | undefined;
     if (req && Date.now() - (req.ts ?? 0) < 5 * 60 * 1000) {
       await browser.storage.local.remove('tm-auto-continue-request');
       // Kurz warten, damit lastMatchResult-Watcher zuerst durchläuft

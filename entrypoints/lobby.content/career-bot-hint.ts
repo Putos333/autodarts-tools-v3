@@ -129,7 +129,7 @@ async function getActiveMatch(): Promise<CareerMatchConfig | null> {
     const r = await browser.storage.local.get([ACTIVE_MATCH_KEY_LOCAL, ACTIVE_MATCH_KEY_FALLBACK]);
     const raw = r[ACTIVE_MATCH_KEY_LOCAL] ?? r[ACTIVE_MATCH_KEY_FALLBACK];
     if (!raw) return null;
-    return typeof raw === 'string' ? JSON.parse(raw) : raw;
+    return typeof raw === 'string' ? JSON.parse(raw) : (raw as CareerMatchConfig);
   } catch (_) { return null; }
 }
 

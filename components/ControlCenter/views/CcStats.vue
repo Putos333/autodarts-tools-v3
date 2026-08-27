@@ -21,8 +21,8 @@
         <p class="cc-note" style="font-size: 13px;">
           Alle Werte hier stammen aus denselben gespeicherten Ergebnissen wie im
           <a href="#history" style="color: var(--cc-gold); text-decoration: underline;">Verlauf</a>. Fehlende
-          Werte werden ehrlich als „–" angezeigt, nie als 0. „Siege/Niederlagen" beziehen sich auf
-          Spieler-Position 1 im Match — dieselbe Konvention wie im Verlauf.
+          Werte werden ehrlich als „–" angezeigt, nie als 0. „Siege/Niederlagen" werden über deine
+          gespeicherte Nutzer-ID (Player-Identity-Fix) ermittelt — nicht über eine feste Spieler-Position.
         </p>
       </CcCard>
     </div>
@@ -89,13 +89,13 @@
           <CcStatTile
             label="Siege"
             :value="overview.summary.wins"
-            hint="Spieler-Position 1"
+            hint="Deine Nutzer-ID"
             accent="accent"
           />
           <CcStatTile
             label="Niederlagen"
             :value="overview.summary.losses"
-            hint="Spieler-Position 1"
+            hint="Deine Nutzer-ID"
             accent="plain"
           />
           <CcStatTile
@@ -199,6 +199,7 @@ import {
 } from "@/utils/canonical-match-result-storage";
 import type { ICanonicalMatchResult } from "@/utils/canonical-match-result";
 import { getUserIdFromToken } from "@/utils/helpers";
+import { AutodartsToolsGlobalStatus } from "@/utils/storage";
 import {
   DEFAULT_STATISTICS_FILTERS,
   computeStatisticsOverview,
@@ -209,6 +210,7 @@ import {
 /* ─── Raw CMR Data (dieselbe Quelle wie CcHistory.vue) ─────────────────────── */
 const rawResults = ref<ICanonicalMatchResult[]>([]);
 let unwatch: (() => void) | undefined;
+let unwatchGlobalStatus: (() => void) | undefined;
 
 async function loadResults(): Promise<void> {
   try {
@@ -289,17 +291,28 @@ function formTitle(entry: IRecentFormEntry): string {
 }
 
 /* ─── Init & Cleanup ─────────────────────────────────────────────────────────── */
+let disposed = false;
+
 onMounted(async () => {
   applyPendingGameModeFilter();
   await Promise.all([ loadResults(), loadMyUserId() ]);
+  if (disposed) return;
   unwatch = AutodartsToolsCanonicalMatchResults.watch(() => {
     void loadResults();
   });
+  // N2 (PR #16 Review): myUserId wurde bisher nur einmalig beim Mount
+  // aufgelöst. Kam der Auth-Token erst nach dem Mount an (später Login),
+  // blieb die Statistik-Ansicht dauerhaft leer — derselbe Live-Refresh-Fix
+  // wie bereits bei useControlCenterStatus.ts.
+  unwatchGlobalStatus = AutodartsToolsGlobalStatus.watch(() => void loadMyUserId());
 });
 
 onBeforeUnmount(() => {
+  disposed = true;
   unwatch?.();
+  unwatchGlobalStatus?.();
   unwatch = undefined;
+  unwatchGlobalStatus = undefined;
 });
 </script>
 

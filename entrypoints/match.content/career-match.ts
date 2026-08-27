@@ -225,7 +225,7 @@ export function showCareerHud(config: CareerMatchConfig, state: CareerMatchState
       </div>
       <div style="font-size: 16px; font-weight: 900; color: #E8002D;">:</div>
       <div style="text-align: center; flex: 1;">
-        <div style="font-size: 10px; color: #94A3B8; text-transform: uppercase; letter-spacing: 1px;">${escapeHtml(config.opponent.name.split(' ').pop())}</div>
+        <div style="font-size: 10px; color: #94A3B8; text-transform: uppercase; letter-spacing: 1px;">${escapeHtml(config.opponent?.name?.split(' ')?.pop() ?? 'Gegner')}</div>
         <div style="font-size: 22px; font-weight: 900; color: #FFFFFF;">${isSetFormat ? state.opponentSetsWon : state.opponentLegsWon}</div>
       </div>
     </div>

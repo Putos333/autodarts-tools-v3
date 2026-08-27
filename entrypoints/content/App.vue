@@ -56,6 +56,15 @@ watch(currentUrl, async (newURL, oldURL) => {
       if (Date.now() < toolsOpeningGuardUntil) return;
       configVisible.value = false;
     }
+
+    // P0-FIX: Nach SPA-Navigation auf eine Seite MIT Sidebar (Match/Lobby/Boards)
+    // initMenu() erneut aufrufen, damit der Sidebar-Eintrag "Tools" nachgerüstet wird.
+    // Auf der Login-Seite gab es keinen Settings-Link → nur FAB. Nach Login existiert
+    // die Sidebar, aber initMenu() lief nie wieder.
+    const isMainAppPage = /\/(matches|boards|lobbies|lobbynew|history|tournament)(?:\/|$)/i.test(newURL);
+    if (isMainAppPage) {
+      initMenu().catch(console.error);
+    }
   }
 });
 
@@ -131,6 +140,7 @@ onMounted(async () => {
 });
 
 onBeforeUnmount(() => {
+  disposed = true;
   observer.disconnect();
   clearInterval(navigationCheckInterval.value);
   const collapseButton = document.querySelector("button[aria-label='Collapse side bar']") as HTMLButtonElement | null;
@@ -139,7 +149,24 @@ onBeforeUnmount(() => {
   document.getElementById("adt-tools-fab-wrap")?.remove();
 });
 
+// Re-Entrancy-Guard (N1, PR #16 Review): initMenu() wird von mehreren
+// unabhängigen Quellen ausgelöst (onMounted, URL-Watcher, isMobileNav-Watcher,
+// Collapse-Button) und hat mehrere `await waitForElement(...)`-Wartepunkte
+// (bis 4s je Selektor). Zwei sich überlappende Aufrufe konnten dadurch beide
+// bis zum `menu.appendChild(menuItem)` durchlaufen — Ergebnis: ein doppelter
+// Sidebar-Eintrag (zweite `id="autodarts-tools-menu-item"`-Node) und ein
+// geleaktes `setInterval`, weil der zweite Aufruf `navigationCheckInterval`
+// überschreibt, bevor der erste sein eigenes Intervall je abräumen kann.
+// Gleiches Muster wie `matchGeneration` in match.content/index.ts. `disposed`
+// deckt zusätzlich Mount→Unmount→Mount ab (ein noch laufender Aufruf einer
+// bereits unmounteten Instanz darf nichts mehr in die reale Seite schreiben).
+let menuInitGeneration = 0;
+let disposed = false;
+
 async function initMenu() {
+  const generation = ++menuInitGeneration;
+  if (disposed) return;
+
   if (navigationCheckInterval.value) clearInterval(navigationCheckInterval.value);
 
   const existingMenuItem = document.getElementById("autodarts-tools-menu-item");
@@ -160,6 +187,9 @@ async function initMenu() {
   for (const sel of SIDEBAR_SELECTORS) {
     try {
       const el = await waitForElement(sel, 4000).catch(() => null);
+      // Ein neuerer initMenu()-Aufruf (oder Unmount) hat diesen überholt —
+      // ab hier nichts mehr an der echten Seite verändern.
+      if (disposed || generation !== menuInitGeneration) return;
       if (el && el.querySelector("a[href='/settings']")) {
         menu = el;
         usedSelector = sel;
@@ -167,6 +197,7 @@ async function initMenu() {
       }
     } catch (_) { /* nächsten Selektor probieren */ }
   }
+  if (disposed || generation !== menuInitGeneration) return;
   if (!menu) {
     console.warn("[ADT] Sidebar-Menü nicht gefunden — Fallback-FAB übernimmt den Einstieg.");
     // Wir montieren trotzdem den Floating-Action-Button, damit der Nutzer die

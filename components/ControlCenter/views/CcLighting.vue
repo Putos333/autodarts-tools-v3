@@ -104,14 +104,18 @@ async function toggleWled(): Promise<void> {
   await updateConfigIfChanged(current, next, "wledFx");
 }
 
+let disposed = false;
+
 onMounted(async () => {
   await loadConfig();
+  if (disposed) return;
   unwatch = AutodartsToolsConfig.watch(() => {
     void loadConfig();
   });
 });
 
 onBeforeUnmount(() => {
+  disposed = true;
   unwatch?.();
   unwatch = undefined;
 });

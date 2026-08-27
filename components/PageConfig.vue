@@ -222,18 +222,18 @@
             </div>
 
             <Animations @toggle="openSettingsModal('animations')" @setting-change="updateConfig" :config="config" class="feature-card" data-feature-index="27" />
-            <Caller @toggle="openSettingsModal('caller')" @setting-change="updateConfig" class="feature-card" data-feature-index="28" />
-            <SoundFx @toggle="openSettingsModal('sound-fx')" @setting-change="updateConfig" class="feature-card" data-feature-index="29" />
-            <Wled @toggle="openSettingsModal('wled-fx')" @setting-change="updateConfig" class="feature-card" data-feature-index="30" />
-            <WalkOn class="feature-card col-span-full" data-feature-index="31" />
-            <Crowd class="feature-card col-span-full" data-feature-index="32" />
-            <Buzzer class="feature-card col-span-full" data-feature-index="33" />
-            <Soundboard class="feature-card col-span-full" data-feature-index="34" />
-            <DartImpact class="feature-card col-span-full" data-feature-index="35" />
-            <TtsProvider class="feature-card col-span-full" data-feature-index="36" />
-            <PrecisionMap class="feature-card col-span-full" data-feature-index="37" />
+            <Caller @toggle="openSettingsModal('caller')" @setting-change="updateConfig" :config="config" class="feature-card" data-feature-index="28" />
+            <SoundFx @toggle="openSettingsModal('sound-fx')" @setting-change="updateConfig" :config="config" class="feature-card" data-feature-index="29" />
+            <Wled @toggle="openSettingsModal('wled-fx')" @setting-change="updateConfig" :config="config" class="feature-card" data-feature-index="30" />
+            <WalkOn @toggle="openSettingsModal('walkon')" @setting-change="updateConfig" :config="config" class="feature-card col-span-full" data-feature-index="31" />
+            <Crowd @toggle="openSettingsModal('crowd')" @setting-change="updateConfig" class="feature-card col-span-full" data-feature-index="32" />
+            <Buzzer @toggle="openSettingsModal('buzzer')" @setting-change="updateConfig" class="feature-card col-span-full" data-feature-index="33" />
+            <Soundboard @toggle="openSettingsModal('soundboard')" @setting-change="updateConfig" :config="config" class="feature-card col-span-full" data-feature-index="34" />
+            <DartImpact @toggle="openSettingsModal('dart-impact')" @setting-change="updateConfig" :config="config" class="feature-card col-span-full" data-feature-index="35" />
+            <TtsProvider @toggle="openSettingsModal('tts-provider')" @setting-change="updateConfig" class="feature-card col-span-full" data-feature-index="36" />
+            <PrecisionMap @toggle="openSettingsModal('precision-map')" @setting-change="updateConfig" class="feature-card col-span-full" data-feature-index="37" />
             <!-- v2.9.93 – Vorbereitung Vision-Auto-Kalibrierung: nur Adress-Feld -->
-            <VisionCalibration class="feature-card col-span-full" data-feature-index="38" />
+            <VisionCalibration @toggle="openSettingsModal('vision-calibration')" @setting-change="updateConfig" class="feature-card col-span-full" data-feature-index="38" />
           </div>
 
           <!-- v2.9.45 NEU: Karriere-Modus (Full-Page) -->

@@ -38,7 +38,7 @@
           <CcStatTile label="Vollständig" :value="kpis.complete" accent="accent" />
           <CcStatTile label="Teilweise" :value="kpis.partial" accent="accent" />
           <CcStatTile label="Minimal" :value="kpis.minimal" accent="plain" />
-          <CcStatTile label="Siege" :value="kpis.wins" hint="Matches mit Sieg (Spieler 1)" accent="gold" />
+          <CcStatTile label="Siege" :value="kpis.wins" hint="Deine Nutzer-ID" accent="gold" />
           <CcStatTile label="Ø Average" :value="kpis.avgAverage" :decimals="1" hint="Aus vollständigen Matches" accent="accent" />
         </div>
       </div>
@@ -348,6 +348,7 @@ import {
 } from "@/utils/canonical-match-result-storage";
 import type { ICanonicalMatchResult } from "@/utils/canonical-match-result";
 import { getUserIdFromToken } from "@/utils/helpers";
+import { AutodartsToolsGlobalStatus } from "@/utils/storage";
 import {
   computeHistoryKPIs,
   DEFAULT_HISTORY_FILTERS,
@@ -368,6 +369,7 @@ const rawResults = ref<ICanonicalMatchResult[]>([]);
 
 /** Registrierte Cleanup-Funktionen (Reaktivität). */
 let unwatch: (() => void) | undefined;
+let unwatchGlobalStatus: (() => void) | undefined;
 
 async function loadResults(): Promise<void> {
   try {
@@ -474,7 +476,9 @@ function winnerNameOf(match: ICmrMatchDisplay): string | null {
 }
 
 function isWinnerMatch(match: ICmrMatchDisplay): boolean {
-  return match.finished && match.winnerIndex !== undefined;
+  if (!match.finished || match.winnerIndex === undefined || !myUserId.value) return false;
+  const me = match.players.find((p) => p.userId === myUserId.value);
+  return me !== undefined && me.index === match.winnerIndex;
 }
 
 function modeOf(match: ICmrMatchDisplay): string | null {
@@ -498,15 +502,26 @@ function qualityTone(quality: ICmrMatchDisplay["quality"]): ReturnType<typeof ge
 }
 
 /* ─── Init & Cleanup ────────────────────────────────────────────────────────── */
+let disposed = false;
+
 onMounted(async () => {
   await Promise.all([ loadResults(), loadMyUserId() ]);
+  if (disposed) return;
   unwatch = AutodartsToolsCanonicalMatchResults.watch(() => {
     void loadResults();
   });
+  // N2 (PR #16 Review): myUserId wurde bisher nur einmalig beim Mount
+  // aufgelöst. Kam der Auth-Token erst nach dem Mount an (später Login),
+  // blieb der Verlauf dauerhaft ohne eigene Sieg-/Kennzeichnung — derselbe
+  // Live-Refresh-Fix wie bereits bei useControlCenterStatus.ts.
+  unwatchGlobalStatus = AutodartsToolsGlobalStatus.watch(() => void loadMyUserId());
 });
 
 onBeforeUnmount(() => {
+  disposed = true;
   unwatch?.();
+  unwatchGlobalStatus?.();
   unwatch = undefined;
+  unwatchGlobalStatus = undefined;
 });
 </script>

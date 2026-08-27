@@ -21,7 +21,9 @@ import { AutodartsToolsGameData } from "@/utils/game-data-storage";
 import { AutodartsToolsTrainingHistory, AutodartsToolsTrainingHistoryMigrated } from "@/utils/storage";
 import type { TrainingSession } from "@/utils/training-history";
 import { mergeTrainingHistories } from "@/utils/training-history";
-import { getExerciseById } from "@/utils/training-exercises";
+import { getExerciseById, PROGRESS_STORAGE_KEY, type ExerciseProgress, type ProgressMap, type TrainingExercise } from "@/utils/training-exercises";
+import { determineAutoMedal, isMedalImprovement } from "@/utils/training-medals";
+import { getUserIdFromToken } from "@/utils/helpers";
 
 /** Legacy page-localStorage key (pre-R1), read once for a non-destructive migration into browser.storage.local. */
 const LEGACY_HISTORY_KEY = "ad-training-history";
@@ -42,9 +44,11 @@ async function migrateLegacyTrainingHistory(): Promise<void> {
       const current = await AutodartsToolsTrainingHistory.getValue();
       await AutodartsToolsTrainingHistory.setValue(mergeTrainingHistories(current, legacy));
     }
+    // Only mark as migrated AFTER successful parse+merge
     await AutodartsToolsTrainingHistoryMigrated.setValue(true);
   } catch (e) {
     console.error("[training-mode] migrateLegacyTrainingHistory failed", e);
+    // Don't set migration flag on failure — allows retry on next match
   }
 }
 
@@ -89,6 +93,23 @@ let live180s = 0;
 let liveCheckoutMisses = 0;
 let liveCheckoutRate = 0;
 
+/**
+ * Resolve the local player's position in a match by userId (Player-Identity-Fix).
+ *
+ * Returns the index of the player whose `userId` matches `myUserId`, or -1 if
+ * not found (e.g. Bot match, guest, or expired token). Falls back to index 0
+ * only when identity cannot be resolved, preserving legacy behavior for the
+ * anonymous/local-single-player case without silently misattributing wins.
+ *
+ * @see getUserIdFromToken() in utils/helpers.ts (JWT sub claim, no network call)
+ */
+function resolveMyPlayerIndex(players: Array<{ userId?: string; index: number }> | undefined, myUserId: string | null): number {
+  if (!players || players.length === 0) return -1;
+  if (!myUserId) return -1; // No identity → do not assume index 0 for stats attribution
+  const found = players.findIndex((p) => p?.userId !== undefined && p.userId === myUserId);
+  return found >= 0 ? found : -1;
+}
+
 export async function trainingMode(): Promise<void> {
   const config = await AutodartsToolsConfig.getValue();
   if (!config.training?.enabled) return;
@@ -102,6 +123,10 @@ export async function trainingMode(): Promise<void> {
   if (config.training.showLiveProgress) {
     createLiveOverlay(config.training);
   }
+
+  // Resolve local player identity once per training session (JWT sub claim).
+  // Player position varies per match — never assume index 0.
+  const myUserId = await getUserIdFromToken();
 
   gameDataWatcherUnwatch = AutodartsToolsGameData.watch(async (gameData: any) => {
     if (!gameData) return;
@@ -124,42 +149,68 @@ export async function trainingMode(): Promise<void> {
     const match = gameData.match;
     if (!match) return;
 
-    // Home player = Index 0 (konsistent mit match-card.ts / career-controller.ts)
-    const myPlayer = match.players?.[0];
-    if (!myPlayer) return;
-
-    // Statistiken aus IMatch.stats[position].matchStats lesen (IPlayer selbst hat kein .stats-Feld)
-    const matchStats = match.stats?.[0]?.matchStats;
-    if (matchStats) {
-      liveAvg = matchStats.average ?? 0;
-      live140Plus = matchStats.plus140 ?? 0;
-      live180s = matchStats.total180 ?? 0;
-      liveCheckoutRate = matchStats.checkoutPercent ?? 0;
-      // checkoutMisses nicht direkt verfügbar – annähern via checkouts/checkoutsHit
-      const checkoutsHit = matchStats.checkoutsHit ?? 0;
-      const checkouts = matchStats.checkouts ?? 0;
-      liveCheckoutMisses = Math.max(0, checkouts - checkoutsHit);
-    }
-
-    // Live-Overlay aktualisieren
-    if (config.training?.showLiveProgress) {
-      updateLiveOverlay({ goals });
-    }
-
-    // Match beendet? (per IMatch.finished / winner)
+    // Match-Ende-Erkennung ist identitätsunabhängig (reine IMatch-Felder) und
+    // muss auch dann laufen, wenn die eigene Identität in diesem Match nicht
+    // auflösbar ist — sonst bleibt die aktive Übung nach einem Match dauerhaft
+    // als "aktiv" markiert (Bug H3, PR #16 Review): clearActiveTrainingExercise()
+    // hing zuvor hinter dem Identity-Check und lief dadurch nie.
     const isFinished = match.finished === true || (match.winner ?? -1) >= 0;
+
+    // Resolve local player per match via userId (Player-Identity-Fix, siehe ROADMAP_DEPENDENCIES.md).
+    // Derselbe Nutzer kann in unterschiedlichen Matches an unterschiedlichen Positionen sitzen.
+    const myIndex = resolveMyPlayerIndex(match.players, myUserId);
+    const myPlayer = myIndex >= 0 ? match.players?.[myIndex] : null;
+
+    // Live-Stats, Overlay, Summary, Verlauf und Medaillen sind zu Recht
+    // identitätsabhängig — sie lesen echte Werte des eigenen Spielers
+    // (match.stats?.[myIndex]) und dürfen ohne aufgelöste Identität nicht mit
+    // Nullwerten fabriziert werden.
+    if (myPlayer) {
+      // Statistiken aus IMatch.stats[position].matchStats lesen (IPlayer selbst hat kein .stats-Feld)
+      const matchStats = match.stats?.[myIndex]?.matchStats;
+      if (matchStats) {
+        liveAvg = matchStats.average ?? 0;
+        live140Plus = matchStats.plus140 ?? 0;
+        live180s = matchStats.total180 ?? 0;
+        liveCheckoutRate = matchStats.checkoutPercent ?? 0;
+        // checkoutMisses nicht direkt verfügbar – annähern via checkouts/checkoutsHit
+        const checkoutsHit = matchStats.checkoutsHit ?? 0;
+        const checkouts = matchStats.checkouts ?? 0;
+        liveCheckoutMisses = Math.max(0, checkouts - checkoutsHit);
+      }
+
+      // Live-Overlay aktualisieren
+      if (config.training?.showLiveProgress) {
+        updateLiveOverlay({ goals });
+      }
+    }
+
     if (isFinished && !matchFinished) {
       matchFinished = true;
 
-      if (config.training?.showSummaryAfterMatch) {
-        showSummary({ goals });
+      if (myPlayer) {
+        if (config.training?.showSummaryAfterMatch) {
+          showSummary({ goals });
+        }
+
+        if (config.training?.trackHistory) {
+          await saveToHistory({ goals, exerciseId: activeExercise?.id, exerciseTitle: activeExercise?.title });
+        }
+
+        // RUNTIME-FIX (Autodarts Elite, nächste Phase nach Match Center):
+        // Medaillen-Vergabe war seit v2.9.72 nie verdrahtet (siehe CcTraining.vue-
+        // Hinweis "technisch noch nicht verdrahtet") — die Live-Stats für die
+        // Auswertung liefen hier bereits durch (liveAvg/live140Plus/live180s/
+        // liveCheckoutRate/liveCheckoutMisses, s.o.), nur das Schreiben nach
+        // local:training-exercise-progress fehlte. Unabhängig von trackHistory,
+        // weil das eine separate Einstellung (Sitzungs-Log) ist.
+        if (activeExercise) {
+          await maybeAwardMedal(activeExercise);
+        }
       }
 
-      if (config.training?.trackHistory) {
-        await saveToHistory({ goals, exerciseId: activeExercise?.id, exerciseTitle: activeExercise?.title });
-      }
-
-      // Clear active exercise after match ends
+      // Aktive Übung immer aufräumen, unabhängig davon, ob die eigene
+      // Identität in diesem Match auflösbar war (Bug H3).
       await clearActiveTrainingExercise();
     }
   });
@@ -401,6 +452,50 @@ async function saveToHistory(cfg: { goals: TrainingGoals; exerciseId?: string; e
     await AutodartsToolsTrainingHistory.setValue(history);
   } catch (e) {
     console.error("[training-mode] saveToHistory failed", e);
+  }
+}
+
+// ─── Medaillen-Vergabe (Bronze/Silber/Gold pro Übung) ─────────────────────────
+// Tier-Bestimmung ist reine Logik in utils/training-medals.ts (testbar ohne
+// Browser/WXT) — hier nur das Lesen/Schreiben von browser.storage.local.
+/**
+ * Trägt ein neu erreichtes Tier in local:training-exercise-progress ein — nie
+ * abwertend gegenüber einem bereits vorhandenen besseren Medaillenstand.
+ * `attempts` zählt jeden abgeschlossenen Versuch mit aktiver Übung, auch wenn
+ * kein (automatisch verifizierbares) Tier erreicht wurde. `bestScore` bleibt
+ * unverändert — die 20 Übungen haben je unterschiedliche Zielgrößen, ein
+ * einzelner "Score"-Begriff würde hier einen Wert erfinden, den es nicht gibt.
+ */
+async function maybeAwardMedal(exercise: TrainingExercise): Promise<void> {
+  try {
+    const medal = determineAutoMedal(exercise, {
+      average: liveAvg,
+      count140Plus: live140Plus,
+      count180s: live180s,
+      checkoutRate: liveCheckoutRate,
+      checkoutMisses: liveCheckoutMisses,
+    });
+
+    const key = PROGRESS_STORAGE_KEY.replace("local:", "");
+    const stored = await browser.storage.local.get(key);
+    const progressMap = (stored[key] ?? {}) as ProgressMap;
+    const existing: ExerciseProgress = progressMap[exercise.id] ?? { medal: null, attempts: 0, bestScore: null, lastAttempt: null };
+
+    const improved = isMedalImprovement(medal, existing.medal);
+
+    progressMap[exercise.id] = {
+      ...existing,
+      medal: improved ? medal : existing.medal,
+      attempts: existing.attempts + 1,
+      lastAttempt: new Date().toISOString(),
+    };
+
+    await browser.storage.local.set({ [key]: progressMap });
+    if (improved) {
+      console.log(`[training-mode] Medaille vergeben: ${exercise.id} → ${medal}`);
+    }
+  } catch (e) {
+    console.error("[training-mode] maybeAwardMedal failed", e);
   }
 }
 

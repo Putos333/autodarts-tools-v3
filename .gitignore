@@ -44,3 +44,16 @@ components.d.ts
 *.certSigningRequest
 
 git2md
+
+# Ruflo local secrets and runtime data
+.env.local
+.env.*.local
+.claude-flow/data/
+.claude-flow/logs/
+.claude-flow/sessions/
+
+# graphify knowledge graph output
+graphify-out/
+
+# Local AI/tooling runtime data
+ruvector.db

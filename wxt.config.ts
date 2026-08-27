@@ -1,6 +1,6 @@
 import { URL, fileURLToPath } from "node:url";
 
-import { defineConfig } from "wxt";
+import { defineConfig, type ConfigEnv } from "wxt";
 import vue from "@vitejs/plugin-vue";
 import AutoImport from "unplugin-auto-import/vite";
 import Component from "unplugin-vue-components/vite";
@@ -22,7 +22,11 @@ export default defineConfig({
       vueTemplate: true,
     },
   },
-  manifest: {
+  // `manifest` als Funktion: Chrome erwartet laut Schema `author: {email}`,
+  // Firefox validiert `author` dagegen strikt als String (sonst Manifest-
+  // Warnung "Expected string instead of {...}"). Der Rest des Manifests ist
+  // für beide Ziele identisch, daher nur `author` pro Browser unterschieden.
+  manifest: ({ browser }: ConfigEnv) => ({
     host_permissions: [
       "*://play.autodarts.io/*",
       "*://play.autodarts.com/*",
@@ -37,6 +41,7 @@ export default defineConfig({
     permissions: [
       "storage",
       "activeTab",
+      "alarms",
       // "background",
     ],
     background: {
@@ -62,7 +67,7 @@ export default defineConfig({
       },
     },
     homepage_url: "https://darts-caller-ext.emergent.host",
-    author: "Autodarts Tools Community",
+    author: browser === "firefox" ? "community@autodarts.tools" : { email: "community@autodarts.tools" },
     // content_scripts: [
     //   {
     //     matches: [ "*://play.autodarts.io/*" ],
@@ -87,7 +92,7 @@ export default defineConfig({
         matches: [ "*://play.autodarts.io/*", "*://play.autodarts.com/*" ],
       },
     ],
-  },
+  }),
   dev: {
     reloadCommand: "Alt+T",
   },
@@ -145,8 +150,19 @@ export default defineConfig({
     // TD-02: `drop` gehört zu Vite's Top-Level `esbuild`-Option (UserConfig.esbuild),
     // nicht unter `build.esbuild` (BuildOptions kennt dieses Feld nicht – wurde bisher
     // von Vite stillschweigend ignoriert, siehe node_modules/vite/dist/node/index.d.ts).
+    //
+    // RUNTIME-FIX (Realtest 2, Friends & Party): "console" stand hier ebenfalls in
+    // `drop` und hat dadurch AUSNAHMSLOS jeden console.*-Aufruf aus JEDEM Build
+    // entfernt — auch aus `yarn build`/`yarn build:firefox`, also genau den Builds,
+    // die real via about:debugging geladen werden. Das betraf nicht nur die neuen
+    // [ADT-DIAG]-Logs dieser Untersuchung, sondern ausnahmslos alle console.log/
+    // warn/error-Aufrufe im gesamten Projekt — ein zuverlässiger Realtest mit
+    // Diagnose-Logs war dadurch grundsätzlich unmöglich. `debugger` bleibt entfernt
+    // (unkritisch). TEMPORÄR bis der reale Datenweg vom Nutzer bestätigt ist —
+    // danach kann "console" hier wieder ergänzt werden, wenn stille Production-
+    // Logs gewünscht sind.
     esbuild: {
-      drop: [ "console", "debugger" ],
+      drop: [ "debugger" ],
     },
   }),
 });

@@ -115,7 +115,7 @@ const emit = defineEmits([ "toggle", "settingChange" ]);
 useStorage("adt:active-settings", "dart-impact");
 
 const config = ref<IConfig>();
-const imageUrl = browser.runtime.getURL("/images/dart-impact.png");
+const imageUrl = browser.runtime.getURL("/images/dart-impact.svg");
 
 const variants = [
   { value: "thud" as const,   label: "Thud" },

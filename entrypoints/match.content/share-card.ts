@@ -50,8 +50,9 @@ async function renderCard(match: any): Promise<void> {
   const players = match.players ?? [];
   const winner = players[match.winner];
   const winnerName = winner?.name ?? "Sieger";
-  const ownIndex = ownUserId ? players.findIndex((p: any) => p.userId === ownUserId) : 0;
-  const own = players[ownIndex] ?? players[0];
+  const ownIndex = ownUserId ? players.findIndex((p: any) => p.userId === ownUserId) : -1;
+  if (ownIndex < 0) return; // Identity not resolved — don't render share card
+  const own = players[ownIndex];
   const ownName = own?.name ?? "Du";
   const stats = match.stats?.[ownIndex] ?? {};
   const avg = (stats.matchStats?.average ?? stats.legStats?.average ?? 0);

@@ -116,10 +116,10 @@ async function runTesten() {
 </script>
 
 <template>
-  <div style="font-family: 'Barniedrig Condensed', 'Barniedrig', sans-serif; color: #e8eaf0; background: #0D1B2A;">
+  <div style="font-family: 'Barlow Condensed', 'Barlow', sans-serif; color: #e8eaf0; background: #0D1B2A;">
 
     <!-- Header -->
-    <div style="display:flex; align-items:Mitte; gap:10px; padding: 16px 20px 12px; border-unten: 2px solid #E8002D;">
+    <div style="display:flex; align-items:center; gap:10px; padding: 16px 20px 12px; border-bottom: 2px solid #E8002D;">
       <span style="font-size:22px;">🎙️</span>
       <span style="font-size:20px; font-weight:700; letter-spacing:2px; text-transform:uppercase; color:#F5C842;">
         KI-Kommentator & TTS
@@ -217,10 +217,10 @@ async function runTesten() {
       </div>
 
       <!-- KI-Kommentator An/Aus -->
-      <div style="background:#0a1520; border-radius:6px; padding:14px 16px; border:1px solid #1e3a5f; display:flex; justify-content:space-between; align-items:Mitte;">
+      <div style="background:#0a1520; border-radius:6px; padding:14px 16px; border:1px solid #1e3a5f; display:flex; justify-content:space-between; align-items:center;">
         <div>
           <div style="font-size:16px; font-weight:700;">KI-Kommentator aktiv</div>
-          <div style="font-size:12px; color:#8899aa; margin-oben:2px;">Spricht live während des Spiels</div>
+          <div style="font-size:12px; color:#8899aa; margin-top:2px;">Spricht live während des Spiels</div>
         </div>
         <input type="checkbox" v-model="config.aiCommentator.enabled"
           style="width:22px; height:22px; accent-color:#E8002D; cursor:pointer;" />
@@ -228,15 +228,15 @@ async function runTesten() {
 
       <!-- Provider-Auswahl -->
       <div style="background:#0a1520; border-radius:6px; padding:16px; border:1px solid #1e3a5f;">
-        <div style="font-size:13px; font-weight:700; color:#F5C842; letter-spacing:1px; text-transform:uppercase; margin-unten:12px;">
+        <div style="font-size:13px; font-weight:700; color:#F5C842; letter-spacing:1px; text-transform:uppercase; margin-bottom:12px;">
           🔊 Schritt 1: Sprachsynthese-Anbieter wählen
         </div>
 
         <!-- Provider-Karten -->
-        <div style="display:flex; flex-direction:column; gap:8px; margin-unten:14px;">
+        <div style="display:flex; flex-direction:column; gap:8px; margin-bottom:14px;">
           <label v-for="(info, key) in TTS_PROVIDERS" :key="key"
             :style="{
-              display:'flex', alignItems:'Mitte', gap:12, padding:'12px 14px',
+              display:'flex', alignItems:'center', gap:12, padding:'12px 14px',
               borderRadius:'5px', cursor:'pointer',
               border: selectedProvider === key ? '2px solid #E8002D' : '1px solid #1e3a5f',
               background: selectedProvider === key ? '#1a0a10' : '#0D1B2A',
@@ -244,16 +244,16 @@ async function runTesten() {
             <input type="radio" :value="key" v-model="selectedProvider"
               style="width:18px; height:18px; accent-color:#E8002D; cursor:pointer; flex-shrink:0;" />
             <div style="flex:1;">
-              <div style="display:flex; align-items:Mitte; justify-content:space-between; gap:8px; flex-wrap:wrap;">
+              <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; flex-wrap:wrap;">
                 <div style="font-size:15px; font-weight:700;">{{ info.label }}</div>
                 <a v-if="info.setupUrl" :href="info.setupUrl" target="_blank"
-                  @click.soben
-                  style="display:inline-flex; align-items:Mitte; gap:5px; background:#E8002D; color:#fff; font-size:11px; font-weight:700; letter-spacing:1px; text-transform:uppercase; padding:5px 10px; border-radius:4px; text-decoration:none; white-space:nowrap; flex-shrink:0;">
+                  @click.stop
+                  style="display:inline-flex; align-items:center; gap:5px; background:#E8002D; color:#fff; font-size:11px; font-weight:700; letter-spacing:1px; text-transform:uppercase; padding:5px 10px; border-radius:4px; text-decoration:none; white-space:nowrap; flex-shrink:0;">
                   🌐 Zur Webseite →
                 </a>
               </div>
-              <div style="font-size:12px; color:#8899aa; margin-oben:4px;">{{ info.description }}</div>
-              <div style="font-size:11px; color:#00C853; margin-oben:4px; font-weight:600;">
+              <div style="font-size:12px; color:#8899aa; margin-top:4px;">{{ info.description }}</div>
+              <div style="font-size:11px; color:#00C853; margin-top:4px; font-weight:600;">
                 💰 {{ info.freeTier }}
               </div>
             </div>
@@ -266,17 +266,17 @@ async function runTesten() {
             background: '#0D1B2A', borderRadius:'5px', padding:'14px',
             borderLeft: '3px solid ' + (selectedProvider === 'browser' ? '#00C853' : '#F5C842'),
           }">
-          <div style="font-size:13px; font-weight:700; color:#F5C842; letter-spacing:1px; text-transform:uppercase; margin-unten:10px;">
+          <div style="font-size:13px; font-weight:700; color:#F5C842; letter-spacing:1px; text-transform:uppercase; margin-bottom:10px;">
             📋 Schritt 2: So richtest du {{ providerInfo.label }} ein
           </div>
-          <ol style="margin:0; padding-links:18px; display:flex; flex-direction:column; gap:6px;">
+          <ol style="margin:0; padding-left:18px; display:flex; flex-direction:column; gap:6px;">
             <li v-for="(step, i) in providerInfo.setupSteps" :key="i"
               style="font-size:13px; color:#c8d4e0; line-height:1.5;">
               {{ step }}
             </li>
           </ol>
           <a v-if="providerInfo.setupUrl" :href="providerInfo.setupUrl" target="_blank"
-            style="display:inline-flex; align-items:Mitte; gap:8px; margin-oben:12px; background:#E8002D; color:#fff; font-size:13px; font-weight:700; letter-spacing:1px; text-transform:uppercase; padding:10px 18px; border-radius:4px; text-decoration:none;">
+            style="display:inline-flex; align-items:center; gap:8px; margin-top:12px; background:#E8002D; color:#fff; font-size:13px; font-weight:700; letter-spacing:1px; text-transform:uppercase; padding:10px 18px; border-radius:4px; text-decoration:none;">
             🌐 Jetzt bei {{ providerInfo.label }} registrieren →
           </a>
         </div>
@@ -287,11 +287,11 @@ async function runTesten() {
         style="background:#0a1520; border-radius:6px; padding:16px; border:1px solid #1e3a5f;">
 
         <!-- Titel + Sicherheits-Badge -->
-        <div style="display:flex; align-items:Mitte; justify-content:space-between; margin-unten:12px; flex-wrap:wrap; gap:8px;">
+        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; flex-wrap:wrap; gap:8px;">
           <div style="font-size:13px; font-weight:700; color:#F5C842; letter-spacing:1px; text-transform:uppercase;">
             🔑 Schritt 3: API-Key eintragen
           </div>
-          <div style="display:flex; align-items:Mitte; gap:6px; background:#003320; border:1px solid #00C853; border-radius:4px; padding:4px 10px; cursor:pointer;"
+          <div style="display:flex; align-items:center; gap:6px; background:#003320; border:1px solid #00C853; border-radius:4px; padding:4px 10px; cursor:pointer;"
             @click="showSecurityInfo = !showSecurityInfo">
             <span style="font-size:12px; color:#00C853; font-weight:700;">🔒 AES-256 verschlüsselt</span>
             <span style="font-size:11px; color:#00C853;">{{ showSecurityInfo ? '▲' : '▼' }}</span>
@@ -300,8 +300,8 @@ async function runTesten() {
 
         <!-- Sicherheits-Info (aufklappbar) -->
         <div v-if="showSecurityInfo"
-          style="background:#001a0d; border:1px solid #00C853; border-radius:5px; padding:12px 14px; margin-unten:12px; font-size:12px; line-height:1.7;">
-          <div style="font-weight:700; color:#00C853; margin-unten:8px; font-size:13px;">🛡️ So wird dein API-Key geschützt:</div>
+          style="background:#001a0d; border:1px solid #00C853; border-radius:5px; padding:12px 14px; margin-bottom:12px; font-size:12px; line-height:1.7;">
+          <div style="font-weight:700; color:#00C853; margin-bottom:8px; font-size:13px;">🛡️ So wird dein API-Key geschützt:</div>
           <table style="width:100%; border-collapse:collapse;">
             <tr>
               <td style="color:#8899aa; padding:3px 0; width:130px;">📍 Speicherort:</td>
@@ -320,13 +320,13 @@ async function runTesten() {
               <td style="color:#c8d4e0;">{{ storageInfo.deleteInfo }}</td>
             </tr>
           </table>
-          <div style="margin-oben:10px; color:#556677; font-size:11px;">
+          <div style="margin-top:10px; color:#556677; font-size:11px;">
             ℹ️ Der Verschlüsselungsschlüssel wird automatisch auf diesem Gerät generiert und verlässt deinen Browser niemals. Selbst wenn jemand Zugriff auf die Erweiterungsdaten bekommt, sieht er nur unlesbaren Ciphertext.
           </div>
         </div>
 
         <!-- Wo kommt der Key hin? Hinweis -->
-        <div style="background:#0D1B2A; border-links:3px solid #F5C842; padding:10px 12px; border-radius:0 4px 4px 0; margin-unten:12px; font-size:12px; color:#c8d4e0; line-height:1.6;">
+        <div style="background:#0D1B2A; border-left:3px solid #F5C842; padding:10px 12px; border-radius:0 4px 4px 0; margin-bottom:12px; font-size:12px; color:#c8d4e0; line-height:1.6;">
           <strong style="color:#F5C842;">📌 Wo findest du deinen API-Key?</strong><br/>
           <span v-if="selectedProvider === 'elevenlabs'">
             Nach der Registrierung auf <strong>elevenlabs.io</strong>: Oben rechts auf dein Profilbild klicken → <strong>"Profile + API key"</strong> → den langen Schlüssel kopieren und hier einfügen.
@@ -343,7 +343,7 @@ async function runTesten() {
         </div>
 
         <!-- Key-Eingabefeld -->
-        <div style="display:flex; gap:8px; align-items:Mitte;">
+        <div style="display:flex; gap:8px; align-items:center;">
           <div style="flex:1; position:relative;">
             <input
               :type="showApiKey ? 'text' : 'password'"
@@ -370,7 +370,7 @@ async function runTesten() {
         </div>
 
         <!-- Status-Anzeige -->
-        <div style="display:flex; align-items:Mitte; justify-content:space-between; margin-oben:8px; flex-wrap:wrap; gap:6px;">
+        <div style="display:flex; align-items:center; justify-content:space-between; margin-top:8px; flex-wrap:wrap; gap:6px;">
           <div style="font-size:11px; color:#556677;">
             🔒 Wird verschlüsselt in <strong style="color:#8899aa;">browser.storage.local</strong> gespeichert – nur auf diesem Gerät, nur für diese Erweiterung.
           </div>
@@ -383,7 +383,7 @@ async function runTesten() {
 
       <!-- Stimme wählen -->
       <div style="background:#0a1520; border-radius:6px; padding:16px; border:1px solid #1e3a5f;">
-        <div style="font-size:13px; font-weight:700; color:#F5C842; letter-spacing:1px; text-transform:uppercase; margin-unten:10px;">
+        <div style="font-size:13px; font-weight:700; color:#F5C842; letter-spacing:1px; text-transform:uppercase; margin-bottom:10px;">
           🗣️ Schritt 4: Stimme wählen
         </div>
         <select v-model="config.aiCommentator.voice"
@@ -397,7 +397,7 @@ async function runTesten() {
       <!-- Sprache & Volume -->
       <div style="background:#0a1520; border-radius:6px; padding:16px; border:1px solid #1e3a5f; display:flex; gap:16px; flex-wrap:wrap;">
         <div style="flex:1; min-width:140px;">
-          <div style="font-size:12px; color:#8899aa; letter-spacing:1px; text-transform:uppercase; margin-unten:8px;">Kommentar-Sprache</div>
+          <div style="font-size:12px; color:#8899aa; letter-spacing:1px; text-transform:uppercase; margin-bottom:8px;">Kommentar-Sprache</div>
           <select v-model="config.aiCommentator.language"
             style="width:100%; background:#1e3a5f; color:#e8eaf0; border:1px solid #2a4a7f; padding:10px; border-radius:4px; font-size:14px;">
             <option value="de">🇩🇪 Deutsch</option>
@@ -405,7 +405,7 @@ async function runTesten() {
           </select>
         </div>
         <div style="flex:1; min-width:140px;">
-          <div style="font-size:12px; color:#8899aa; letter-spacing:1px; text-transform:uppercase; margin-unten:8px;">
+          <div style="font-size:12px; color:#8899aa; letter-spacing:1px; text-transform:uppercase; margin-bottom:8px;">
             Volume: {{ config.aiCommentator?.volume ?? 80 }}%
           </div>
           <input type="range" min="0" max="100" step="5"
@@ -416,7 +416,7 @@ async function runTesten() {
 
       <!-- Testen-Button -->
       <div style="background:#0a1520; border-radius:6px; padding:16px; border:1px solid #1e3a5f;">
-        <div style="font-size:13px; font-weight:700; color:#F5C842; letter-spacing:1px; text-transform:uppercase; margin-unten:10px;">
+        <div style="font-size:13px; font-weight:700; color:#F5C842; letter-spacing:1px; text-transform:uppercase; margin-bottom:10px;">
           🧪 Schritt 5: Verbindung testen
         </div>
         <button @click="runTesten" :disabled="isTestening"
@@ -424,7 +424,7 @@ async function runTesten() {
           :style="{ opacity: isTestening ? 0.6 : 1 }">
           {{ isTestening ? '⏳ Testene Verbindung...' : '▶ TEST ABSPIELEN' }}
         </button>
-        <div v-if="testResult" style="margin-oben:10px; padding:10px 14px; border-radius:4px; font-size:13px; font-weight:600;"
+        <div v-if="testResult" style="margin-top:10px; padding:10px 14px; border-radius:4px; font-size:13px; font-weight:600;"
           :style="{
             background: testResult.ok ? '#003320' : '#330010',
             border: `1px solid ${testResult.ok ? '#00C853' : '#E8002D'}`,
@@ -435,7 +435,7 @@ async function runTesten() {
       </div>
 
       <!-- Fallback-Hinweis -->
-      <div style="background:#0a1520; border-radius:6px; padding:14px 16px; border-links:3px solid #1e3a5f; font-size:12px; color:#556677; line-height:1.6;">
+      <div style="background:#0a1520; border-radius:6px; padding:14px 16px; border-left:3px solid #1e3a5f; font-size:12px; color:#556677; line-height:1.6;">
         <strong style="color:#8899aa;">ℹ️ Automatischer Fallback:</strong>
         Wenn kein API-Key eingetragen ist oder ein Fehler auftritt, wechselt die Erweiterung
         automatisch auf den <strong style="color:#8899aa;">Browser-TTS</strong> –

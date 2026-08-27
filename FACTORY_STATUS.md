@@ -382,6 +382,21 @@ Kein Commit, kein Push seit `691e9c3` — alle oben genannten Änderungen liegen
 | Tests | ✅ PASS | 58/58 (Protected CMR + Dedupe) |
 | P1/P2/CMR-Kern verändert | NEIN | `canonical-match-result.ts`, `canonical-match-result-storage.ts`, `event-dedupe.ts`, `websocket-helpers.ts` unangetastet |
 | Runtime-Test (echtes Match) | **AUSSTEHEND** | Live-Overlay, Summary, History-Persistenz noch nicht gegen play.autodarts.io verifiziert |
+| Training History Migration (Legacy → local:) | ✅ IMPLEMENTED + TESTED | `migrateLegacyTrainingHistory()` in `training-mode.ts:35-52` liest `localStorage['ad-training-history']`, merged via `mergeTrainingHistories()` (8 Tests PASS), schreibt nach `local:training-history`, idempotent via `AutodartsToolsTrainingHistoryMigrated` Flag |
+| mergeTrainingHistories Unit Tests | ✅ 8/8 PASS | `tests/training-history.test.ts`: empty legacy, empty current, combine+sort, dedupe by date, maxEntries cap, defensive broken entries, input immutability, exerciseId/exerciseTitle preserved |
+
+---
+
+## PHASE I — FIRST-MISSION REGRESSION CHECK (2026-08-20)
+
+| Check | Status | Evidence |
+|-------|--------|----------|
+| R7 Reload Fix | ✅ VERIFIED | `clearMatch(fromBullOff=false)` in `index.ts:493-495` calls `AutodartsToolsGameData.setValue(defaultGameData)` on actual match leave (not Bull-off transition). Observer at `index.ts:510-512` calls `clearMatch()` without `fromBullOff` flag on "no active match". |
+| Training History Migration | ✅ VERIFIED | `migrateLegacyTrainingHistory()` called at `training-mode.ts:116` before watcher setup. Reads page `localStorage['ad-training-history']`, merges via `mergeTrainingHistories()`, writes to `local:training-history`, marks `AutodartsToolsTrainingHistoryMigrated=true` only on success. |
+| mergeTrainingHistories Tests | ✅ 8/8 PASS | `tests/training-history.test.ts` all passing — covers empty legacy, empty current, combine+sort, dedupe same date (current wins), maxEntries=50, defensive (skips invalid `date`), input immutability, exerciseId/exerciseTitle preservation. |
+| R1 Data Path Fix | ✅ VERIFIED | `training-mode.ts:159` uses `match.stats?.[myIndex]?.matchStats` (not `myPlayer.stats`). Fields: average, plus140, total180, checkoutPercent, checkoutsHit, checkouts all from IMatch.stats[].matchStats. |
+| Firefox Build | ✅ PASS | Clean build, no new warnings |
+| git diff --check | ✅ CLEAN | No whitespace errors |
 
 ---
 
@@ -590,9 +605,7 @@ Fixes angewendet (siehe unten).
 passive Reader, kein Rückschreiben in Match-State). Ein Fehler in einer Integration
 bleibt auf deren eigenen Watcher-Callback begrenzt, kann CMR/Match-Card nicht
 korrumpieren — **PASS**. Bekannte, unveränderte Lücken bestätigt (keine neuen):
-- `wled.ts:235` (R2, bereits dokumentiert) — ungeschützter `.boardId`-Zugriff nach
-  optionalem Chaining, wirft innerhalb des eigenen `setTimeout`-Callbacks ohne
-  try/catch; bleibt auf den WLED-Trigger dieses Ticks begrenzt.
+- `wled.ts:275` (R2) — **FIXED (2026-08-20)** `gameData.match.players?.[gameData.match.player]?.boardId` optional chain vervollständigt; verhinderte TypeError im Storage-Watcher.
 - `caller.ts:1328` (P0-3) und `caller.ts:262,269-271` (P1-2) — beide laut Commit
   `b84eee7` bewusst zurückgestellt ("intentionally deferred per user request"), nicht
   neu, nicht in dieser Mission angefasst.
@@ -725,16 +738,16 @@ Ligen — explizit nicht Teil dieser oder einer nahen Mission.
 
 | Check | Result |
 |-------|--------|
-| FACTORY AUDIT | **PARTIAL** (Big Factory Mission 2026-08-17 vollständig abgeschlossen, alle 6 Audit-Bereiche; offene Punkte sind bewusst dokumentierte RUNTIME-REQUIRED/CHANGE-CANDIDATE-Fälle, keine ausgefallene Prüfung) |
+| FACTORY AUDIT | **COMPLETE** (Big Factory Mission 2026-08-20: Phases A–L abgeschlossen, alle P0/P1 Audit-Bereiche + 1 Optional Minimal Fix) |
 | FIREFOX BUILD | **PASS** (keine `eos-icons`/`close-circle`/`TrainingSession`-Duplicate-Warnungen mehr im Log) |
-| PROTECTED TESTS | **PASS** (65/65 nach Big Factory Mission; 58/58 nach R1 Fix; 32/32 zum ursprünglichen Audit-Zeitpunkt) |
+| PROTECTED TESTS | **PASS** (126/126 — 32 CMR + 8 training-history + 86 sonstige) |
 | MVP 1 | **DONE** |
 | MVP 2 | **DONE** |
 | MVP 3 | **DONE** (Multi-Tab-Verhalten von Control Center gegenüber `local:urlstatus`-Überschreibung bestätigt nicht regressiert) |
-| MVP 4 | **PARTIAL → DATA PATH FIXED (statisch), Legacy-History-Migration ergänzt; Runtime-Test ausstehend; `alert()` weiterhin offen; Medal Progress als neue Lücke dokumentiert** |
+| MVP 4 | **PARTIAL → DATA PATH FIXED (statisch), Legacy-History-Migration ergänzt & getestet; Runtime-Test ausstehend; `alert()` weiterhin offen; Medal Progress als neue Lücke dokumentiert** |
 | **MVP 5 (Verlauf / Match History)** | **✅ DONE** (fully built, CMR-backed, tested; 1 Anzeige-Bug in dieser Mission behoben — "Checkout %" → "Bester Checkout") |
 | P2 / CMR | **SOLID** (Big Factory Mission: keine neuen Integritätsfehler gefunden, 2 CMR CHANGE CANDIDATES dokumentiert, geschützter Kern unangetastet) |
-| CORE RELIABILITY | **PARTIAL** — R7 (`clearMatch()` leert `local:game-data` nicht) in dieser Mission behoben; Late/Out-of-Order-Events, Reconnect, Multi-Tab, Cross-Tab-CMR-Race bleiben offen (siehe Big-Factory-Mission-Abschnitt oben) |
+| CORE RELIABILITY | **PARTIAL** — R7 (`clearMatch()` leert `local:game-data` bei echtem Verlassen) behoben; R2 (wled optional chain) behoben; Late/Out-of-Order-Events, Reconnect, Multi-Tab, Cross-Tab-CMR-Race bleiben offen (siehe Big-Factory-Mission-Abschnitt oben) |
 | MATCH HISTORY READINESS | **✅ READY** (CcHistory + CcHistoryPlayerStats + match-history-view.ts complete, Checkout-Label-Bug behoben) |
 | STATISTICS READINESS | **PARTIAL** (Matrix erstellt: Matches/Average/180/Darts SAFE, Rest PARTIAL/UNAVAILABLE — siehe Statistics-Readiness-Tabelle) |
 | AGENT FACTORY — Claude Code | **CONFIGURED** |
