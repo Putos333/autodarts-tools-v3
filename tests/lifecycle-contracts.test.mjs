@@ -308,10 +308,10 @@ test('CcHistory.vue winnerNameOf() reuses the precomputed isWinner flag, no inde
 /**
  * Issue #13, P2-5: CcTraining.vue loaded training history/progress only in
  * onMounted, with no watcher — changes recorded from another Autodarts tab
- * stayed invisible until navigation/reload. Fix: watch the same stores via
- * the project's established patterns (WxtStorageItem.watch() for
- * AutodartsToolsTrainingHistory, storage.onChanged for the raw progress key),
- * and tear both down on unmount — same shape as CcHistory.vue/useControlCenterStatus.ts.
+ * stayed invisible until navigation/reload. Fix: watch both stores via
+ * WxtStorageItem.watch() (AutodartsToolsTrainingHistory,
+ * AutodartsToolsTrainingProgress), and tear both down on unmount — same
+ * shape as CcHistory.vue/useControlCenterStatus.ts.
  */
 /**
  * Issue #13, P2-6: CcSettings.vue's diagnostic counters (cmrCount,
@@ -347,4 +347,76 @@ test('CcTraining.vue watches training history and progress instead of loading on
     /unwatchHistory\?\.\(\);/,
     /unwatchProgress\?\.\(\);/,
   ], 'CcTraining.vue');
+});
+
+/**
+ * Issue #13, #7: History/Stats/Dashboard-Zusammenfassung/Training zeigten
+ * denselben leeren Zustand für "lädt noch", "Laden fehlgeschlagen" und
+ * "wirklich keine Daten" — nicht unterscheidbar für den Nutzer. Fix: das
+ * gemeinsame State-Modell aus utils/control-center-data-state.ts, in jeder
+ * betroffenen Komponente verdrahtet über einen `loading`-Ref (nur beim ersten
+ * Ladevorgang wahr) und einen `error`-Ref, der bereits geladene Daten NICHT
+ * mehr löscht (kein Zurückfallen auf "keine Daten" bei einem fehlgeschlagenen
+ * Hintergrund-Refresh).
+ */
+function assertUsesCcDataState(text, label, patterns) {
+  assertContains(text, [
+    /import \{ deriveCcDataState \} from "@\/utils\/control-center-data-state";/,
+    ...patterns,
+  ], label);
+}
+
+test('CcHistory.vue distinguishes loading/unavailable/no_data via deriveCcDataState', async () => {
+  const text = await source('components/ControlCenter/views/CcHistory.vue');
+  assertUsesCcDataState(text, 'CcHistory.vue', [
+    /const loading = ref\(true\);/,
+    /const loadError = ref\(false\);/,
+    /const historyState = computed\(\(\) => deriveCcDataState\(\{/,
+    /loading\.value = false;/,
+  ]);
+  assert.doesNotMatch(text, /rawResults\.value = \[\];/, 'CcHistory.vue: a failed background refresh must not erase already-loaded results');
+});
+
+test('CcStats.vue distinguishes loading/unavailable/no_data/identity_unknown via deriveCcDataState', async () => {
+  const text = await source('components/ControlCenter/views/CcStats.vue');
+  assertUsesCcDataState(text, 'CcStats.vue', [
+    /const loading = ref\(true\);/,
+    /const loadError = ref\(false\);/,
+    /const statsState = computed\(\(\) => deriveCcDataState\(\{/,
+    /identityRequired: true,/,
+    /identityKnown: myUserId\.value !== null,/,
+  ]);
+  assert.doesNotMatch(text, /rawResults\.value = \[\];/, 'CcStats.vue: a failed background refresh must not erase already-loaded results');
+});
+
+test('CcDashboardSummary.vue distinguishes loading/unavailable/no_data/identity_unknown for Bilanz and Training independently', async () => {
+  const text = await source('components/ControlCenter/CcDashboardSummary.vue');
+  assertUsesCcDataState(text, 'CcDashboardSummary.vue', [
+    /const bilanzState = computed\(\(\) => deriveCcDataState\(\{/,
+    /identityRequired: true,/,
+    /const trainingState = computed\(\(\) => deriveCcDataState\(\{/,
+  ]);
+});
+
+/**
+ * CcTraining.vue's history source (getTrainingHistory()) already swallows
+ * storage errors and returns `[]` — a second caller (Settings/Training.vue)
+ * relies on that, so it must not be changed to throw. `historyState` can
+ * therefore only ever be "loading" or "no_data"/ready, never "unavailable" —
+ * no dead retry UI for a state that can't occur. `progressState` (a
+ * genuinely independent store with its own real error path) keeps the full
+ * loading/unavailable/no_data distinction.
+ */
+test('CcTraining.vue distinguishes loading/no_data for history (no unreachable "unavailable") and loading/unavailable/no_data for progress', async () => {
+  const text = await source('components/ControlCenter/views/CcTraining.vue');
+  assertUsesCcDataState(text, 'CcTraining.vue', [
+    /const historyLoading = ref\(true\);/,
+    /const historyState = computed\(\(\) => deriveCcDataState\(\{\s*loading: historyLoading\.value,\s*error: false,/,
+    /const progressLoading = ref\(true\);/,
+    /const progressError = ref\(false\);/,
+    /const progressState = computed\(\(\) => deriveCcDataState\(\{/,
+    /historyLoading\.value = false;/,
+    /progressLoading\.value = false;/,
+  ]);
+  assert.doesNotMatch(text, /historyState === 'unavailable'/, 'CcTraining.vue: history has no reachable unavailable state, must not render dead retry UI for it');
 });

@@ -63,20 +63,27 @@
           <CcStatusPill label="20 Übungen" tone="gold" class="is-sm" />
         </template>
 
-        <div class="cc-grid" style="grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 18px;">
-          <CcExerciseCard
-            v-for="ex in topExercises"
-            :key="ex.id"
-            :exercise="ex"
-            :medal="progress[ex.id]?.medal ?? null"
-            :large="true"
-            class="cc-col-3"
-          />
-        </div>
-
-        <p v-if="topExercises.length === 0" class="cc-note" style="margin-top: 8px;">
-          Noch keine Medaillen errungen. Starte eine Übung unten in den Kategorien!
+        <p v-if="progressState === 'loading'" class="cc-note" style="margin-top: 8px;">Lädt …</p>
+        <p v-else-if="progressState === 'unavailable'" class="cc-note" style="margin-top: 8px; color: var(--cc-warn);">
+          Fortschritt nicht verfügbar.
+          <a href="#" @click.prevent="() => loadProgress()" style="color: var(--cc-gold); text-decoration: underline;">Erneut versuchen</a>
         </p>
+        <template v-else>
+          <div class="cc-grid" style="grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 18px;">
+            <CcExerciseCard
+              v-for="ex in topExercises"
+              :key="ex.id"
+              :exercise="ex"
+              :medal="progress[ex.id]?.medal ?? null"
+              :large="true"
+              class="cc-col-3"
+            />
+          </div>
+
+          <p v-if="topExercises.length === 0" class="cc-note" style="margin-top: 8px;">
+            Noch keine Medaillen errungen. Starte eine Übung unten in den Kategorien!
+          </p>
+        </template>
       </CcCard>
     </div>
 
@@ -114,7 +121,8 @@
     <!-- (D1) PERFORMANCE -->
     <div class="cc-col-12">
       <CcCard title="Trainings-Performance" subtitle="Aggregiert über alle gespeicherten Sessions" icon="icon-[pixelarticons--trending-up]" accent="muted">
-        <div v-if="performance.sessionCount > 0" class="cc-tiles" style="grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));">
+        <CcEmptyState v-if="historyState === 'loading'" icon="icon-[pixelarticons--loader]" title="Lädt …" text="Trainings-Sessions werden geladen." />
+        <div v-else-if="performance.sessionCount > 0" class="cc-tiles" style="grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));">
           <CcStatTile label="Sessions" :value="performance.sessionCount" />
           <CcStatTile label="Ø Average" :value="performance.meanAverage" :decimals="1" />
           <CcStatTile label="Ø Checkout-Quote" :value="performance.meanCheckoutRate" :decimals="0" unit="%" />
@@ -134,7 +142,8 @@
     <!-- (D2) FORTSCHRITT & EMPFEHLUNG -->
     <div class="cc-col-8">
       <CcCard title="Fortschritt" subtitle="Average der letzten Sessions, chronologisch" icon="icon-[pixelarticons--chart]" accent="muted">
-        <div v-if="progressTrend.length >= 2" class="cc-trend">
+        <CcEmptyState v-if="historyState === 'loading'" icon="icon-[pixelarticons--loader]" title="Lädt …" text="Trainings-Sessions werden geladen." />
+        <div v-else-if="progressTrend.length >= 2" class="cc-trend">
           <svg
             class="cc-trend-svg"
             viewBox="0 0 200 60"
@@ -160,7 +169,10 @@
 
     <div class="cc-col-4">
       <CcCard title="Empfehlung" subtitle="Verglichen mit deinem eigenen Schnitt" icon="icon-[pixelarticons--target]" accent="muted">
-        <template v-if="!recommendation.sufficient">
+        <template v-if="historyState === 'loading'">
+          <CcEmptyState icon="icon-[pixelarticons--loader]" title="Lädt …" text="Trainings-Sessions werden geladen." />
+        </template>
+        <template v-else-if="!recommendation.sufficient">
           <CcEmptyState
             icon="icon-[pixelarticons--target]"
             title="Noch zu wenig Sessions"
@@ -190,7 +202,8 @@
     <!-- (D3) LETZTES TRAINING -->
     <div class="cc-col-7">
       <CcCard title="Letztes Training" subtitle="Verlauf gespeicherter Sessions (Training-Modus) — Zeile anklicken für Details" icon="icon-[pixelarticons--clock]" accent="muted">
-        <div v-if="trainingHistory.length > 0">
+        <CcEmptyState v-if="historyState === 'loading'" icon="icon-[pixelarticons--loader]" title="Lädt …" text="Trainings-Sessions werden geladen." />
+        <div v-else-if="trainingHistory.length > 0">
           <div class="cc-list" style="max-height: 320px; overflow-y: auto;">
             <div
               v-for="session in trainingHistory"
@@ -310,6 +323,7 @@ import {
   isSessionPersonalBest,
 } from "@/utils/training-performance";
 import type { TrainingSession } from "@/utils/training-history";
+import { deriveCcDataState } from "@/utils/control-center-data-state";
 
 /** Vom Control-Center-Root via provide() zur Verfügung gestellt (wie CcExerciseCard.vue). */
 type ShowNotification = (message: string, type?: "success" | "error", duration?: number) => void;
@@ -319,9 +333,32 @@ const showNotification = inject<ShowNotification>("cc-notification");
 const trainingHistory = ref<Awaited<ReturnType<typeof getTrainingHistory>>>([]);
 const selectedSession = ref<TrainingSession | null>(null);
 
+/**
+ * Issue #13, #7: "lädt noch", "Laden fehlgeschlagen" und "zu wenige Sessions"
+ * zeigten bisher denselben leeren Zustand in Performance/Fortschritt/Empfehlung.
+ * `loading` gilt nur für den ersten Ladevorgang.
+ *
+ * KEIN `unavailable`-Zustand für diese Quelle: `getTrainingHistory()` (und
+ * `components/Settings/Training.vue`, der andere Aufrufer) fängt Storage-
+ * Fehler bereits selbst ab und liefert `[]` statt zu werfen — ein Fehler wäre
+ * hier nie von "wirklich keine Sessions" unterscheidbar. Der try/catch ist
+ * rein defensiv für alles andere, was vor diesem Rückgabewert werfen könnte.
+ */
+const historyLoading = ref(true);
+
 async function loadHistory(): Promise<void> {
-  trainingHistory.value = await getTrainingHistory();
+  try {
+    trainingHistory.value = await getTrainingHistory();
+  } catch (error) {
+    console.error("[CcTraining] loadHistory failed", error);
+  }
 }
+
+const historyState = computed(() => deriveCcDataState({
+  loading: historyLoading.value,
+  error: false,
+  hasData: trainingHistory.value.length > 0,
+}));
 
 /* ─── Performance / Bestleistungen / Fortschritt / Empfehlung (rein abgeleitet) ── */
 const lastSession = computed<TrainingSession | null>(() => trainingHistory.value[0] ?? null);
@@ -371,14 +408,24 @@ async function repeatLastExercise(): Promise<void> {
 
 /* ─── Exercise Progress (Medaillen) ─────────────────────────────────────────── */
 const progress = ref<ProgressMap>({});
+const progressLoading = ref(true);
+const progressError = ref(false);
 
 async function loadProgress(): Promise<void> {
   try {
     progress.value = (await AutodartsToolsTrainingProgress.getValue()) as ProgressMap;
+    progressError.value = false;
   } catch (e) {
     console.error("[CcTraining] loadProgress failed", e);
+    progressError.value = true;
   }
 }
+
+const progressState = computed(() => deriveCcDataState({
+  loading: progressLoading.value,
+  error: progressError.value,
+  hasData: Object.keys(progress.value).length > 0,
+}));
 
 /* ─── Live Status ───────────────────────────────────────────────────────────── */
 const {
@@ -507,6 +554,8 @@ let unwatchProgress: (() => void) | undefined;
 
 onMounted(async () => {
   await Promise.all([loadHistory(), loadProgress()]);
+  historyLoading.value = false;
+  progressLoading.value = false;
   if (disposed) return;
   unwatchHistory = AutodartsToolsTrainingHistory.watch(() => void loadHistory());
   unwatchProgress = AutodartsToolsTrainingProgress.watch(() => void loadProgress());

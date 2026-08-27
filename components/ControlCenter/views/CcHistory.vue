@@ -31,7 +31,7 @@
     </div>
 
     <!-- (B) KPI SUMMARY -->
-    <template v-if="kpis.total > 0">
+    <template v-if="historyState === null">
       <div class="cc-col-12">
         <div class="cc-tiles" style="grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));">
           <CcStatTile label="Gespeichert" :value="kpis.total" accent="gold" />
@@ -315,6 +315,26 @@
     <div v-else class="cc-col-12">
       <CcCard title="MATCH HISTORY" subtitle="Deine lokal gespeicherten Matches" icon="icon-[pixelarticons--clock]" accent="gold">
         <CcEmptyState
+          v-if="historyState === 'loading'"
+          icon="icon-[pixelarticons--loader]"
+          title="Lädt …"
+          text="Gespeicherte Matches werden geladen."
+        />
+        <CcEmptyState
+          v-else-if="historyState === 'unavailable'"
+          icon="icon-[pixelarticons--alert]"
+          title="Verlauf nicht verfügbar"
+          text="Die gespeicherten Matches konnten nicht geladen werden."
+        >
+          <template #action>
+            <button @click="() => loadResults()" class="cc-btn is-primary" type="button">
+              <span class="icon-[pixelarticons--reload]" />
+              <span>Erneut versuchen</span>
+            </button>
+          </template>
+        </CcEmptyState>
+        <CcEmptyState
+          v-else
           icon="icon-[pixelarticons--clock]"
           title="Noch keine gespeicherten Matches"
           text="Sobald ein Match auf play.autodarts.io beendet wird, speichert die Erweiterung das Ergebnis hier lokal. Danach erscheinen hier Verlauf, Filter und Details."
@@ -362,6 +382,7 @@ import {
   type IHistoryFilters,
   type THistorySort,
 } from "@/utils/match-history-view";
+import { deriveCcDataState } from "@/utils/control-center-data-state";
 
 /* ─── Zentrale Status-Quelle (N2 Centralization) ────────────────────────────── */
 const { myUserId } = useControlCenterStatus();
@@ -369,20 +390,38 @@ const { myUserId } = useControlCenterStatus();
 /* ─── Raw CMR Data ──────────────────────────────────────────────────────────── */
 const rawResults = ref<ICanonicalMatchResult[]>([]);
 
+/**
+ * Issue #13, #7: "lädt noch", "Laden fehlgeschlagen" und "wirklich keine
+ * Matches" zeigten bisher denselben leeren Zustand. `loading` gilt nur für
+ * den ersten Ladevorgang (kein Spinner bei jedem Hintergrund-Refresh durch
+ * `unwatch`). Ein fehlgeschlagener SPÄTERER Refresh löscht `rawResults` NICHT
+ * mehr — bereits geladene, gute Daten bleiben sichtbar (siehe deriveCcDataState).
+ */
+const loading = ref(true);
+const loadError = ref(false);
+
 /** Registrierte Cleanup-Funktionen (Reaktivität). */
 let unwatch: (() => void) | undefined;
 
 async function loadResults(): Promise<void> {
   try {
     rawResults.value = await initCanonicalMatchResults();
+    loadError.value = false;
   } catch (error) {
     console.error("[CcHistory] loadResults failed", error);
-    rawResults.value = [];
+    loadError.value = true;
   }
 }
 
 /* ─── Display Model ─────────────────────────────────────────────────────────── */
 const allDisplay = computed<ICmrMatchDisplay[]>(() => mapCmrsToDisplay(rawResults.value));
+
+/** Identität wird für die Liste selbst nicht gebraucht (nur für die "Siege"-Kachel, siehe kpis.wins). */
+const historyState = computed(() => deriveCcDataState({
+  loading: loading.value,
+  error: loadError.value,
+  hasData: allDisplay.value.length > 0,
+}));
 
 /* ─── Filters & Sorting ─────────────────────────────────────────────────────── */
 const filters = ref<IHistoryFilters>({ ...DEFAULT_HISTORY_FILTERS });
@@ -497,6 +536,7 @@ let disposed = false;
 
 onMounted(async () => {
   await loadResults();
+  loading.value = false;
   if (disposed) return;
   unwatch = AutodartsToolsCanonicalMatchResults.watch(() => {
     void loadResults();

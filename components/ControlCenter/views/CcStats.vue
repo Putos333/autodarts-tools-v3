@@ -24,13 +24,37 @@
           Werte werden ehrlich als „–" angezeigt, nie als 0. „Siege/Niederlagen" werden über deine
           gespeicherte Nutzer-ID (Player-Identity-Fix) ermittelt — nicht über eine feste Spieler-Position.
         </p>
+        <p v-if="statsState === 'identity_unknown'" class="cc-note" style="font-size: 13px; color: var(--cc-warn);">
+          Deine Nutzer-ID ist noch nicht aufgelöst — personenbezogene Kennzahlen (Siege, Average, Form)
+          erscheinen automatisch, sobald sie bekannt ist. Öffne dafür play.autodarts.io in einem Tab.
+        </p>
       </CcCard>
     </div>
 
     <!-- (B) EMPTY STATE -->
-    <div v-if="overview.summary.totalMatches === 0" class="cc-col-12">
+    <div v-if="statsState !== null && statsState !== 'identity_unknown'" class="cc-col-12">
       <CcCard title="Noch keine Daten" icon="icon-[pixelarticons--chart-bar]" accent="muted">
         <CcEmptyState
+          v-if="statsState === 'loading'"
+          icon="icon-[pixelarticons--loader]"
+          title="Lädt …"
+          text="Statistiken werden geladen."
+        />
+        <CcEmptyState
+          v-else-if="statsState === 'unavailable'"
+          icon="icon-[pixelarticons--alert]"
+          title="Statistiken nicht verfügbar"
+          text="Die gespeicherten Match-Ergebnisse konnten nicht geladen werden."
+        >
+          <template #action>
+            <button @click="() => loadResults()" class="cc-btn is-primary" type="button">
+              <span class="icon-[pixelarticons--reload]" />
+              <span>Erneut versuchen</span>
+            </button>
+          </template>
+        </CcEmptyState>
+        <CcEmptyState
+          v-else
           icon="icon-[pixelarticons--chart-bar]"
           title="Noch keine Statistiken verfügbar"
           text="Sobald ein Match auf play.autodarts.io beendet wird, speichert die Erweiterung das Ergebnis — danach erscheinen hier Kennzahlen und Trends."
@@ -205,6 +229,7 @@ import {
   type IRecentFormEntry,
   type IStatisticsFilters,
 } from "@/utils/statistics";
+import { deriveCcDataState } from "@/utils/control-center-data-state";
 
 /* ─── Zentrale Status-Quelle (N2 Centralization) ────────────────────────────── */
 const { myUserId } = useControlCenterStatus();
@@ -213,12 +238,22 @@ const { myUserId } = useControlCenterStatus();
 const rawResults = ref<ICanonicalMatchResult[]>([]);
 let unwatch: (() => void) | undefined;
 
+/**
+ * Issue #13, #7: "lädt noch", "Laden fehlgeschlagen" und "wirklich keine
+ * Matches" zeigten bisher denselben leeren Zustand. `loading` gilt nur für
+ * den ersten Ladevorgang. Ein fehlgeschlagener SPÄTERER Refresh löscht
+ * `rawResults` NICHT mehr — bereits geladene, gute Daten bleiben sichtbar.
+ */
+const loading = ref(true);
+const loadError = ref(false);
+
 async function loadResults(): Promise<void> {
   try {
     rawResults.value = await initCanonicalMatchResults();
+    loadError.value = false;
   } catch (error) {
     console.error("[CcStats] loadResults failed", error);
-    rawResults.value = [];
+    loadError.value = true;
   }
 }
 
@@ -239,6 +274,20 @@ function applyPendingGameModeFilter(): void {
 }
 
 const overview = computed(() => computeStatisticsOverview(rawResults.value, filters.value, myUserId.value));
+
+/**
+ * Statistiken sind grundsätzlich personenbezogen ("Abgeleitet aus DEINEN
+ * gespeicherten Match-Ergebnissen") — bei vorhandenen Matches aber unbekannter
+ * Identität wird trotzdem gerendert (bestehende Konvention: fehlende Werte
+ * zeigen "–", nie 0), zusätzlich aber ein Hinweis eingeblendet.
+ */
+const statsState = computed(() => deriveCcDataState({
+  loading: loading.value,
+  error: loadError.value,
+  hasData: overview.value.summary.totalMatches > 0,
+  identityRequired: true,
+  identityKnown: myUserId.value !== null,
+}));
 
 const winRatePercent = computed(() => {
   const rate = overview.value.summary.winRate;
@@ -285,6 +334,7 @@ let disposed = false;
 onMounted(async () => {
   applyPendingGameModeFilter();
   await loadResults();
+  loading.value = false;
   if (disposed) return;
   unwatch = AutodartsToolsCanonicalMatchResults.watch(() => {
     void loadResults();
