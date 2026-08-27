@@ -283,7 +283,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, inject, onMounted, ref } from "vue";
+import { computed, inject, onBeforeUnmount, onMounted, ref } from "vue";
 
 import CcCard from "../CcCard.vue";
 import CcStatTile from "../CcStatTile.vue";
@@ -295,13 +295,13 @@ import { openAutodarts, openClassicSettings } from "../open-autodarts";
 import {
   TRAINING_EXERCISES,
   EXERCISE_CATEGORIES,
-  PROGRESS_STORAGE_KEY,
   type ExerciseCategory,
   type Medal,
   type ProgressMap,
 } from "@/utils/training-exercises";
 import { getTrainingHistory } from "@/entrypoints/match.content/training-mode";
 import { useControlCenterStatus } from "@/composables/useControlCenterStatus";
+import { AutodartsToolsTrainingHistory, AutodartsToolsTrainingProgress } from "@/utils/storage";
 import {
   computePersonalBests,
   computeProgressTrend,
@@ -374,9 +374,7 @@ const progress = ref<ProgressMap>({});
 
 async function loadProgress(): Promise<void> {
   try {
-    const key = PROGRESS_STORAGE_KEY.replace("local:", "");
-    const r = await browser.storage.local.get(key);
-    progress.value = (r[key] ?? {}) as ProgressMap;
+    progress.value = (await AutodartsToolsTrainingProgress.getValue()) as ProgressMap;
   } catch (e) {
     console.error("[CcTraining] loadProgress failed", e);
   }
@@ -496,9 +494,30 @@ function formatDate(iso: string): string {
   }
 }
 
-/* ─── Init ───────────────────────────────────────────────────────────────────── */
+/**
+ * Issue #13, P2-5: History/Progress wurden bisher nur beim Mount geladen —
+ * Änderungen aus einem anderen Autodarts-Tab blieben bis Navigation/Reload
+ * unsichtbar. Fix: dieselben Watcher-Patterns wie an anderer Stelle im
+ * Control Center (z.B. CcHistory.vue::AutodartsToolsCanonicalMatchResults.watch).
+ */
+/* ─── Init & Cleanup ─────────────────────────────────────────────────────────── */
+let disposed = false;
+let unwatchHistory: (() => void) | undefined;
+let unwatchProgress: (() => void) | undefined;
+
 onMounted(async () => {
   await Promise.all([loadHistory(), loadProgress()]);
+  if (disposed) return;
+  unwatchHistory = AutodartsToolsTrainingHistory.watch(() => void loadHistory());
+  unwatchProgress = AutodartsToolsTrainingProgress.watch(() => void loadProgress());
+});
+
+onBeforeUnmount(() => {
+  disposed = true;
+  unwatchHistory?.();
+  unwatchHistory = undefined;
+  unwatchProgress?.();
+  unwatchProgress = undefined;
 });
 </script>
 

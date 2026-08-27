@@ -289,3 +289,26 @@ test('CcMatchDetails.vue winnerNameOf() has no array-position fallback', async (
 test('CcHistory.vue winnerNameOf() has no array-position fallback', async () => {
   assertNoWinnerPositionalFallback(await source('components/ControlCenter/views/CcHistory.vue'), 'CcHistory.vue');
 });
+
+/**
+ * Issue #13, P2-5: CcTraining.vue loaded training history/progress only in
+ * onMounted, with no watcher — changes recorded from another Autodarts tab
+ * stayed invisible until navigation/reload. Fix: watch the same stores via
+ * the project's established patterns (WxtStorageItem.watch() for
+ * AutodartsToolsTrainingHistory, storage.onChanged for the raw progress key),
+ * and tear both down on unmount — same shape as CcHistory.vue/useControlCenterStatus.ts.
+ */
+test('CcTraining.vue watches training history and progress instead of loading once on mount', async () => {
+  const text = await source('components/ControlCenter/views/CcTraining.vue');
+  assertContains(text, [
+    /import \{ AutodartsToolsTrainingHistory, AutodartsToolsTrainingProgress \} from "@\/utils\/storage";/,
+    /let disposed = false;/,
+    /let unwatchHistory: \(\(\) => void\) \| undefined;/,
+    /let unwatchProgress: \(\(\) => void\) \| undefined;/,
+    /unwatchHistory = AutodartsToolsTrainingHistory\.watch\(\(\) => void loadHistory\(\)\);/,
+    /unwatchProgress = AutodartsToolsTrainingProgress\.watch\(\(\) => void loadProgress\(\)\);/,
+    /onBeforeUnmount\(\(\) => \{\s*disposed = true;/,
+    /unwatchHistory\?\.\(\);/,
+    /unwatchProgress\?\.\(\);/,
+  ], 'CcTraining.vue');
+});
