@@ -286,8 +286,23 @@ test('CcMatchDetails.vue winnerNameOf() has no array-position fallback', async (
   assertNoWinnerPositionalFallback(await source('components/ControlCenter/CcMatchDetails.vue'), 'CcMatchDetails.vue');
 });
 
-test('CcHistory.vue winnerNameOf() has no array-position fallback', async () => {
-  assertNoWinnerPositionalFallback(await source('components/ControlCenter/views/CcHistory.vue'), 'CcHistory.vue');
+/**
+ * Code-review follow-up on P1-3: CcHistory.vue's ICmrPlayerDisplay already
+ * carries a precomputed `isWinner` (mapCmrPlayerToDisplay, utils/match-history-view.ts:83),
+ * derived with the same `player.index === winnerIndex` rule. winnerNameOf()
+ * now reuses that single source of truth instead of re-deriving the winner
+ * independently — one implementation of the rule, not two that could diverge.
+ */
+test('CcHistory.vue winnerNameOf() reuses the precomputed isWinner flag, no independent re-derivation', async () => {
+  const text = await source('components/ControlCenter/views/CcHistory.vue');
+  assert.doesNotMatch(
+    text,
+    /\.players\[\w+\.winnerIndex\]/,
+    'CcHistory.vue: winnerNameOf() must not fall back to players[winnerIndex]',
+  );
+  assertContains(text, [
+    /\.find\(\(p\) => p\.isWinner\);/,
+  ], 'CcHistory.vue');
 });
 
 /**
