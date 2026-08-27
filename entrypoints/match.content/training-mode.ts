@@ -149,56 +149,68 @@ export async function trainingMode(): Promise<void> {
     const match = gameData.match;
     if (!match) return;
 
+    // Match-Ende-Erkennung ist identitätsunabhängig (reine IMatch-Felder) und
+    // muss auch dann laufen, wenn die eigene Identität in diesem Match nicht
+    // auflösbar ist — sonst bleibt die aktive Übung nach einem Match dauerhaft
+    // als "aktiv" markiert (Bug H3, PR #16 Review): clearActiveTrainingExercise()
+    // hing zuvor hinter dem Identity-Check und lief dadurch nie.
+    const isFinished = match.finished === true || (match.winner ?? -1) >= 0;
+
     // Resolve local player per match via userId (Player-Identity-Fix, siehe ROADMAP_DEPENDENCIES.md).
     // Derselbe Nutzer kann in unterschiedlichen Matches an unterschiedlichen Positionen sitzen.
     const myIndex = resolveMyPlayerIndex(match.players, myUserId);
-    if (myIndex < 0) return; // Identity not resolved in this match — skip stats attribution
-    const myPlayer = match.players?.[myIndex];
-    if (!myPlayer) return;
+    const myPlayer = myIndex >= 0 ? match.players?.[myIndex] : null;
 
-    // Statistiken aus IMatch.stats[position].matchStats lesen (IPlayer selbst hat kein .stats-Feld)
-    const matchStats = match.stats?.[myIndex]?.matchStats;
-    if (matchStats) {
-      liveAvg = matchStats.average ?? 0;
-      live140Plus = matchStats.plus140 ?? 0;
-      live180s = matchStats.total180 ?? 0;
-      liveCheckoutRate = matchStats.checkoutPercent ?? 0;
-      // checkoutMisses nicht direkt verfügbar – annähern via checkouts/checkoutsHit
-      const checkoutsHit = matchStats.checkoutsHit ?? 0;
-      const checkouts = matchStats.checkouts ?? 0;
-      liveCheckoutMisses = Math.max(0, checkouts - checkoutsHit);
+    // Live-Stats, Overlay, Summary, Verlauf und Medaillen sind zu Recht
+    // identitätsabhängig — sie lesen echte Werte des eigenen Spielers
+    // (match.stats?.[myIndex]) und dürfen ohne aufgelöste Identität nicht mit
+    // Nullwerten fabriziert werden.
+    if (myPlayer) {
+      // Statistiken aus IMatch.stats[position].matchStats lesen (IPlayer selbst hat kein .stats-Feld)
+      const matchStats = match.stats?.[myIndex]?.matchStats;
+      if (matchStats) {
+        liveAvg = matchStats.average ?? 0;
+        live140Plus = matchStats.plus140 ?? 0;
+        live180s = matchStats.total180 ?? 0;
+        liveCheckoutRate = matchStats.checkoutPercent ?? 0;
+        // checkoutMisses nicht direkt verfügbar – annähern via checkouts/checkoutsHit
+        const checkoutsHit = matchStats.checkoutsHit ?? 0;
+        const checkouts = matchStats.checkouts ?? 0;
+        liveCheckoutMisses = Math.max(0, checkouts - checkoutsHit);
+      }
+
+      // Live-Overlay aktualisieren
+      if (config.training?.showLiveProgress) {
+        updateLiveOverlay({ goals });
+      }
     }
 
-    // Live-Overlay aktualisieren
-    if (config.training?.showLiveProgress) {
-      updateLiveOverlay({ goals });
-    }
-
-    // Match beendet? (per IMatch.finished / winner)
-    const isFinished = match.finished === true || (match.winner ?? -1) >= 0;
     if (isFinished && !matchFinished) {
       matchFinished = true;
 
-      if (config.training?.showSummaryAfterMatch) {
-        showSummary({ goals });
+      if (myPlayer) {
+        if (config.training?.showSummaryAfterMatch) {
+          showSummary({ goals });
+        }
+
+        if (config.training?.trackHistory) {
+          await saveToHistory({ goals, exerciseId: activeExercise?.id, exerciseTitle: activeExercise?.title });
+        }
+
+        // RUNTIME-FIX (Autodarts Elite, nächste Phase nach Match Center):
+        // Medaillen-Vergabe war seit v2.9.72 nie verdrahtet (siehe CcTraining.vue-
+        // Hinweis "technisch noch nicht verdrahtet") — die Live-Stats für die
+        // Auswertung liefen hier bereits durch (liveAvg/live140Plus/live180s/
+        // liveCheckoutRate/liveCheckoutMisses, s.o.), nur das Schreiben nach
+        // local:training-exercise-progress fehlte. Unabhängig von trackHistory,
+        // weil das eine separate Einstellung (Sitzungs-Log) ist.
+        if (activeExercise) {
+          await maybeAwardMedal(activeExercise);
+        }
       }
 
-      if (config.training?.trackHistory) {
-        await saveToHistory({ goals, exerciseId: activeExercise?.id, exerciseTitle: activeExercise?.title });
-      }
-
-      // RUNTIME-FIX (Autodarts Elite, nächste Phase nach Match Center):
-      // Medaillen-Vergabe war seit v2.9.72 nie verdrahtet (siehe CcTraining.vue-
-      // Hinweis "technisch noch nicht verdrahtet") — die Live-Stats für die
-      // Auswertung liefen hier bereits durch (liveAvg/live140Plus/live180s/
-      // liveCheckoutRate/liveCheckoutMisses, s.o.), nur das Schreiben nach
-      // local:training-exercise-progress fehlte. Unabhängig von trackHistory,
-      // weil das eine separate Einstellung (Sitzungs-Log) ist.
-      if (activeExercise) {
-        await maybeAwardMedal(activeExercise);
-      }
-
-      // Clear active exercise after match ends
+      // Aktive Übung immer aufräumen, unabhängig davon, ob die eigene
+      // Identität in diesem Match auflösbar war (Bug H3).
       await clearActiveTrainingExercise();
     }
   });
