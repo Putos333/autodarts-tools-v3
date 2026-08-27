@@ -79,8 +79,13 @@
     <!-- Historie, rein lesend aus dem gespeicherten Ergebnis-Store -->
     <CcMatchHistory class="cc-col-12" />
 
-    <!-- TEMPORÄR (Phase 5, 301/2-Legs Human Test) — siehe CcMatchHumanTestPanel.vue -->
-    <CcMatchHumanTestPanel class="cc-col-12" />
+    <!-- TEMPORÄR (Phase 5, 301/2-Legs Human Test) — siehe CcMatchHumanTestPanel.vue.
+         Nur sichtbar, wenn der Live-Tester es bewusst aktiviert hat
+         (localStorage.setItem("adt-human-test-panel", "1") in den DevTools der
+         Control-Center-Seite). Kein import.meta.env.DEV-Gate: das Panel muss
+         gerade gegen den echten Produktions-Build laufen, wenn der Human Test
+         tatsächlich stattfindet (N5, PR #16 Review). -->
+    <CcMatchHumanTestPanel v-if="showHumanTestPanel" class="cc-col-12" />
   </div>
 </template>
 
@@ -110,6 +115,8 @@ import CcMatchHumanTestPanel from "../CcMatchHumanTestPanel.vue";
 import CcCard from "../CcCard.vue";
 import CcEmptyState from "../CcEmptyState.vue";
 import CcStatusPill from "../CcStatusPill.vue";
+import { computed } from "vue";
+
 import { openAutodarts, openLobby, openMatch } from "../open-autodarts";
 import { useControlCenterStatus } from "@/composables/useControlCenterStatus";
 
@@ -124,4 +131,15 @@ const {
   connectionHint,
   lastSignalAgo,
 } = useControlCenterStatus();
+
+// N5 (PR #16 Review): CcMatchHumanTestPanel lief bisher ungegated für jeden
+// Nutzer mit aktivem Match mit. Sichtbar nur nach explizitem Opt-in des
+// Live-Testers, siehe Kommentar im Template oben.
+const showHumanTestPanel = computed(() => {
+  try {
+    return localStorage.getItem("adt-human-test-panel") === "1";
+  } catch {
+    return false;
+  }
+});
 </script>
