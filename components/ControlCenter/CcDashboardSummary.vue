@@ -33,13 +33,16 @@ import CcCard from "./CcCard.vue";
 import CcStatTile from "./CcStatTile.vue";
 import {
   AutodartsToolsCanonicalMatchResults,
-  getCanonicalMatchResults,
+  initCanonicalMatchResults,
 } from "@/utils/canonical-match-result-storage";
 import type { ICanonicalMatchResult } from "@/utils/canonical-match-result";
-import { AutodartsToolsGlobalStatus, AutodartsToolsTrainingHistory } from "@/utils/storage";
+import { AutodartsToolsTrainingHistory } from "@/utils/storage";
 import type { TrainingSession } from "@/utils/training-history";
-import { getUserIdFromToken } from "@/utils/helpers";
+import { useControlCenterStatus } from "@/composables/useControlCenterStatus";
 import { computeMatchSummary } from "@/utils/statistics";
+
+/* ─── Zentrale Status-Quelle (N2 Centralization) ────────────────────────────── */
+const { myUserId } = useControlCenterStatus();
 
 /* ─── Match-Bilanz (aus CMR, ungefiltert — dieselbe Quelle wie Verlauf/Statistiken) ── */
 const rawResults = ref<ICanonicalMatchResult[]>([]);
@@ -47,21 +50,9 @@ let unwatchCmr: (() => void) | undefined;
 
 async function loadResults(): Promise<void> {
   try {
-    rawResults.value = await getCanonicalMatchResults();
+    rawResults.value = await initCanonicalMatchResults();
   } catch (error) {
     console.error("[CcDashboardSummary] loadResults failed", error);
-  }
-}
-
-/* ─── Eigene Identität (Player-Identity-Fix, siehe ROADMAP_DEPENDENCIES.md) ── */
-const myUserId = ref<string | null>(null);
-
-async function loadMyUserId(): Promise<void> {
-  try {
-    myUserId.value = await getUserIdFromToken();
-  } catch (error) {
-    console.error("[CcDashboardSummary] loadMyUserId failed", error);
-    myUserId.value = null;
   }
 }
 
@@ -74,7 +65,6 @@ const winRatePercent = computed(() => {
 /* ─── Letztes Training ───────────────────────────────────────────────────── */
 const trainingHistory = ref<TrainingSession[]>([]);
 let unwatchTraining: (() => void) | undefined;
-let unwatchGlobalStatus: (() => void) | undefined;
 
 async function loadTrainingHistory(): Promise<void> {
   try {
@@ -97,24 +87,17 @@ function formatDate(iso: string): string {
 let disposed = false;
 
 onMounted(async () => {
-  await Promise.all([ loadResults(), loadTrainingHistory(), loadMyUserId() ]);
+  await Promise.all([ loadResults(), loadTrainingHistory() ]);
   if (disposed) return;
   unwatchCmr = AutodartsToolsCanonicalMatchResults.watch(() => void loadResults());
   unwatchTraining = AutodartsToolsTrainingHistory.watch(() => void loadTrainingHistory());
-  // N2 (PR #16 Review): myUserId wurde bisher nur einmalig beim Mount
-  // aufgelöst. Kam der Auth-Token erst nach dem Mount an (später Login),
-  // blieb die Bilanz dauerhaft leer — derselbe Live-Refresh-Fix wie bereits
-  // bei useControlCenterStatus.ts.
-  unwatchGlobalStatus = AutodartsToolsGlobalStatus.watch(() => void loadMyUserId());
 });
 
 onBeforeUnmount(() => {
   disposed = true;
   unwatchCmr?.();
   unwatchTraining?.();
-  unwatchGlobalStatus?.();
   unwatchCmr = undefined;
   unwatchTraining = undefined;
-  unwatchGlobalStatus = undefined;
 });
 </script>

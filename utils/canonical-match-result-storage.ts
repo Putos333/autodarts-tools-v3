@@ -18,6 +18,7 @@ import {
   type TCmrOutcome,
   sanitizeCanonicalMatchResults,
   upsertCanonicalMatchResult,
+  migrateCanonicalMatchResult,
 } from "./canonical-match-result";
 
 export interface ICanonicalMatchResultStore {
@@ -37,6 +38,44 @@ export const AutodartsToolsCanonicalMatchResults: WxtStorageItem<ICanonicalMatch
     defaultValue: defaultCanonicalMatchResultStore,
   },
 );
+
+/**
+ * Migrations-Laufwerk: lädt den Store, führt bei Bedarf eine Migration durch
+ * und speichert das Ergebnis mit der aktuellen Schema-Version.
+ *
+ * Wird einmalig beim Extension-Start oder bei Storage-Änderungen aufgerufen.
+ */
+export async function migrateCanonicalMatchResults(): Promise<ICanonicalMatchResultStore> {
+  const store = await AutodartsToolsCanonicalMatchResults.getValue();
+  if (!store) {
+    return defaultCanonicalMatchResultStore;
+  }
+
+  // Bereits aktuelle Version → nichts zu tun
+  if (store.version === CMR_SCHEMA_VERSION) {
+    return store;
+  }
+
+  // Migration von älterer Version auf aktuelle
+  const migratedRecords = store.records.map((record) => migrateCanonicalMatchResult(record, store.version));
+
+  const migratedStore: ICanonicalMatchResultStore = {
+    version: CMR_SCHEMA_VERSION,
+    records: sanitizeCanonicalMatchResults(migratedRecords),
+  };
+
+  await AutodartsToolsCanonicalMatchResults.setValue(migratedStore);
+  return migratedStore;
+}
+
+/**
+ * Initialisiert den CMR-Store: führt Migration durch und gibt gültige Records zurück.
+ * Diese Funktion ersetzt getCanonicalMatchResults() für den ersten Lesezugriff.
+ */
+export async function initCanonicalMatchResults(): Promise<ICanonicalMatchResult[]> {
+  const store = await migrateCanonicalMatchResults();
+  return store.records;
+}
 
 /**
  * Schreibt einen Stand fort. Es wird nur dann geschrieben, wenn sich

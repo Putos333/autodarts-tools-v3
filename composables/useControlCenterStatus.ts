@@ -44,6 +44,8 @@ import {
   getCanonicalMatchResults,
 } from "@/utils/canonical-match-result-storage";
 import type { ICanonicalMatchResult } from "@/utils/canonical-match-result";
+// Player Identity (N2 Centralization) — zentrale myUserId für alle Views
+import { getUserIdFromToken } from "@/utils/helpers";
 // Checkout-Route-Tabelle: dieselbe Quelle wie CcMatchScoreboard.vue und das
 // bestehende Bogey-Warning-Overlay — eine Tabelle, kein Duplikat.
 import { CHECKOUTS } from "@/entrypoints/match.content/bogey-warning";
@@ -123,6 +125,8 @@ const isRefreshing = ref(false);
 const now = ref(Date.now());
 /** Gespeicherte Match-Ergebnisse (P2-Store), neueste zuerst. Nur gelesen. */
 const recentResults = ref<ICanonicalMatchResult[]>([]);
+/** Zentrale Nutzer-Identität (Player-Identity-Fix / N2 Centralization). */
+const myUserId = ref<string | null>(null);
 /**
  * Für welchen Spieler die Quick-Stats gelten. `null` = automatisch
  * (Spieler am Wurf, sonst Sieger, sonst erster Spieler).
@@ -164,6 +168,14 @@ async function readRecentResults(): Promise<void> {
     recentResults.value = await getCanonicalMatchResults();
   } catch {
     recentResults.value = [];
+  }
+}
+
+async function loadMyUserId(): Promise<void> {
+  try {
+    myUserId.value = await getUserIdFromToken();
+  } catch {
+    myUserId.value = null;
   }
 }
 
@@ -223,6 +235,7 @@ async function refresh(): Promise<void> {
     await readWsStatus();
     await readAuth();
     await readRecentResults();
+    await loadMyUserId();
     await pingBackend();
     now.value = Date.now();
   } finally {
@@ -263,6 +276,9 @@ function attach(): void {
     const tokenAt = value?.auth?.tokenAt;
     authTokenAt.value = typeof tokenAt === "number" ? tokenAt : null;
   });
+  // N2 Centralization: myUserId live nachführen — wenn der Auth-Token später
+  // ankommt (später Login), wird die Identität automatisch aufgelöst.
+  const unwatchMyUserId = AutodartsToolsGlobalStatus.watch(() => void loadMyUserId());
   browser.storage.onChanged.addListener(onStorageChanged);
   const ticker = setInterval(() => { now.value = Date.now(); }, TICK_MS);
 
@@ -273,6 +289,7 @@ function attach(): void {
     () => unwatchUrl?.(),
     () => unwatchResults?.(),
     () => unwatchAuth?.(),
+    () => unwatchMyUserId?.(),
     () => browser.storage.onChanged.removeListener(onStorageChanged),
     () => clearInterval(ticker),
   );
@@ -926,6 +943,9 @@ export function useControlCenterStatus() {
     // Auth
     authFresh,
     authAgo,
+
+    // Player Identity (N2 Centralization)
+    myUserId,
 
     // Board
     hasBoardSignal,

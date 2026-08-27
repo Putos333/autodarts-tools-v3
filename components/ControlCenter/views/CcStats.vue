@@ -195,11 +195,10 @@ import { openAutodarts } from "../open-autodarts";
 import { CC_STATS_PENDING_GAME_MODE_KEY } from "../sections";
 import {
   AutodartsToolsCanonicalMatchResults,
-  getCanonicalMatchResults,
+  initCanonicalMatchResults,
 } from "@/utils/canonical-match-result-storage";
 import type { ICanonicalMatchResult } from "@/utils/canonical-match-result";
-import { getUserIdFromToken } from "@/utils/helpers";
-import { AutodartsToolsGlobalStatus } from "@/utils/storage";
+import { useControlCenterStatus } from "@/composables/useControlCenterStatus";
 import {
   DEFAULT_STATISTICS_FILTERS,
   computeStatisticsOverview,
@@ -207,29 +206,19 @@ import {
   type IStatisticsFilters,
 } from "@/utils/statistics";
 
+/* ─── Zentrale Status-Quelle (N2 Centralization) ────────────────────────────── */
+const { myUserId } = useControlCenterStatus();
+
 /* ─── Raw CMR Data (dieselbe Quelle wie CcHistory.vue) ─────────────────────── */
 const rawResults = ref<ICanonicalMatchResult[]>([]);
 let unwatch: (() => void) | undefined;
-let unwatchGlobalStatus: (() => void) | undefined;
 
 async function loadResults(): Promise<void> {
   try {
-    rawResults.value = await getCanonicalMatchResults();
+    rawResults.value = await initCanonicalMatchResults();
   } catch (error) {
     console.error("[CcStats] loadResults failed", error);
     rawResults.value = [];
-  }
-}
-
-/* ─── Eigene Identität (Player-Identity-Fix, siehe ROADMAP_DEPENDENCIES.md) ── */
-const myUserId = ref<string | null>(null);
-
-async function loadMyUserId(): Promise<void> {
-  try {
-    myUserId.value = await getUserIdFromToken();
-  } catch (error) {
-    console.error("[CcStats] loadMyUserId failed", error);
-    myUserId.value = null;
   }
 }
 
@@ -295,24 +284,17 @@ let disposed = false;
 
 onMounted(async () => {
   applyPendingGameModeFilter();
-  await Promise.all([ loadResults(), loadMyUserId() ]);
+  await loadResults();
   if (disposed) return;
   unwatch = AutodartsToolsCanonicalMatchResults.watch(() => {
     void loadResults();
   });
-  // N2 (PR #16 Review): myUserId wurde bisher nur einmalig beim Mount
-  // aufgelöst. Kam der Auth-Token erst nach dem Mount an (später Login),
-  // blieb die Statistik-Ansicht dauerhaft leer — derselbe Live-Refresh-Fix
-  // wie bereits bei useControlCenterStatus.ts.
-  unwatchGlobalStatus = AutodartsToolsGlobalStatus.watch(() => void loadMyUserId());
 });
 
 onBeforeUnmount(() => {
   disposed = true;
   unwatch?.();
-  unwatchGlobalStatus?.();
   unwatch = undefined;
-  unwatchGlobalStatus = undefined;
 });
 </script>
 

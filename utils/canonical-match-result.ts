@@ -364,3 +364,60 @@ export function upsertCanonicalMatchResult(
     records: applyCmrRetention([ reconciled.record, ...remaining ], limit),
   };
 }
+
+/**
+ * Migriert einen einzelnen CMR-Record von einer älteren Schema-Version
+ * auf die aktuelle Version (v1).
+ *
+ * Für v1 gibt es noch keine älteren Versionen zum Migrieren — die Funktion
+ * ist als Vorbereitung für zukünftige Schema-Änderungen (v2, v3, …) gedacht.
+ * Die Strategie ist:
+ *
+ *   • Unbekannte Felder werden verworfen (werden durch sanitizeCanonicalMatchResults
+ *     beim nächsten Speichern ohnehin gefiltert).
+ *   • Fehlende Pflichtfelder werden mit sinnvollen Defaults ergänzt.
+ *   • schemaVersion wird auf die aktuelle Version gesetzt.
+ */
+export function migrateCanonicalMatchResult(
+  record: Partial<ICanonicalMatchResult>,
+  fromVersion: number,
+): ICanonicalMatchResult {
+  // v1 ist die erste Version — Migration ist aktuell eine Identitätsfunktion
+  // mit Default-Werten für fehlende Pflichtfelder.
+  if (fromVersion >= CMR_SCHEMA_VERSION) {
+    return {
+      schemaVersion: CMR_SCHEMA_VERSION,
+      matchId: record.matchId ?? "",
+      revision: record.revision ?? 1,
+      quality: record.quality ?? "MINIMAL",
+      createdAt: record.createdAt,
+      recordedAt: record.recordedAt ?? new Date().toISOString(),
+      variant: record.variant,
+      gameMode: record.gameMode,
+      type: record.type,
+      finished: record.finished ?? false,
+      winnerIndex: record.winnerIndex,
+      players: Array.isArray(record.players) ? record.players : [],
+    };
+  }
+
+  // Für zukünftige Versionen: hier versions-spezifische Migrationen einfügen
+  // z.B.:
+  // if (fromVersion === 1) { /* v1 -> v2 Migration */ }
+  // if (fromVersion === 2) { /* v2 -> v3 Migration */ }
+
+  return {
+    schemaVersion: CMR_SCHEMA_VERSION,
+    matchId: record.matchId ?? "",
+    revision: record.revision ?? 1,
+    quality: record.quality ?? "MINIMAL",
+    createdAt: record.createdAt,
+    recordedAt: record.recordedAt ?? new Date().toISOString(),
+    variant: record.variant,
+    gameMode: record.gameMode,
+    type: record.type,
+    finished: record.finished ?? false,
+    winnerIndex: record.winnerIndex,
+    players: Array.isArray(record.players) ? record.players : [],
+  };
+}

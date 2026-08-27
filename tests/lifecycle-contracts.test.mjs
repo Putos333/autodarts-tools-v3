@@ -226,33 +226,36 @@ test('content App.vue guards initMenu() against re-entrant calls and unmount rac
  * werden — der identische, an den anderen vier Stellen bewiesene Fix wurde
  * dort aus Konsistenzgründen ebenfalls angewendet und ist TypeScript-geprüft.
  *
- * Die folgenden Assertions sind SEKUNDÄRER, strukturbasierter Regressions-
- * schutz gegen eine versehentliche Entfernung des real verifizierten Fixes.
+ * NEUE ARCHITEKTUR (N2 Centralization): Die fünf Komponenten nutzen nun
+ * `useControlCenterStatus()` Composable, das den `AutodartsToolsGlobalStatus`
+ * Watcher ZENTRAL hält (einmal pro Seite, nicht pro Komponente). Die
+ * folgenden Tests prüfen, dass die Komponenten das Composable nutzen und
+ * `myUserId` daraus beziehen — der eigentliche Watcher wird im Composable
+ * getestet (implizit durch die Composable-Tests und TypeScript-Check).
  */
-function assertGlobalStatusLiveRefresh(text, label) {
+function assertUsesCentralizedMyUserId(text, label) {
   assertContains(text, [
-    /import \{ AutodartsToolsGlobalStatus[,\s]*.*\} from "@\/utils\/storage";|import \{[^}]*AutodartsToolsGlobalStatus[^}]*\} from "@\/utils\/storage";/,
-    /unwatchGlobalStatus = AutodartsToolsGlobalStatus\.watch\(\(\) => void loadMyUserId\(\)\);/,
-    /unwatchGlobalStatus\?\.\(\);/,
+    /import \{ useControlCenterStatus \} from "@\/composables\/useControlCenterStatus";/,
+    /const \{ myUserId \} = useControlCenterStatus\(\);/,
   ], label);
 }
 
-test('CcRecentActivity.vue keeps myUserId live via AutodartsToolsGlobalStatus.watch', async () => {
-  assertGlobalStatusLiveRefresh(await source('components/ControlCenter/CcRecentActivity.vue'), 'CcRecentActivity.vue');
+test('CcRecentActivity.vue uses centralized myUserId via useControlCenterStatus', async () => {
+  assertUsesCentralizedMyUserId(await source('components/ControlCenter/CcRecentActivity.vue'), 'CcRecentActivity.vue');
 });
 
-test('CcPerformanceStrip.vue keeps myUserId live via AutodartsToolsGlobalStatus.watch', async () => {
-  assertGlobalStatusLiveRefresh(await source('components/ControlCenter/CcPerformanceStrip.vue'), 'CcPerformanceStrip.vue');
+test('CcPerformanceStrip.vue uses centralized myUserId via useControlCenterStatus', async () => {
+  assertUsesCentralizedMyUserId(await source('components/ControlCenter/CcPerformanceStrip.vue'), 'CcPerformanceStrip.vue');
 });
 
-test('CcDashboardSummary.vue keeps myUserId live via AutodartsToolsGlobalStatus.watch', async () => {
-  assertGlobalStatusLiveRefresh(await source('components/ControlCenter/CcDashboardSummary.vue'), 'CcDashboardSummary.vue');
+test('CcDashboardSummary.vue uses centralized myUserId via useControlCenterStatus', async () => {
+  assertUsesCentralizedMyUserId(await source('components/ControlCenter/CcDashboardSummary.vue'), 'CcDashboardSummary.vue');
 });
 
-test('CcHistory.vue keeps myUserId live via AutodartsToolsGlobalStatus.watch', async () => {
-  assertGlobalStatusLiveRefresh(await source('components/ControlCenter/views/CcHistory.vue'), 'CcHistory.vue');
+test('CcHistory.vue uses centralized myUserId via useControlCenterStatus', async () => {
+  assertUsesCentralizedMyUserId(await source('components/ControlCenter/views/CcHistory.vue'), 'CcHistory.vue');
 });
 
-test('CcStats.vue keeps myUserId live via AutodartsToolsGlobalStatus.watch', async () => {
-  assertGlobalStatusLiveRefresh(await source('components/ControlCenter/views/CcStats.vue'), 'CcStats.vue');
+test('CcStats.vue uses centralized myUserId via useControlCenterStatus', async () => {
+  assertUsesCentralizedMyUserId(await source('components/ControlCenter/views/CcStats.vue'), 'CcStats.vue');
 });

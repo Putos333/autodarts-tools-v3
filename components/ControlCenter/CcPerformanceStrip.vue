@@ -43,11 +43,10 @@ import { computed, onBeforeUnmount, onMounted, ref } from "vue";
 
 import {
   AutodartsToolsCanonicalMatchResults,
-  getCanonicalMatchResults,
+  initCanonicalMatchResults,
 } from "@/utils/canonical-match-result-storage";
 import type { ICanonicalMatchResult } from "@/utils/canonical-match-result";
-import { getUserIdFromToken } from "@/utils/helpers";
-import { AutodartsToolsGlobalStatus } from "@/utils/storage";
+import { useControlCenterStatus } from "@/composables/useControlCenterStatus";
 import { computeMatchSummary, computeAverageStats, computeScoringStats, computeRecentForm } from "@/utils/statistics";
 
 /**
@@ -57,46 +56,30 @@ import { computeMatchSummary, computeAverageStats, computeScoringStats, computeR
  * nicht — nur `average`, `total180`, `checkoutPoints` (bester Einzel-
  * Checkout) und `dartsThrown` werden je Match gespeichert.
  */
+const { myUserId } = useControlCenterStatus();
+
 const rawResults = ref<ICanonicalMatchResult[]>([]);
-const myUserId = ref<string | null>(null);
 let unwatchCmr: (() => void) | undefined;
-let unwatchGlobalStatus: (() => void) | undefined;
 
 async function loadResults(): Promise<void> {
   try {
-    rawResults.value = await getCanonicalMatchResults();
+    rawResults.value = await initCanonicalMatchResults();
   } catch (error) {
     console.error("[CcPerformanceStrip] loadResults failed", error);
-  }
-}
-
-async function loadMyUserId(): Promise<void> {
-  try {
-    myUserId.value = await getUserIdFromToken();
-  } catch (error) {
-    console.error("[CcPerformanceStrip] loadMyUserId failed", error);
-    myUserId.value = null;
   }
 }
 
 let disposed = false;
 
 onMounted(async () => {
-  await Promise.all([ loadResults(), loadMyUserId() ]);
+  await loadResults();
   if (disposed) return;
   unwatchCmr = AutodartsToolsCanonicalMatchResults.watch(() => void loadResults());
-  // N2 (PR #16 Review): myUserId wurde bisher nur einmalig beim Mount
-  // aufgelöst. Kam der Auth-Token erst nach dem Mount an (später Login),
-  // blieben alle Statistik-Werte dauerhaft leer — derselbe Live-Refresh-Fix
-  // wie bereits bei useControlCenterStatus.ts.
-  unwatchGlobalStatus = AutodartsToolsGlobalStatus.watch(() => void loadMyUserId());
 });
 onBeforeUnmount(() => {
   disposed = true;
   unwatchCmr?.();
-  unwatchGlobalStatus?.();
   unwatchCmr = undefined;
-  unwatchGlobalStatus = undefined;
 });
 
 const summary = computed(() => computeMatchSummary(rawResults.value, myUserId.value));
