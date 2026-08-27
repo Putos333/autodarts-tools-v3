@@ -4,7 +4,7 @@
     Ohne Match: kein Widget, kein Platzhalter, kein erfundener Gegner.
   -->
   <template v-if="hasMatch && matchTitle">
-    <div class="cc-live-widget" data-testid="cc-live-widget">
+    <div class="cc-live-widget" :data-testid="`cc-live-widget${idSuffix}`">
       <div class="cc-live-widget-head">
         <span v-if="isLive" class="cc-live-dot" />
         <span>{{ headline }}</span>
@@ -31,7 +31,7 @@
         class="cc-live-widget-btn"
         type="button"
         title="Öffnet dieses Match auf Autodarts"
-        data-testid="cc-live-widget-open"
+        :data-testid="`cc-live-widget-open${idSuffix}`"
       >
         Match öffnen
       </button>
@@ -41,7 +41,7 @@
         class="cc-live-widget-btn"
         type="button"
         title="Öffnet die zugehörige Lobby auf Autodarts"
-        data-testid="cc-live-widget-open-lobby"
+        :data-testid="`cc-live-widget-open-lobby${idSuffix}`"
       >
         Lobby öffnen
       </button>
@@ -51,7 +51,7 @@
         class="cc-live-widget-btn"
         type="button"
         title="Zum Match-Bereich im Control Center"
-        data-testid="cc-live-widget-open-section"
+        :data-testid="`cc-live-widget-open-section${idSuffix}`"
       >
         Match-Bereich
       </button>
@@ -71,6 +71,15 @@ import { computed } from "vue";
 
 import { openLobby, openMatch } from "./open-autodarts";
 import { useControlCenterStatus } from "@/composables/useControlCenterStatus";
+
+/**
+ * Issue #13, #8: CcSidebar.vue mountet diese Komponente seit der mobilen
+ * Bottom-Nav zweimal (Sidebar + Bottom-Nav, nur eine davon per CSS sichtbar).
+ * Ohne `idSuffix` hätten beide DOM-Instanzen dieselben `data-testid`s —
+ * ein `getByTestId`-Zugriff könnte die verdeckte statt die sichtbare Instanz
+ * treffen. Default "" hält bestehende Testid-Erwartungen unverändert.
+ */
+const { idSuffix = "" } = defineProps<{ idSuffix?: string }>();
 
 const {
   hasMatch,

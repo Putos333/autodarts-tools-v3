@@ -420,3 +420,128 @@ test('CcTraining.vue distinguishes loading/no_data for history (no unreachable "
   ]);
   assert.doesNotMatch(text, /historyState === 'unavailable'/, 'CcTraining.vue: history has no reachable unavailable state, must not render dead retry UI for it');
 });
+
+/**
+ * Issue #13, #8: below 1080px the sidebar collapsed to an icon-only rail
+ * with no further adaptation down to real phone widths (~360-430px) — a
+ * planned bottom-nav ("Mobil: Navigation als fixierte Leiste unten.") was
+ * left as a stub comment in style.css, never implemented. Fix: CcSidebar.vue
+ * renders a second root node, `<nav class="cc-bottom-nav">`, driven by the
+ * SAME `sections`/`active` props and the SAME "navigate" emit as the
+ * existing `<aside class="cc-sidebar">` — no second navigation state, no
+ * new data source. Pure CSS decides which one is visible per breakpoint,
+ * the exact pattern already used for .cc-live-widget/.cc-live-rail in
+ * CcLiveMatchWidget.vue.
+ */
+test('CcSidebar.vue renders a bottom-nav sharing the same sections/active/navigate as the sidebar', async () => {
+  const text = await source('components/ControlCenter/CcSidebar.vue');
+  assertContains(text, [
+    /<nav class="cc-bottom-nav" aria-label="Control-Center-Bereiche \(mobil\)">/,
+    /v-for="section in sections"/,
+    /\$emit\('navigate', section\.id\)/,
+    /'cc-bottom-nav-item', section\.id === active && 'is-active'/,
+    /:title="section\.label"/,
+    /\{\{ section\.shortLabel \?\? section\.label \}\}/,
+    /v-if="section\.preview" class="cc-bottom-nav-badge"/,
+  ], 'CcSidebar.vue');
+});
+
+/**
+ * Code-review follow-up: an earlier version set `aria-label` to the full
+ * `label` while the visible text was the shorter `shortLabel` — for
+ * "Einstellungen"/"Optionen" that meant the accessible name didn't even
+ * contain the visible text, violating WCAG 2.5.3 "Label in Name" (a
+ * speech-input user saying "click Optionen" wouldn't match a button whose
+ * accessible name is "Einstellungen"). Fix: no `aria-label` override at all
+ * — the button's own visible text content (`.cc-bottom-nav-label`) already
+ * becomes its accessible name, so accessible name and visible text are
+ * always identical by construction. `title` (a supplementary hover tooltip)
+ * keeps the full `label` — it doesn't override the accessible name once
+ * the button has visible text content.
+ */
+test('CcSidebar.vue bottom-nav has no aria-label overriding the shortened visible text (WCAG 2.5.3)', async () => {
+  const text = await source('components/ControlCenter/CcSidebar.vue');
+  const bottomNavIdx = text.indexOf('class="cc-bottom-nav"');
+  assert.ok(bottomNavIdx !== -1, 'CcSidebar.vue: .cc-bottom-nav not found');
+  const bottomNavButton = text.slice(bottomNavIdx, text.indexOf('</nav>', bottomNavIdx));
+  assert.doesNotMatch(bottomNavButton, /aria-label="section\.label"/, 'CcSidebar.vue: bottom-nav button must not set an aria-label longer than its visible (shortLabel) text');
+});
+
+/**
+ * The bottom-nav is hidden by default (tablet/desktop keep the existing
+ * sidebar/icon-rail unchanged) and only takes over at real phone widths —
+ * a dedicated breakpoint below the existing 1080px icon-rail breakpoint, so
+ * ~768px+ tablets still get the icon rail, not the bottom nav.
+ */
+test('style.css hides .cc-bottom-nav by default and switches to it only below the existing icon-rail breakpoint', async () => {
+  const text = await source('entrypoints/controlcenter/style.css');
+  const bottomNavBaseIdx = text.indexOf('.cc-bottom-nav {');
+  assert.ok(bottomNavBaseIdx !== -1, 'style.css: .cc-bottom-nav base rule missing');
+  assert.match(text.slice(bottomNavBaseIdx, bottomNavBaseIdx + 200), /display: none;/, 'style.css: .cc-bottom-nav must be hidden by default (tablet/desktop unaffected)');
+
+  const railBreakpointIdx = text.indexOf('@media (max-width: 1080px)');
+  const phoneBreakpointIdx = text.indexOf('@media (max-width: 640px)');
+  assert.ok(railBreakpointIdx !== -1 && phoneBreakpointIdx !== -1, 'style.css: expected both the existing icon-rail breakpoint and a new phone breakpoint');
+  assert.ok(phoneBreakpointIdx > railBreakpointIdx, 'style.css: the new phone breakpoint (640px) must be narrower than and layered after the existing tablet icon-rail breakpoint (1080px)');
+
+  const phoneBlock = text.slice(phoneBreakpointIdx, phoneBreakpointIdx + 400);
+  assertContains(phoneBlock, [
+    /\.cc-sidebar \{ display: none; \}/,
+    /\.cc-bottom-nav \{ display: flex; \}/,
+  ], 'style.css (@media max-width:640px)');
+});
+
+/**
+ * Code-review follow-up: hiding .cc-sidebar at phone widths silently removed
+ * the live-match indicator too, since CcLiveMatchWidget was only ever
+ * mounted inside it (visible at every width down to 1080px via
+ * .cc-live-rail) — a real loss of existing functionality this task
+ * explicitly required avoiding. Fix: mount the same component (a
+ * refcounted singleton via useControlCenterStatus(), so a second instance
+ * adds no new watcher/data source) inside the bottom-nav too; CSS reserves
+ * extra content padding only when a live match is actually present
+ * (`:has(.cc-live-rail)`), so the no-match case stays as compact as before.
+ */
+test('CcSidebar.vue mounts CcLiveMatchWidget inside the bottom-nav too, so it is not lost at phone widths', async () => {
+  const text = await source('components/ControlCenter/CcSidebar.vue');
+  const bottomNavIdx = text.indexOf('<nav class="cc-bottom-nav"');
+  assert.ok(bottomNavIdx !== -1, 'CcSidebar.vue: .cc-bottom-nav not found');
+  const bottomNavBlock = text.slice(bottomNavIdx, text.indexOf('</nav>', bottomNavIdx));
+  assertContains(bottomNavBlock, [
+    /<div class="cc-bottom-nav-live"><CcLiveMatchWidget id-suffix="-mobile" \/><\/div>/,
+  ], 'CcSidebar.vue (.cc-bottom-nav)');
+});
+
+test('style.css reserves extra bottom-nav padding only while a live match is actually present', async () => {
+  const text = await source('entrypoints/controlcenter/style.css');
+  assertContains(text, [
+    /\.cc-bottom-nav-live \{\s*flex-basis: 100%;\s*\}/,
+    /\.cc-bottom-nav:has\(\.cc-live-rail\) ~ \.cc-main \.cc-content \{/,
+  ], 'style.css');
+});
+
+/**
+ * Code-review follow-up: mounting CcLiveMatchWidget a second time (sidebar +
+ * bottom-nav) put two elements with the identical `data-testid="cc-live-widget"`
+ * (and its child button testids) in the DOM at once — only one visible via
+ * CSS per breakpoint, but a testid-based lookup doesn't know that and could
+ * resolve to the hidden instance. Fix: an `idSuffix` prop appends to every
+ * testid in CcLiveMatchWidget.vue; the bottom-nav instance passes
+ * `id-suffix="-mobile"`, the sidebar instance keeps the unsuffixed default.
+ */
+test('CcLiveMatchWidget.vue testids are suffixable so two simultaneously-mounted instances never collide', async () => {
+  const widgetText = await source('components/ControlCenter/CcLiveMatchWidget.vue');
+  assertContains(widgetText, [
+    /const \{ idSuffix = "" \} = defineProps<\{ idSuffix\?: string \}>\(\);/,
+    /:data-testid="`cc-live-widget\$\{idSuffix\}`"/,
+    /:data-testid="`cc-live-widget-open\$\{idSuffix\}`"/,
+    /:data-testid="`cc-live-widget-open-lobby\$\{idSuffix\}`"/,
+    /:data-testid="`cc-live-widget-open-section\$\{idSuffix\}`"/,
+  ], 'CcLiveMatchWidget.vue');
+  assert.doesNotMatch(widgetText, /data-testid="cc-live-widget"/, 'CcLiveMatchWidget.vue: testid must be suffixable, not a static literal');
+
+  const sidebarText = await source('components/ControlCenter/CcSidebar.vue');
+  assertContains(sidebarText, [
+    /<CcLiveMatchWidget id-suffix="-mobile" \/>/,
+  ], 'CcSidebar.vue');
+});

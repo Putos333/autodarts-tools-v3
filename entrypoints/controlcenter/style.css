@@ -368,6 +368,96 @@ ul {
   color: var(--cc-text-faint);
 }
 
+/* ─── Bottom-Navigation (Mobil, #8) ──────────────────────────────────────────
+   Standardmäßig ausgeblendet — Desktop/Tablet bleiben bei Sidebar bzw.
+   Icon-Rail (siehe @media max-width:1080px). Erst @media max-width:640px
+   ersetzt sie die Sidebar vollständig (siehe dort). */
+
+.cc-bottom-nav {
+  display: none;
+  flex-wrap: wrap;
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 30;
+  gap: 2px;
+  border-top: 1px solid var(--cc-border);
+  background: rgba(6, 11, 18, 0.96);
+  backdrop-filter: blur(12px);
+  /* iOS Home-Indicator: Leiste nicht darunter verstecken. */
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* Live-Match-Indikator über der Bottom-Nav (Code-Review-Fund #8: dieselbe
+   Info war bis 1080px durchgehend sichtbar, siehe CcSidebar.vue). Leer
+   (kein Match) nimmt der Wrapper keinen Platz ein — .cc-live-rail rendert
+   dann gar nicht erst (v-if in CcLiveMatchWidget.vue). */
+.cc-bottom-nav-live {
+  flex-basis: 100%;
+}
+.cc-bottom-nav-live .cc-live-rail {
+  margin: 6px 10px 4px;
+}
+
+.cc-bottom-nav-item {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  min-height: 56px;
+  border: none;
+  background: transparent;
+  color: var(--cc-text-dim);
+  cursor: pointer;
+}
+
+.cc-bottom-nav-item.is-active {
+  color: var(--cc-gold);
+}
+
+.cc-bottom-nav-item.is-active .cc-bottom-nav-icon {
+  color: var(--cc-accent);
+}
+
+.cc-bottom-nav-item:focus-visible {
+  outline: none;
+  box-shadow: inset 0 0 0 2px var(--cc-accent-soft);
+}
+
+.cc-bottom-nav-icon {
+  position: relative;
+  font-size: 20px;
+  line-height: 1;
+}
+
+/* Entspricht .cc-nav-badge ("bald"), nur als Punkt statt Text-Pille —
+   für die Bottom-Nav-Spalte (~45-55px) zu schmal für eine Text-Badge. */
+.cc-bottom-nav-badge {
+  position: absolute;
+  top: -2px;
+  right: -4px;
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--cc-gold);
+  box-shadow: 0 0 4px var(--cc-gold);
+}
+
+.cc-bottom-nav-label {
+  max-width: 100%;
+  padding: 0 2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+}
+
 /* ─── Top-Bar ────────────────────────────────────────────────────────────── */
 
 .cc-topbar {
@@ -2274,7 +2364,36 @@ ul {
   .cc-topbar { padding: 14px 18px; }
 }
 
-/* Mobil: Navigation als fixierte Leiste unten. */
+/*
+ * Mobil (#8): Sidebar/Icon-Rail komplett durch die fixierte Bottom-Navigation
+ * ersetzt (.cc-bottom-nav, siehe oben) statt zusätzlich zu ihr — beides
+ * gleichzeitig würde auf einem 360-430px-Phone unnötig Breite/Höhe
+ * verschwenden. Unterhalb von 640px, damit klassische Tablet-Breiten
+ * (~768px+) weiterhin die Icon-Rail aus der 1080px-Regel oben bekommen.
+ */
+@media (max-width: 640px) {
+  .cc-root { grid-template-columns: minmax(0, 1fr); }
+  .cc-sidebar { display: none; }
+  .cc-bottom-nav { display: flex; }
+  /* Platz für die fixierte Bottom-Nav (56px + Safe-Area) freihalten. */
+  .cc-content { padding: 16px 14px calc(56px + env(safe-area-inset-bottom, 0px) + 20px); }
+  .cc-topbar { padding: 12px 14px; }
+
+  /* Läuft gerade ein Match, ist die Bottom-Nav durch die Live-Zeile höher —
+     mehr Platz freihalten, damit nichts verdeckt wird. `:has()` erkennt das
+     rein aus der DOM-Präsenz von .cc-live-rail (nur vorhanden, wenn
+     CcLiveMatchWidget.vue's `v-if="hasMatch && matchTitle"` zutrifft) —
+     ohne Match bleibt die schlankere Grundreservierung oben aktiv.
+     96px ist die reale Live-Zeilen-Höhe (.cc-live-rail-Padding/-Margin,
+     siehe oben) plus bewusster Sicherheitspuffer für größere Systemschrift
+     (Bedienungshilfen) oder einen längeren Spielstand-Text — kein exakter
+     Pixelwert, der bei jeder Textänderung in CcLiveMatchWidget.vue
+     mitgepflegt werden müsste. */
+  .cc-bottom-nav:has(.cc-live-rail) ~ .cc-main .cc-content {
+    padding-bottom: calc(56px + 96px + env(safe-area-inset-bottom, 0px) + 20px);
+  }
+}
+
 /* ─── Training-Exercise-Card ─────────────────────────────────────────────────── */
 
 .cc-ex {

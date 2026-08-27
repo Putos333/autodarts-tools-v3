@@ -24,6 +24,18 @@ export interface ICcSection {
   hint: string;
   /** Iconify-Klasse. */
   icon: string;
+  /**
+   * Kürzere Variante für die mobile Bottom-Navigation (#8), wo pro Item nur
+   * ~45-55px Breite zur Verfügung stehen. Wird als sichtbarer UND
+   * zugänglicher Name verwendet (kein separates `aria-label` — der
+   * Accessible Name muss den sichtbaren Text enthalten, WCAG 2.5.3 "Label
+   * in Name"; ein längeres `label` als `aria-label` hinter kürzerem
+   * sichtbarem Text würde dagegen verstoßen). `title` bleibt `label` als
+   * reiner Hover-Tooltip — überschreibt den Accessible Name nicht, solange
+   * sichtbarer Textinhalt vorhanden ist. Ohne `shortLabel` wird `label`
+   * verwendet.
+   */
+  shortLabel?: string;
   /** Für MVP 1 noch ohne eigene Inhalte. */
   preview?: boolean;
 }
@@ -32,12 +44,14 @@ export const CC_SECTIONS: ICcSection[] = [
   {
     id: "dashboard",
     label: "Dashboard",
+    shortLabel: "Home",
     hint: "Board, Verbindung, aktuelles Match und Spieler auf einen Blick",
     icon: "icon-[pixelarticons--dashboard]",
   },
   {
     id: "board",
     label: "Board & Autoscoring",
+    shortLabel: "Board",
     hint: "Verbindungs- und Board-Diagnose (Kalibrierung/Erkennung bleiben bei Autodarts)",
     icon: "icon-[pixelarticons--bullseye]",
   },
@@ -56,12 +70,14 @@ export const CC_SECTIONS: ICcSection[] = [
   {
     id: "party",
     label: "Freunde / Party",
+    shortLabel: "Party",
     hint: "Lobby-Status und Freundesliste von Autodarts",
     icon: "icon-[pixelarticons--users]",
   },
   {
     id: "stats",
     label: "Statistiken",
+    shortLabel: "Stats",
     hint: "Kennzahlen und Trends aus deinen gespeicherten Match-Ergebnissen",
     icon: "icon-[pixelarticons--chart-bar]",
   },
@@ -74,6 +90,7 @@ export const CC_SECTIONS: ICcSection[] = [
   {
     id: "settings",
     label: "Einstellungen",
+    shortLabel: "Optionen",
     hint: "Version, Diagnose, Datenschutz, Caller & Sounds, WLED / Beleuchtung",
     icon: "icon-[pixelarticons--sliders]",
   },
