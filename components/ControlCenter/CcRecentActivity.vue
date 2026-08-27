@@ -44,11 +44,13 @@ import {
 } from "@/utils/canonical-match-result-storage";
 import type { ICanonicalMatchResult } from "@/utils/canonical-match-result";
 import { getUserIdFromToken } from "@/utils/helpers";
+import { AutodartsToolsGlobalStatus } from "@/utils/storage";
 import { getLastMatchSummary, getRecentOpponents } from "@/utils/dashboard-activity";
 
 const rawResults = ref<ICanonicalMatchResult[]>([]);
 const myUserId = ref<string | null>(null);
 let unwatchCmr: (() => void) | undefined;
+let unwatchGlobalStatus: (() => void) | undefined;
 
 async function loadResults(): Promise<void> {
   try {
@@ -73,11 +75,18 @@ onMounted(async () => {
   await Promise.all([ loadResults(), loadMyUserId() ]);
   if (disposed) return;
   unwatchCmr = AutodartsToolsCanonicalMatchResults.watch(() => void loadResults());
+  // N2 (PR #16 Review): myUserId wurde bisher nur einmalig beim Mount
+  // aufgelöst. Kam der Auth-Token erst nach dem Mount an (später Login),
+  // blieb die Identität dauerhaft `null` und Bilanz/Recent-Activity dauerhaft
+  // leer — derselbe Live-Refresh-Fix wie bereits bei useControlCenterStatus.ts.
+  unwatchGlobalStatus = AutodartsToolsGlobalStatus.watch(() => void loadMyUserId());
 });
 onBeforeUnmount(() => {
   disposed = true;
   unwatchCmr?.();
+  unwatchGlobalStatus?.();
   unwatchCmr = undefined;
+  unwatchGlobalStatus = undefined;
 });
 
 const lastMatch = computed(() => getLastMatchSummary(rawResults.value, myUserId.value));

@@ -36,7 +36,7 @@ import {
   getCanonicalMatchResults,
 } from "@/utils/canonical-match-result-storage";
 import type { ICanonicalMatchResult } from "@/utils/canonical-match-result";
-import { AutodartsToolsTrainingHistory } from "@/utils/storage";
+import { AutodartsToolsGlobalStatus, AutodartsToolsTrainingHistory } from "@/utils/storage";
 import type { TrainingSession } from "@/utils/training-history";
 import { getUserIdFromToken } from "@/utils/helpers";
 import { computeMatchSummary } from "@/utils/statistics";
@@ -74,6 +74,7 @@ const winRatePercent = computed(() => {
 /* ─── Letztes Training ───────────────────────────────────────────────────── */
 const trainingHistory = ref<TrainingSession[]>([]);
 let unwatchTraining: (() => void) | undefined;
+let unwatchGlobalStatus: (() => void) | undefined;
 
 async function loadTrainingHistory(): Promise<void> {
   try {
@@ -100,13 +101,20 @@ onMounted(async () => {
   if (disposed) return;
   unwatchCmr = AutodartsToolsCanonicalMatchResults.watch(() => void loadResults());
   unwatchTraining = AutodartsToolsTrainingHistory.watch(() => void loadTrainingHistory());
+  // N2 (PR #16 Review): myUserId wurde bisher nur einmalig beim Mount
+  // aufgelöst. Kam der Auth-Token erst nach dem Mount an (später Login),
+  // blieb die Bilanz dauerhaft leer — derselbe Live-Refresh-Fix wie bereits
+  // bei useControlCenterStatus.ts.
+  unwatchGlobalStatus = AutodartsToolsGlobalStatus.watch(() => void loadMyUserId());
 });
 
 onBeforeUnmount(() => {
   disposed = true;
   unwatchCmr?.();
   unwatchTraining?.();
+  unwatchGlobalStatus?.();
   unwatchCmr = undefined;
   unwatchTraining = undefined;
+  unwatchGlobalStatus = undefined;
 });
 </script>

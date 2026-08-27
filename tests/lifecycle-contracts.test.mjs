@@ -169,3 +169,90 @@ test('Gotcha.vue registers onUnmounted synchronously (no await before it) — ve
     /onUnmounted\(\(\) => \{\s*if \(typeof unwatch === 'function'\) \{\s*unwatch\(\);/,
   ], 'Gotcha.vue');
 });
+
+/**
+ * N1 (PR #16 Re-Review, 2026-08-27): entrypoints/content/App.vue's initMenu()
+ * ist nicht re-entrant (mehrere await waitForElement()-Wartepunkte) und wird
+ * von mehreren unabhängigen Quellen ausgelöst (onMounted, URL-Watcher,
+ * isMobileNav-Watcher, Collapse-Button). Zwei überlappende Aufrufe konnten
+ * beide bis zum DOM-Insert durchlaufen -> doppelter Sidebar-Eintrag + ein
+ * geleaktes setInterval (der zweite Aufruf überschreibt navigationCheckInterval,
+ * bevor der erste sein eigenes Intervall je abräumen kann).
+ *
+ * PRIMÄRER Nachweis für diesen Fix ist KEIN Source-Text-Match, sondern ein
+ * echter Browser-Test (chrome-devtools MCP, reales DOM/MutationObserver/
+ * setInterval, wortgetreue Kopie der Kontrollfluss-Logik): REPRODUCE zeigte
+ * 2 doppelte #autodarts-tools-menu-item-Knoten + ein geleaktes Intervall ohne
+ * Guard; TARGETED RETEST zeigte exakt 1 Knoten mit Guard; ein zusätzlicher
+ * Mount->Unmount->Mount-Lauf bestätigte, dass ein beim Unmount noch
+ * laufender Aufruf danach nichts mehr in die Seite schreibt. App.vue kann
+ * als Vue-SFC nicht ohne volle Kompilierung in Node importiert werden — die
+ * folgende Assertion ist daher nur ein SEKUNDÄRER, strukturbasierter
+ * Regressionsschutz (verhindert eine versehentliche Entfernung des bereits
+ * real verifizierten Guards), kein alleiniger Beweis.
+ */
+test('content App.vue guards initMenu() against re-entrant calls and unmount races', async () => {
+  const text = await source('entrypoints/content/App.vue');
+  assertContains(text, [
+    /let menuInitGeneration = 0;/,
+    /let disposed = false;/,
+    /async function initMenu\(\) \{\s*const generation = \+\+menuInitGeneration;\s*if \(disposed\) return;/,
+    /if \(disposed \|\| generation !== menuInitGeneration\) return;/,
+    /onBeforeUnmount\(\(\) => \{\s*disposed = true;/,
+  ], 'content/App.vue');
+});
+
+/**
+ * N2 (PR #16 Re-Review, 2026-08-27): myUserId wurde in fünf Control-Center-
+ * Komponenten nur einmalig beim Mount aufgelöst (getUserIdFromToken()) und
+ * nie nachgezogen. Kam der Auth-Token erst nach dem Mount an (später Login,
+ * frisches Profil), blieb die Identität dauerhaft null — Bilanz, Recent
+ * Activity, Verlaufs-Kennzahlen und Statistiken blieben leer/falsch, obwohl
+ * die Daten längst vorhanden waren. Fix: derselbe Live-Refresh via
+ * AutodartsToolsGlobalStatus.watch(), der bereits in useControlCenterStatus.ts
+ * (Wave-1-Checkpoint) bewiesen wurde.
+ *
+ * PRIMÄRER Nachweis ist ein echter Browser-Test (chrome-devtools MCP, echter
+ * kompilierter Chrome-MV3-Build, echte Storage-Transitions) für die vier über
+ * das UI erreichbaren Komponenten: CcRecentActivity.vue + CcPerformanceStrip.vue
+ * (#dashboard), CcHistory.vue (#history), CcStats.vue (#stats) — alle vier
+ * zeigen nach einem simulierten späten Login (chrome.storage.local.set auf
+ * "globalstatus", KEIN Reload) sofort korrekte Werte statt des vorherigen
+ * "keine Identität"-Zustands. Für CcRecentActivity.vue zusätzlich per
+ * Mutationstest bestätigt: mit entferntem Fix bleibt die Anzeige exakt
+ * identisch ("stuck"), mit Fix aktualisiert sie sich live.
+ * CcDashboardSummary.vue wird aktuell von keiner View gerendert (bereits vor
+ * diesem Fix verwaist) und konnte daher nicht per Live-Navigation getestet
+ * werden — der identische, an den anderen vier Stellen bewiesene Fix wurde
+ * dort aus Konsistenzgründen ebenfalls angewendet und ist TypeScript-geprüft.
+ *
+ * Die folgenden Assertions sind SEKUNDÄRER, strukturbasierter Regressions-
+ * schutz gegen eine versehentliche Entfernung des real verifizierten Fixes.
+ */
+function assertGlobalStatusLiveRefresh(text, label) {
+  assertContains(text, [
+    /import \{ AutodartsToolsGlobalStatus[,\s]*.*\} from "@\/utils\/storage";|import \{[^}]*AutodartsToolsGlobalStatus[^}]*\} from "@\/utils\/storage";/,
+    /unwatchGlobalStatus = AutodartsToolsGlobalStatus\.watch\(\(\) => void loadMyUserId\(\)\);/,
+    /unwatchGlobalStatus\?\.\(\);/,
+  ], label);
+}
+
+test('CcRecentActivity.vue keeps myUserId live via AutodartsToolsGlobalStatus.watch', async () => {
+  assertGlobalStatusLiveRefresh(await source('components/ControlCenter/CcRecentActivity.vue'), 'CcRecentActivity.vue');
+});
+
+test('CcPerformanceStrip.vue keeps myUserId live via AutodartsToolsGlobalStatus.watch', async () => {
+  assertGlobalStatusLiveRefresh(await source('components/ControlCenter/CcPerformanceStrip.vue'), 'CcPerformanceStrip.vue');
+});
+
+test('CcDashboardSummary.vue keeps myUserId live via AutodartsToolsGlobalStatus.watch', async () => {
+  assertGlobalStatusLiveRefresh(await source('components/ControlCenter/CcDashboardSummary.vue'), 'CcDashboardSummary.vue');
+});
+
+test('CcHistory.vue keeps myUserId live via AutodartsToolsGlobalStatus.watch', async () => {
+  assertGlobalStatusLiveRefresh(await source('components/ControlCenter/views/CcHistory.vue'), 'CcHistory.vue');
+});
+
+test('CcStats.vue keeps myUserId live via AutodartsToolsGlobalStatus.watch', async () => {
+  assertGlobalStatusLiveRefresh(await source('components/ControlCenter/views/CcStats.vue'), 'CcStats.vue');
+});
