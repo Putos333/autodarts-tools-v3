@@ -259,3 +259,33 @@ test('CcHistory.vue uses centralized myUserId via useControlCenterStatus', async
 test('CcStats.vue uses centralized myUserId via useControlCenterStatus', async () => {
   assertUsesCentralizedMyUserId(await source('components/ControlCenter/views/CcStats.vue'), 'CcStats.vue');
 });
+
+/**
+ * Issue #13, P1-3: `winnerNameOf()` searched the winner by `player.index`
+ * but fell back to `players[winnerIndex]` (raw array position) when no
+ * player matched. `player.index` is the CMR's only reliable player identity
+ * (canonical-match-result.ts always sets it, defaulting to array position
+ * only at construction time, not at read time) — if a player's `index`
+ * diverges from its array position, the positional fallback can display the
+ * wrong winner's name. Fix: drop the fallback; show no name rather than a
+ * possibly wrong one, consistent with `isWinnerMatch()`/`isWinner()` (already
+ * fixed in 1805da7), which trust only `player.index`.
+ */
+function assertNoWinnerPositionalFallback(text, label) {
+  assert.doesNotMatch(
+    text,
+    /\.players\[\w+\.winnerIndex\]/,
+    `${label}: winnerNameOf() must not fall back to players[winnerIndex]`,
+  );
+  assertContains(text, [
+    /\.find\([^=]*=>\s*p(?:layer)?\.index === \w+\.winnerIndex\);/,
+  ], label);
+}
+
+test('CcMatchDetails.vue winnerNameOf() has no array-position fallback', async () => {
+  assertNoWinnerPositionalFallback(await source('components/ControlCenter/CcMatchDetails.vue'), 'CcMatchDetails.vue');
+});
+
+test('CcHistory.vue winnerNameOf() has no array-position fallback', async () => {
+  assertNoWinnerPositionalFallback(await source('components/ControlCenter/views/CcHistory.vue'), 'CcHistory.vue');
+});

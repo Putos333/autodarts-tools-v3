@@ -173,8 +173,11 @@ function scoreOf(result: ICanonicalMatchResult): string {
 
 function winnerNameOf(result: ICanonicalMatchResult): string | null {
   if (result.winnerIndex === undefined) return null;
-  const winner = result.players.find(player => player.index === result.winnerIndex)
-    ?? result.players[result.winnerIndex];
+  // Kein Array-Positions-Fallback: player.index ist die einzige verlässliche
+  // Identität (siehe CMR-Konstruktion in canonical-match-result.ts). Weicht die
+  // Array-Reihenfolge davon ab, würde ein Positions-Fallback einen falschen
+  // Namen zeigen — dann lieber gar keinen (Issue #13, P1-3).
+  const winner = result.players.find(player => player.index === result.winnerIndex);
   return winner?.name ?? null;
 }
 </script>

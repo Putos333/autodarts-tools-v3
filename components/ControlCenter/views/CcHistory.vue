@@ -459,8 +459,11 @@ function scoreOf(match: ICmrMatchDisplay): string {
 
 function winnerNameOf(match: ICmrMatchDisplay): string | null {
   if (match.winnerIndex === undefined) return null;
-  const winner = match.players.find((p) => p.index === match.winnerIndex)
-    ?? match.players[match.winnerIndex];
+  // Kein Array-Positions-Fallback: player.index ist die einzige verlässliche
+  // Identität (siehe CMR-Konstruktion in canonical-match-result.ts). Weicht die
+  // Array-Reihenfolge davon ab, würde ein Positions-Fallback einen falschen
+  // Namen zeigen — dann lieber gar keinen (Issue #13, P1-3).
+  const winner = match.players.find((p) => p.index === match.winnerIndex);
   return winner?.name ?? null;
 }
 
