@@ -287,8 +287,9 @@
 
         <p class="cc-note" style="margin-top: 8px;">
           Bronze/Silber/Gold sind die Zielstufen jeder Übung (sichtbar auf den Übungskarten oben).
-          Die automatische Vergabe nach einem abgeschlossenen Match ist technisch noch nicht
-          verdrahtet — der Fortschritt hier bleibt deshalb aktuell leer, bis das nachgezogen wird.
+          Automatisch vergeben werden sie nach einem abgeschlossenen Match derzeit nur bei den drei
+          Konstanz-Übungen mit reinen Zahlenzielen (Average, 140+, 180er). Alle anderen Übungen haben
+          Zielstufen mit Bedingungen, die nicht live gemessen werden — sie bleiben unbewertet.
         </p>
       </CcCard>
     </div>

@@ -198,8 +198,8 @@ export async function trainingMode(): Promise<void> {
         }
 
         // RUNTIME-FIX (Autodarts Elite, nächste Phase nach Match Center):
-        // Medaillen-Vergabe war seit v2.9.72 nie verdrahtet (siehe CcTraining.vue-
-        // Hinweis "technisch noch nicht verdrahtet") — die Live-Stats für die
+        // Medaillen-Vergabe war seit v2.9.72 nie verdrahtet (CcTraining.vue
+        // dokumentierte das damals offen) — die Live-Stats für die
         // Auswertung liefen hier bereits durch (liveAvg/live140Plus/live180s/
         // liveCheckoutRate/liveCheckoutMisses, s.o.), nur das Schreiben nach
         // local:training-exercise-progress fehlte. Unabhängig von trackHistory,
