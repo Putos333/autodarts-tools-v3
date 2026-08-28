@@ -6,7 +6,7 @@ import { AutodartsToolsBoardData, type IBoard } from "@/utils/board-data-storage
 import { AutodartsToolsTournamentData, type ITournament } from "@/utils/tournament-data-storage";
 import { AutodartsToolsConfig, type IConfig, type IWled } from "@/utils/storage";
 import { triggerPatterns } from "@/utils/helpers";
-import { gameDataProcessor } from "@/utils/wled";
+import { createGameDataDebounceQueue, gameDataProcessor } from "@/utils/wled";
 import { WledType } from "#imports";
 
 let gameDataWatcherUnwatch: any;
@@ -16,9 +16,12 @@ let tournamentDataWatcherUnwatch: any;
 let config: IConfig;
 let currentBoardId: string;
 
-let debounceTimer: number | null = null;
 const DEBOUNCE_DELAY = 200;
 let wledActive = false;
+const gameDataQueue = createGameDataDebounceQueue((gameData, oldGameData) => {
+  if (!wledActive) return;
+  processGameData(gameData, oldGameData, true).catch(console.error);
+}, DEBOUNCE_DELAY);
 const activeRequestControllers = new Set<AbortController>();
 const requestStartTimers = new Set<ReturnType<typeof setTimeout>>();
 
@@ -87,10 +90,7 @@ export async function wledFx() {
 
   try {
     // Remove any leftovers from a previous lifecycle, including a pending cleanup-idle request.
-    if (debounceTimer !== null) {
-      clearTimeout(debounceTimer);
-      debounceTimer = null;
-    }
+    gameDataQueue.clear();
     clearRequestStartTimers();
     abortActiveRequests();
 
@@ -103,17 +103,7 @@ export async function wledFx() {
       gameDataWatcherUnwatch = AutodartsToolsGameData.watch(
         (gameData: IGameData, oldGameData: IGameData) => {
           if (!config.wledFx?.enabled || !wledActive) return;
-
-          // Debounce the processGameData call
-          if (debounceTimer !== null) {
-            clearTimeout(debounceTimer);
-          }
-
-          debounceTimer = window.setTimeout(() => {
-            debounceTimer = null;
-            if (!wledActive) return;
-            processGameData(gameData, oldGameData, true).catch(console.error);
-          }, DEBOUNCE_DELAY);
+          gameDataQueue.push(gameData, oldGameData);
         },
       );
 
@@ -200,10 +190,7 @@ export function wledFxOnRemove() {
     tournamentDataWatcherUnwatch = null;
   }
 
-  if (debounceTimer !== null) {
-    clearTimeout(debounceTimer);
-    debounceTimer = null;
-  }
+  gameDataQueue.clear();
 
   clearRequestStartTimers();
   abortActiveRequests();

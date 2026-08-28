@@ -36,13 +36,25 @@ test('crowd lifecycle owns storage listener and delayed reactions', async () => 
   ], 'crowd.ts');
 });
 
-test('WLED cleanup cancels debounce, queued starts and active requests', async () => {
+/**
+ * Code-review follow-up (Priorität-1-Bugfix): der frühere Trailing-Debounce
+ * ("clearTimeout(debounceTimer) + reschedule") verwarf jedes bis auf das
+ * letzte game-data-Update, das innerhalb von 200ms eintraf — dokumentierter
+ * Bug in FACTORY_STATUS.md ("WLED-Debounce verwirft Transitionen bei
+ * <200ms-Abstand"). Fix: `createGameDataDebounceQueue()` (utils/wled.ts,
+ * eigenständig getestet in tests/wled-game-data-queue.test.ts) verarbeitet
+ * jedes Update genau einmal, in Reihenfolge, nur zeitlich entzerrt.
+ * `gameDataQueue.clear()` übernimmt die Cleanup-Rolle des früheren
+ * `clearTimeout(debounceTimer)` — verwirft zusätzlich auch ausstehende,
+ * noch nicht abgearbeitete Backlog-Einträge, nicht nur einen einzelnen Timer.
+ */
+test('WLED cleanup cancels queued game-data processing, queued starts and active requests', async () => {
   const text = await source('entrypoints/match.content/wled.ts');
   assertContains(text, [
     /let wledActive = false;/,
     /activeRequestControllers/,
     /requestStartTimers/,
-    /clearTimeout\(debounceTimer\)/,
+    /gameDataQueue\.clear\(\);/,
     /clearRequestStartTimers\(\);/,
     /abortActiveRequests\(\);/,
     /setEffectByTrigger\("idle", false, true\)/,
