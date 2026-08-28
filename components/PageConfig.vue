@@ -369,7 +369,7 @@ import AppButton from "@/components/AppButton.vue";
 import ConfirmDialog from "@/components/ConfirmDialog.vue";
 import AppNotification from "@/components/AppNotification.vue";
 import SettingsModal from "@/components/SettingsModal.vue";
-import { useConfirmDialog } from "@/composables/useConfirmDialog";
+import { useAppConfirmDialog } from "@/composables/useAppConfirmDialog";
 import { useNotification } from "@/composables/useNotification";
 import AppTabs from "@/components/AppTabs.vue";
 
@@ -492,7 +492,7 @@ const tournamentSubMode = ref<'pdc' | 'friends'>('pdc');
 const mounted = useMounted();
 
 // Use the composables
-const { confirmDialog, showConfirmDialog, confirmDialogConfirm, confirmDialogCancel } = useConfirmDialog();
+const { confirmDialog, showConfirmDialog, confirmDialogConfirm, confirmDialogCancel } = useAppConfirmDialog();
 const { notification, showNotification, hideNotification } = useNotification();
 
 function goBack() {

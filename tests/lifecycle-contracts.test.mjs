@@ -92,6 +92,27 @@ test('sound-fx cleanup cancels queued game-data processing (no lossy debounce)',
   assert.doesNotMatch(text, /clearTimeout\(debounceTimer\)/, 'sound-fx.ts: old lossy debounce must be gone');
 });
 
+/**
+ * Regression für eine Rollup-"Duplicated imports"-Build-Warnung: WXT's
+ * AutoImport-Plugin (wxt.config.ts) importiert sowohl `@vueuse/core` global
+ * als auch alles aus `composables/` global — @vueuse/core hat selbst ein
+ * `useConfirmDialog` (ein anderes, promise-basiertes Reveal/Confirm/Cancel-
+ * API). Die eigene, viel simplere `composables/useConfirmDialog.ts` kollidierte
+ * mit exakt diesem Namen, was in jedem Build 11× "Duplicated imports
+ * useConfirmDialog" auslöste (funktional harmlos, da Rollup die lokale
+ * Version bevorzugte, aber dokumentierte Baseline-Warnung). Fix: umbenannt zu
+ * `useAppConfirmDialog` — eindeutiger Name, keine Kollision mehr mit dem
+ * VueUse-Preset.
+ */
+test('confirm-dialog composable no longer collides with @vueuse/core\'s useConfirmDialog', async () => {
+  const text = await source('composables/useAppConfirmDialog.ts');
+  assertContains(text, [
+    /export function useAppConfirmDialog\(\)/,
+  ], 'useAppConfirmDialog.ts');
+
+  await assert.rejects(source('composables/useConfirmDialog.ts'), 'the colliding composables/useConfirmDialog.ts must not come back');
+});
+
 test('training summary timeout is lifecycle-owned', async () => {
   const text = await source('entrypoints/match.content/training-mode.ts');
   assertContains(text, [

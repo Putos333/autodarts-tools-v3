@@ -9,7 +9,7 @@ interface ConfirmDialogState {
   cancelText?: string;
 }
 
-export function useConfirmDialog() {
+export function useAppConfirmDialog() {
   const confirmDialog = ref<ConfirmDialogState>({
     show: false,
     title: "",
