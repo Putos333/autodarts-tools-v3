@@ -73,7 +73,7 @@ UNKNOWN. Kein Punkt wird beschönigt.
 | Stats-Datenpfad | **PASS** | R1 verifiziert, `match.stats?.[0]?.matchStats` |
 | Legacy-Migration | **PASS** | idempotent, getestet (7 Tests) |
 | Checkout-Misses | **RUNTIME REQUIRED** | Approximation, nicht live verifiziert |
-| Medal-Progress | **FAIL** | wird nach echten Matches nie befüllt (bekannte Lücke, heute nicht behoben — Produktentscheidung nötig) |
+| Medal-Progress | **RUNTIME REQUIRED** | Schreibpfad verdrahtet (RUNTIME-FIX, training-mode.ts L200-209 `maybeAwardMedal`, unabhängig von trackHistory, gated auf aktive Übung + aufgelöste Identität); Live-Verifikation ausstehend |
 | Blockierender `alert()` (TrainingExercises.vue) | **PASS** | heute auf bestehende `useNotification`/`AppNotification`-Infrastruktur migriert |
 
 ## CONTROL CENTER
@@ -92,7 +92,7 @@ UNKNOWN. Kein Punkt wird beschönigt.
 |---|---|---|
 | Ein Schreibpfad pro Domain-Key | **PASS** | verifiziert |
 | Multi-Tab-Schutz | **FAIL** | kein Owner/Timestamp/Tab-ID-Konzept auf irgendeinem Storage-Key |
-| Verwaiste Keys | **PARTIAL** | `local:training-exercise-progress` faktisch verwaist (nur gelöscht, nie befüllt) |
+| Verwaiste Keys | **PASS** | `local:training-exercise-progress` aktiv befüllt (`maybeAwardMedal`, training-mode.ts L469 ff., `utils/training-medals.ts`) |
 | Doppelte Datenhaltung | **PASS** | einzige gefundene Doppelhaltung (Training-History Legacy vs. neu) bereits durch Migration entschärft |
 
 ## MULTI-TAB

@@ -683,3 +683,129 @@ test('CcLiveMatchWidget.vue testids are suffixable so two simultaneously-mounted
     /<CcLiveMatchWidget id-suffix="-mobile" \/>/,
   ], 'CcSidebar.vue');
 });
+
+/**
+ * Phase 5B (P1-1): Lifecycle-Contract-Coverage für die 13 peripheren
+ * match.content-Module, die im Phase-5-Audit als "Listener/Timer/Observer ohne
+ * Lifecycle-Verifikation" gelistet waren. Statische Verifikation (2026-08-28):
+ * alle 13 Module besitzen ein abräumbares Cleanup — benannte Handler mit
+ * removeEventListener, clearInterval, disconnect, Unwatch-Aufruf und/oder
+ * OnRemove-Exports, die von match.content/index.ts registriert werden.
+ * Diese Tests pinnen die Invariants gegen Regression.
+ */
+
+test('automatic-fullscreen removes the named fullscreenchange handler on remove', async () => {
+  const text = await source('entrypoints/match.content/automatic-fullscreen.ts');
+  assertContains(text, [
+    /document\.addEventListener\("fullscreenchange", fullscreenChangeHandler\)/,
+    /document\.removeEventListener\("fullscreenchange", fullscreenChangeHandler\)/,
+    /fullscreenChangeHandler = null;/,
+  ], 'automatic-fullscreen.ts');
+});
+
+test('automatic-next-leg tears down both watchers and the countdown interval on remove', async () => {
+  const text = await source('entrypoints/match.content/automatic-next-leg.ts');
+  assertContains(text, [
+    /gameDataWatcherUnwatch = AutodartsToolsGameData\.watch/,
+    /boardDataWatcherUnwatch = AutodartsToolsBoardData\.watch/,
+    /nextLegInterval = setInterval/,
+    /clearInterval\(nextLegInterval\)/,
+    /gameDataWatcherUnwatch\?\.\(\);/,
+    /boardDataWatcherUnwatch\?\.\(\);/,
+  ], 'automatic-next-leg.ts');
+});
+
+test('career-match disconnects the MutationObserver on cleanup', async () => {
+  const text = await source('entrypoints/match.content/career-match.ts');
+  assertContains(text, [
+    /matchObserver = new MutationObserver/,
+    /matchObserver\?\.disconnect\(\)/,
+    /removeCareerHud/,
+  ], 'career-match.ts');
+});
+
+test('clutch-moments clears the heartbeat interval on cleanup', async () => {
+  const text = await source('entrypoints/match.content/clutch-moments.ts');
+  assertContains(text, [
+    /heartbeatInterval = setInterval\(beat, 900\)/,
+    /clearInterval\(heartbeatInterval\)/,
+    /cleanupClutchMoments/,
+  ], 'clutch-moments.ts');
+});
+
+test('color-change clears the color interval on remove', async () => {
+  const text = await source('entrypoints/match.content/color-change.ts');
+  assertContains(text, [
+    /colorChangeInterval = setInterval\(handleChangeColor, 500\)/,
+    /if \(colorChangeInterval\) clearInterval\(colorChangeInterval\)/,
+  ], 'color-change.ts');
+});
+
+test('face-to-face binds panel buttons to a removable shadow-UI panel (teardown via faceToFaceOnRemove)', async () => {
+  const text = await source('entrypoints/match.content/face-to-face.ts');
+  assertContains(text, [
+    /faceToFaceOnRemove/,
+    /face-close-btn/,
+    /face-hangup-btn/,
+  ], 'face-to-face.ts');
+});
+
+test('hide-menu-in-match binds its toggle to the removable button element', async () => {
+  const text = await source('entrypoints/match.content/hide-menu-in-match.ts');
+  assertContains(text, [
+    /menuHideBtn\.addEventListener\("click", \(\) => toggleMenu\(\)\)/,
+    /hideMenuInMatchOnRemove/,
+  ], 'hide-menu-in-match.ts');
+});
+
+test('match-card unwatches the game-data watcher and revokes object URLs on cleanup', async () => {
+  const text = await source('entrypoints/match.content/match-card.ts');
+  assertContains(text, [
+    /matchWatcher = AutodartsToolsGameData\.watch/,
+    /if \(matchWatcher\) \{ matchWatcher\(\); matchWatcher = null; \}/,
+    /URL\.revokeObjectURL\(url\)/,
+  ], 'match-card.ts');
+});
+
+test('next-player-on-take-out-stuck removes the board watcher and both named document handlers', async () => {
+  const text = await source('entrypoints/match.content/next-player-on-take-out-stuck.ts');
+  assertContains(text, [
+    /if \(boardDataWatcherUnwatch\) \{\s*boardDataWatcherUnwatch\(\);/,
+    /document\.removeEventListener\("fullscreenchange", fullscreenHandlerRef\)/,
+    /document\.removeEventListener\("click", clickHandlerRef\)/,
+    /if \(takeOutTimout\) clearInterval\(takeOutTimout\)/,
+  ], 'next-player-on-take-out-stuck.ts');
+});
+
+test('quick-menu exposes onRemoveQuickMenu for teardown', async () => {
+  const text = await source('entrypoints/match.content/quick-menu.ts');
+  assertContains(text, [
+    /onRemoveQuickMenu/,
+  ], 'quick-menu.ts');
+});
+
+test('screenshot-export revokes object URLs and exposes cleanupScreenshotExport', async () => {
+  const text = await source('entrypoints/match.content/screenshot-export.ts');
+  assertContains(text, [
+    /cleanupScreenshotExport/,
+    /URL\.revokeObjectURL\(url\)/,
+  ], 'screenshot-export.ts');
+});
+
+test('share-card unwatches the game-data watcher and removes the card on teardown', async () => {
+  const text = await source('entrypoints/match.content/share-card.ts');
+  assertContains(text, [
+    /unwatch = AutodartsToolsGameData\.watch/,
+    /export function shareCardOnRemove\(\): void \{\s*unwatch\?\.\(\);\s*unwatch = null;\s*removeCard\(\);/,
+  ], 'share-card.ts');
+});
+
+test('walk-on unwatches the game-data watcher and stops pending audio on teardown', async () => {
+  const text = await source('entrypoints/match.content/walk-on.ts');
+  assertContains(text, [
+    /gameDataWatcherUnwatch = AutodartsToolsGameData\.watch/,
+    /walkOnOnRemove/,
+    /gameDataWatcherUnwatch\?\.\(\);/,
+    /stopCurrentAudio/,
+  ], 'walk-on.ts');
+});
