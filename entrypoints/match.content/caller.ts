@@ -1,6 +1,7 @@
 import { AutodartsToolsGameData, type IGameData } from "@/utils/game-data-storage";
 import { AutodartsToolsConfig, type IConfig, type ISoundTTS } from "@/utils/storage";
 import { getSoundFromIndexedDB, isIndexedDBAvailable, triggerPatterns } from "@/utils/helpers";
+import { createGameDataDebounceQueue } from "@/utils/game-data-debounce-queue";
 
 let gameDataWatcherUnwatch: any;
 let boardDataWatcherUnwatch: any;
@@ -17,10 +18,11 @@ const soundQueue: { url?: string; base64?: string; name?: string; soundId?: stri
 let isPlaying = false;
 // Flag to track if audio has been unlocked
 let audioUnlocked = false;
-// Debounce timer for processing game data
-let debounceTimer: number | null = null;
 // Debounce delay in milliseconds
 const DEBOUNCE_DELAY = 200;
+const gameDataQueue = createGameDataDebounceQueue((gameData, oldGameData) => {
+  processGameData(gameData, oldGameData, true);
+}, DEBOUNCE_DELAY);
 // Cooldown tracking for gameshot/matchshot sounds (to prevent multiple triggers from AI referee)
 let lastGameshotTimestamp: number = 0;
 // Aktiver Caller-Name für die Zufalls-Caller-Funktion (wird pro Match gewählt)
@@ -90,15 +92,7 @@ export async function caller() {
         if (!config?.caller?.enabled) return;
         console.log("Autodarts Tools: caller game data updated");
 
-        // Debounce the processGameData call
-        if (debounceTimer) {
-          clearTimeout(debounceTimer);
-        }
-
-        debounceTimer = window.setTimeout(() => {
-          processGameData(gameData, oldGameData, true);
-          debounceTimer = null;
-        }, DEBOUNCE_DELAY);
+        gameDataQueue.push(gameData, oldGameData);
       });
 
       const url = window.location.href;
@@ -132,11 +126,8 @@ export function callerOnRemove() {
     boardDataWatcherUnwatch = null;
   }
 
-  // Clear any pending debounce timer
-  if (debounceTimer) {
-    clearTimeout(debounceTimer);
-    debounceTimer = null;
-  }
+  // Clear any pending queued game-data processing
+  gameDataQueue.clear();
 
   // Reset gameshot cooldown timestamp
   lastGameshotTimestamp = 0;

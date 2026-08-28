@@ -1,6 +1,7 @@
 import { AutodartsToolsGameData, type IGameData } from "@/utils/game-data-storage";
 import { AutodartsToolsConfig, type IConfig, type ISound, type ISoundTTS } from "@/utils/storage";
 import { getSoundFxFromIndexedDB, isIndexedDBAvailable, triggerPatterns } from "@/utils/helpers";
+import { createGameDataDebounceQueue } from "@/utils/game-data-debounce-queue";
 
 let gameDataWatcherUnwatch: any;
 let lobbyDataWatcherUnwatch: any;
@@ -20,10 +21,11 @@ let isPlaying2 = false;
 // Flag to track if audio has been unlocked
 let audioUnlocked = false;
 let audioUnlocked2 = false;
-// Debounce timer for processing game data
-let debounceTimer: number | null = null;
 // Debounce delay in milliseconds
 const DEBOUNCE_DELAY = 200;
+const gameDataQueue = createGameDataDebounceQueue((gameData, oldGameData) => {
+  processGameData(gameData, oldGameData, true);
+}, DEBOUNCE_DELAY);
 // Cooldown tracking for gameshot/matchshot sounds (to prevent multiple triggers from AI referee)
 let lastGameshotTimestamp: number = 0;
 const GAMESHOT_COOLDOWN_MS = 10000; // 10 seconds cooldown
@@ -98,15 +100,7 @@ export async function soundFx() {
         if (!config?.soundFx?.enabled) return;
         console.log("Autodarts Tools: soundFx game data updated");
 
-        // Debounce the processGameData call
-        if (debounceTimer) {
-          clearTimeout(debounceTimer);
-        }
-
-        debounceTimer = window.setTimeout(() => {
-          processGameData(gameData, oldGameData, true);
-          debounceTimer = null;
-        }, DEBOUNCE_DELAY);
+        gameDataQueue.push(gameData, oldGameData);
       });
 
       const url = window.location.href;
@@ -206,11 +200,8 @@ export function soundFxOnRemove() {
     unlockAudioAbortController = null;
   }
 
-  // Clear any pending debounce timer
-  if (debounceTimer) {
-    clearTimeout(debounceTimer);
-    debounceTimer = null;
-  }
+  // Clear any pending queued game-data processing
+  gameDataQueue.clear();
 
   // Reset gameshot cooldown timestamp
   lastGameshotTimestamp = 0;

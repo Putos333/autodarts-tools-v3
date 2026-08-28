@@ -61,6 +61,37 @@ test('WLED cleanup cancels queued game-data processing, queued starts and active
   ], 'wled.ts');
 });
 
+/**
+ * Same trailing-debounce bug as WLED (see the test above), found identically
+ * in caller.ts and sound-fx.ts — both debounced the GameData watcher via
+ * "clearTimeout(debounceTimer) + reschedule", silently dropping any update
+ * that arrived within 200ms of the previous one, including the caller
+ * announcement / sound effect that should have fired for it. Fix: both now
+ * share `createGameDataDebounceQueue()` (utils/game-data-debounce-queue.ts,
+ * extracted from wled.ts, independently tested in
+ * tests/wled-game-data-queue.test.ts) instead of reimplementing the same
+ * lossy debounce three times.
+ */
+test('caller cleanup cancels queued game-data processing (no lossy debounce)', async () => {
+  const text = await source('entrypoints/match.content/caller.ts');
+  assertContains(text, [
+    /createGameDataDebounceQueue/,
+    /gameDataQueue\.push\(gameData, oldGameData\);/,
+    /gameDataQueue\.clear\(\);/,
+  ], 'caller.ts');
+  assert.doesNotMatch(text, /clearTimeout\(debounceTimer\)/, 'caller.ts: old lossy debounce must be gone');
+});
+
+test('sound-fx cleanup cancels queued game-data processing (no lossy debounce)', async () => {
+  const text = await source('entrypoints/match.content/sound-fx.ts');
+  assertContains(text, [
+    /createGameDataDebounceQueue/,
+    /gameDataQueue\.push\(gameData, oldGameData\);/,
+    /gameDataQueue\.clear\(\);/,
+  ], 'sound-fx.ts');
+  assert.doesNotMatch(text, /clearTimeout\(debounceTimer\)/, 'sound-fx.ts: old lossy debounce must be gone');
+});
+
 test('training summary timeout is lifecycle-owned', async () => {
   const text = await source('entrypoints/match.content/training-mode.ts');
   assertContains(text, [

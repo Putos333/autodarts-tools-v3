@@ -6,7 +6,8 @@ import { AutodartsToolsBoardData, type IBoard } from "@/utils/board-data-storage
 import { AutodartsToolsTournamentData, type ITournament } from "@/utils/tournament-data-storage";
 import { AutodartsToolsConfig, type IConfig, type IWled } from "@/utils/storage";
 import { triggerPatterns } from "@/utils/helpers";
-import { createGameDataDebounceQueue, gameDataProcessor } from "@/utils/wled";
+import { gameDataProcessor } from "@/utils/wled";
+import { createGameDataDebounceQueue } from "@/utils/game-data-debounce-queue";
 import { WledType } from "#imports";
 
 let gameDataWatcherUnwatch: any;

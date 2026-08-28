@@ -1,25 +1,27 @@
 /**
- * Regression test für den WLED-Debounce-Bug (dokumentiert in FACTORY_STATUS.md:
- * "WLED-Debounce verwirft Transitionen bei <200ms-Abstand").
+ * Regression test für den Trailing-Debounce-Bug, ursprünglich in WLED gefunden
+ * (dokumentiert in FACTORY_STATUS.md: "WLED-Debounce verwirft Transitionen bei
+ * <200ms-Abstand") und danach identisch in `caller.ts` und `sound-fx.ts`
+ * gefunden — alle drei debounceten den GameData-Watcher per
+ * "clearTimeout + reschedule". Trafen mehrere game-data-Updates innerhalb von
+ * 200ms ein, wurden alle bis auf das letzte verworfen — inklusive der Caller-
+ * Ansagen/Soundeffekte/WLED-Effekte, die für die verworfenen Zwischenzustände
+ * hätten feuern müssen.
  *
- * Vorher: `entrypoints/match.content/wled.ts` hat den GameData-Watcher per
- * "clearTimeout + reschedule" debounced (trailing debounce). Trafen mehrere
- * game-data-Updates innerhalb von 200ms ein, wurden alle bis auf das letzte
- * verworfen — inklusive der WLED-Effekte, die für die verworfenen
- * Zwischenzustände hätten feuern müssen.
- *
- * Nachher: `createGameDataDebounceQueue()` (utils/wled.ts) verarbeitet jedes
+ * Nachher: `createGameDataDebounceQueue()` (utils/game-data-debounce-queue.ts,
+ * von wled.ts/caller.ts/sound-fx.ts gemeinsam genutzt) verarbeitet jedes
  * (gameData, oldGameData)-Paar genau einmal, in Reihenfolge, nur zeitlich
  * entzerrt — kein Datenverlust mehr.
  *
- * utils/wled.ts importiert kein WXT/Browser-API, daher läuft dieser Test ohne
- * Extension-Kontext über den Node-eigenen Test-Runner (siehe event-dedupe.test.ts).
+ * utils/game-data-debounce-queue.ts importiert kein WXT/Browser-API, daher
+ * läuft dieser Test ohne Extension-Kontext über den Node-eigenen Test-Runner
+ * (siehe event-dedupe.test.ts).
  */
 
 import { strict as assert } from "node:assert";
 import { describe, it } from "node:test";
 
-import { createGameDataDebounceQueue } from "../utils/wled";
+import { createGameDataDebounceQueue } from "../utils/game-data-debounce-queue";
 
 /** Manuell steuerbarer Fake-Scheduler statt echter Timer. */
 function createFakeScheduler() {
