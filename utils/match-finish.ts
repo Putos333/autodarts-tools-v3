@@ -21,3 +21,21 @@ export function didMatchJustFinish(
   const nowFinished = typeof newWinner === "number" && newWinner >= 0;
   return nowFinished && !wasFinished;
 }
+
+/**
+ * "Is this match currently finished" — the one-shot counterpart to
+ * `didMatchJustFinish` above, for callers (like `utils/liga-api.ts`'s
+ * `ligaAutoSubmit()`) that only need the current state, not a transition.
+ *
+ * Original bug (liga-api.ts): checked `gameData?.gameState === 'finished' ||
+ * gameData?.status === 'finished'` — neither field exists on `IGameData`
+ * (only `.match.finished`/`.match.winner` do, see game-data-storage.ts) or
+ * even on `IMatch`. The watcher callback was typed `gameData: any`, so
+ * TypeScript never caught it — `isFinished` was permanently `false` and the
+ * Liga auto-submit feature never fired for any match.
+ */
+export function isMatchFinished(
+  match: { finished?: boolean; winner?: number | null } | null | undefined,
+): boolean {
+  return match?.finished === true || (typeof match?.winner === "number" && match.winner >= 0);
+}

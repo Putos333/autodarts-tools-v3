@@ -384,7 +384,8 @@ export function calculateHeadToHead(matches: LigaMatch[], player1: string, playe
 
 // ─── Match-Auto-Submit nach Spielende ────────────────────────────────────────
 import { AutodartsToolsConfig } from "@/utils/storage";
-import { AutodartsToolsGameData } from "@/utils/game-data-storage";
+import { AutodartsToolsGameData, type IGameData } from "@/utils/game-data-storage";
+import { isMatchFinished } from "@/utils/match-finish";
 
 let gameDataWatcherUnwatch: (() => void) | null = null;
 let lastSubmittedMatchId = '';
@@ -401,19 +402,32 @@ export async function ligaAutoSubmit(): Promise<void> {
     return;
   }
 
-  gameDataWatcherUnwatch = AutodartsToolsGameData.watch(async (gameData: any) => {
-    if (!gameData) return;
+  gameDataWatcherUnwatch = AutodartsToolsGameData.watch(async (gameData: IGameData | undefined) => {
+    const match = gameData?.match;
+    if (!match) return;
 
-    const isFinished = gameData?.gameState === 'finished' || gameData?.status === 'finished';
-    if (!isFinished) return;
+    // `gameData` selbst hat nur { private, gameMode, match } (siehe
+    // utils/game-data-storage.ts) — gameState/status/matchId/id/players/variant
+    // existieren nur unter `match`, nicht auf `gameData`. Die vorherige
+    // Implementierung las diese Felder direkt von `gameData` (getypt als
+    // `any`, daher kein Compile-Fehler) — `isFinished` war dadurch IMMER
+    // `false`, die automatische Liga-Übermittlung feuerte nie. Dieselbe
+    // Bug-Klasse wie das historische R1 (training-mode.ts las früher ebenfalls
+    // gameData.gameState/status statt match.finished/match.winner).
+    if (!isMatchFinished(match)) return;
 
-    const matchId = gameData?.matchId || gameData?.id || '';
+    const matchId = match.id || '';
     if (matchId && matchId === lastSubmittedMatchId) return;
     lastSubmittedMatchId = matchId;
 
     try {
-      const players = gameData?.players || [];
+      const players = match.players ?? [];
       if (players.length < 2) return;
+
+      const scores = match.scores ?? [];
+      const stats = match.stats ?? [];
+      const stats1 = stats[0]?.matchStats;
+      const stats2 = stats[1]?.matchStats;
 
       const ligaConfig = await AutodartsToolsConfig.getValue();
       const ligaName = ligaConfig.liga?.name || 'Meine Liga';
@@ -422,16 +436,14 @@ export async function ligaAutoSubmit(): Promise<void> {
         liga_name: ligaName,
         player1: players[0]?.name || 'Spieler 1',
         player2: players[1]?.name || 'Spieler 2',
-        score1: parseInt(players[0]?.legs || '0', 10),
-        score2: parseInt(players[1]?.legs || '0', 10),
-        avg1: parseFloat(players[0]?.stats?.average || '0') || undefined,
-        avg2: parseFloat(players[1]?.stats?.average || '0') || undefined,
-        checkout1: parseFloat(players[0]?.stats?.checkoutRate || '0') || undefined,
-        checkout2: parseFloat(players[1]?.stats?.checkoutRate || '0') || undefined,
-        best_leg1: parseInt(players[0]?.stats?.bestLeg || '0', 10) || undefined,
-        best_leg2: parseInt(players[1]?.stats?.bestLeg || '0', 10) || undefined,
+        score1: scores[0]?.legs ?? scores[0]?.sets ?? 0,
+        score2: scores[1]?.legs ?? scores[1]?.sets ?? 0,
+        avg1: stats1?.average,
+        avg2: stats2?.average,
+        checkout1: stats1?.checkoutPercent,
+        checkout2: stats2?.checkoutPercent,
         match_id: matchId,
-        variant: gameData?.variant || 'X01',
+        variant: match.variant || 'X01',
       });
 
       console.log('Autodarts Tools: Liga-Ergebnis gespeichert');
