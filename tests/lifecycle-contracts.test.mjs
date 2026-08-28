@@ -164,6 +164,29 @@ test('QuickCorrection.vue removes both keydown listeners on unmount (no anonymou
   );
 });
 
+/**
+ * Regression: der AutodartsToolsGameData.watch()-Callback in
+ * enhanced-scoring-display.ts loggte UNBEDINGT bei JEDEM game-data-Update
+ * (also mehrfach pro Sekunde während eines laufenden Matches) — anders als
+ * jeder andere game-data-Watcher im Repo (crowd.ts, ft-auto-result.ts,
+ * career-controller.ts, training-mode.ts loggen nur bei echten
+ * State-Übergängen). Konsequenz: Konsolen-Spam während jedes laufenden
+ * Matches, erschwert das Erkennen echter Fehler/Warnungen. Der bedingte
+ * Log bei tatsächlicher Wurf-/Spielerwechsel-Änderung bleibt bestehen
+ * (kein Spam, konsistent mit den anderen Watchern).
+ */
+test('enhanced-scoring-display game-data watcher does not log unconditionally on every tick', async () => {
+  const text = await source('entrypoints/match.content/enhanced-scoring-display.ts');
+  assertContains(text, [
+    /Game scores changed/, // der bedingte, transition-gated Log bleibt
+  ], 'enhanced-scoring-display.ts');
+  assert.doesNotMatch(
+    text,
+    /Game data changed/,
+    'enhanced-scoring-display.ts: unconditional per-tick console.log must not come back',
+  );
+});
+
 test('training summary timeout is lifecycle-owned', async () => {
   const text = await source('entrypoints/match.content/training-mode.ts');
   assertContains(text, [

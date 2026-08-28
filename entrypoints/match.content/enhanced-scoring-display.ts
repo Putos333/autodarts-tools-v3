@@ -27,8 +27,6 @@ export async function enhancedScoringDisplay() {
   updateScoreDisplays(gameData.match?.turns[0].throws as IThrow[]);
 
   gameDataWatcherUnwatch = AutodartsToolsGameData.watch((_gameData: IGameData, _oldGameData: IGameData) => {
-    console.log("Autodarts Tools: Enhanced Scoring Display - Game data changed");
-
     // Update score displays if throws have changed
     if (_gameData.match?.turns[0].throws.length !== _oldGameData.match?.turns[0].throws.length || _gameData.match?.player !== _oldGameData.match?.player) {
       console.log("Autodarts Tools: Enhanced Scoring Display - Game scores changed", _gameData.match?.turns[0].throws);
