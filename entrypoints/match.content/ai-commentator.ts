@@ -413,9 +413,13 @@ async function processGameData(gameData: IGameData, oldGameData: IGameData): Pro
   const currentScore = gameScores[currentPlayerIdx];
 
   // ── Match-Start ────────────────────────────────────────────────────────────
+  // Kein `currentPlayerIdx === 0`-Gate: wer zuerst wirft, wird per Bull-off
+  // entschieden (nicht immer Spieler 0) — die Bedingung ließ "Game On" bei
+  // jedem Match verstummen, in dem Spieler 1 (Index 1) das Bull-off gewinnt
+  // und beginnt. speak()s eigener eventKey/lastEventTime-Cooldown (5s)
+  // verhindert weiterhin ein Doppel-Feuern.
   if (gameData.match.round === 1
-    && gameData.match.turns[0].throws.length === 0
-    && currentPlayerIdx === 0) {
+    && gameData.match.turns[0].throws.length === 0) {
     const p1 = players[0]?.name ?? config.aiCommentator?.playerName1 ?? 'Spieler 1';
     const p2 = players[1]?.name ?? config.aiCommentator?.playerName2 ?? 'Spieler 2';
     await speak('gameon', { player1: p1, player2: p2 });

@@ -113,6 +113,30 @@ test('confirm-dialog composable no longer collides with @vueuse/core\'s useConfi
   await assert.rejects(source('composables/useConfirmDialog.ts'), 'the colliding composables/useConfirmDialog.ts must not come back');
 });
 
+/**
+ * Regression: "Game On" wurde in der Praxis in ca. der Hälfte aller Matches
+ * nie angesagt. Die ursprüngliche Bedingung verlangte zusätzlich zu
+ * `round === 1 && throws.length === 0` noch `currentPlayerIdx === 0` — wer
+ * zuerst wirft, wird aber per Bull-off entschieden (nicht immer Spieler 0).
+ * Gewinnt Spieler 1 das Bull-off, feuerte der Match-Start-Zweig nie (die
+ * Bedingung wird nur EINMAL pro Match kurz erfüllt, bevor throws.length > 0
+ * wird). `speak()`s eigener eventKey/lastEventTime-Cooldown (5s) verhindert
+ * weiterhin ein Doppel-Feuern, ein `currentPlayerIdx`-Gate war dafür nie
+ * nötig.
+ */
+test('ai-commentator "Game On" fires regardless of which player starts (no currentPlayerIdx gate)', async () => {
+  const text = await source('entrypoints/match.content/ai-commentator.ts');
+  // Nur die tatsächliche if-Bedingung prüfen (nicht den erklärenden Kommentar
+  // direkt darüber, der zur Dokumentation selbst den Ausdruck "currentPlayerIdx === 0" nennt).
+  const condition = text.match(/if \(gameData\.match\.round === 1[\s\S]{0,200}?\)\s*\{/);
+  assert.ok(condition, 'ai-commentator.ts: Match-Start if-condition not found');
+  assert.doesNotMatch(
+    condition[0],
+    /currentPlayerIdx === 0/,
+    'ai-commentator.ts: Match-Start condition must not gate on currentPlayerIdx — Bull-off can make either player start',
+  );
+});
+
 test('training summary timeout is lifecycle-owned', async () => {
   const text = await source('entrypoints/match.content/training-mode.ts');
   assertContains(text, [
