@@ -22,6 +22,12 @@
  *   "stale"   → das letzte Signal ist älter als LIVE_WINDOW_MS
  *   "live"    → frisches Signal
  *
+ * Als "frisch" zählt jedes echte Signal: das WS-Signal (`adt-ws-status`) ODER
+ * eine kürzlich hier angekommene board/game/lobby-Daten-Aktualisierung. Das
+ * `adt-ws-status.when` allein würde während eines laufenden Matches (Socket
+ * offen, keine open/close/error-Ereignisse) fälschlich "stale" melden, obwohl
+ * die Match-/Board-Daten ununterbrochen fließen (Human-Live-Test 2026-08-28).
+ *
  * Ein fehlendes oder altes Signal wird NIE als "getrennt" dargestellt —
  * "getrennt" sagen wir nur, wenn der Monitor das frisch gemeldet hat.
  */
@@ -123,6 +129,13 @@ const backendUrl = ref<string>("");
 const isRefreshing = ref(false);
 /** Zeitbasis für alle Alters-Berechnungen; wird vom Ticker fortgeschrieben. */
 const now = ref(Date.now());
+/**
+ * Letzte Ankunft echter Live-Daten (board/game/lobby) in DIESEM Seiten-Kontext.
+ * `adt-ws-status.when` wird nur bei Socket-open/close/error geschrieben — bei
+ * laufendem Match fließen aber board/game-Daten weiter. Dieser Wert fängt diese
+ * Live-Aktivität als zusätzliches Frische-Signal ab (siehe `lastLiveAt`).
+ */
+const lastLiveActivityAt = ref<number | null>(null);
 /** Gespeicherte Match-Ergebnisse (P2-Store), neueste zuerst. Nur gelesen. */
 const recentResults = ref<ICanonicalMatchResult[]>([]);
 /** Zentrale Nutzer-Identität (Player-Identity-Fix / N2 Centralization). */
@@ -140,7 +153,10 @@ const teardown: Array<() => void> = [];
 function onStorageChanged(changes: Record<string, any>, areaName: string): void {
   if (areaName !== "local") return;
   const entry = changes[WS_STATUS_KEY];
-  if (entry) wsRaw.value = (entry.newValue ?? null) as IWsStatusRaw | null;
+  if (entry) {
+    wsRaw.value = (entry.newValue ?? null) as IWsStatusRaw | null;
+    lastLiveActivityAt.value = Date.now();
+  }
 }
 
 async function readWsStatus(): Promise<void> {
@@ -249,6 +265,7 @@ function attach(): void {
   const unwatchBoard = AutodartsToolsBoardData.watch((value: IBoard) => {
     if (value) boardData.value = value;
     now.value = Date.now();
+    lastLiveActivityAt.value = Date.now();
   });
   const unwatchGame = AutodartsToolsGameData.watch((value: IGameData) => {
     if (value) {
@@ -256,10 +273,12 @@ function attach(): void {
       syncFocusSeat(value.match);
     }
     now.value = Date.now();
+    lastLiveActivityAt.value = Date.now();
   });
   const unwatchLobby = AutodartsToolsLobbyData.watch((value: ILobbies | undefined) => {
     lobbyRaw.value = value ?? undefined;
     now.value = Date.now();
+    lastLiveActivityAt.value = Date.now();
   });
   const unwatchUrl = AutodartsToolsUrlStatus.watch((value: string) => {
     urlStatus.value = typeof value === "string" ? value : "";
@@ -352,12 +371,28 @@ export function useControlCenterStatus() {
     return typeof when === "number" && Number.isFinite(when) ? when : null;
   });
 
-  const liveness = computed<TLiveness>(() => {
-    if (!wsRaw.value || lastSignalAt.value === null) return "unknown";
-    return now.value - lastSignalAt.value <= LIVE_WINDOW_MS ? "live" : "stale";
+  /**
+   * Neuester Live-Kontakt überhaupt: entweder das explizite WS-Signal
+   * (`adt-ws-status.when`) oder die zuletzt hier angekommene Live-Daten-
+   * Aktualisierung (board/game/lobby). Beides sind echte Signale aus einem
+   * offenen Autodarts-Tab — ohne den zweiten Zweig bliebe der globale Status
+   * während eines laufenden Matches fälschlich "Keine aktuellen Daten".
+   */
+  const lastLiveAt = computed<number | null>(() => {
+    const signalAt = lastSignalAt.value;
+    const activityAt = lastLiveActivityAt.value;
+    const a = typeof signalAt === "number" && Number.isFinite(signalAt) ? signalAt : 0;
+    const b = typeof activityAt === "number" && Number.isFinite(activityAt) ? activityAt : 0;
+    const newest = Math.max(a, b);
+    return newest > 0 ? newest : null;
   });
 
-  const lastSignalAgo = computed(() => formatAgo(lastSignalAt.value, now.value));
+  const liveness = computed<TLiveness>(() => {
+    if (lastLiveAt.value === null) return "unknown";
+    return now.value - lastLiveAt.value <= LIVE_WINDOW_MS ? "live" : "stale";
+  });
+
+  const lastSignalAgo = computed(() => formatAgo(lastLiveAt.value, now.value));
 
   const connection = computed<TConnectionState>(() => {
     if (liveness.value === "unknown") return "unknown";

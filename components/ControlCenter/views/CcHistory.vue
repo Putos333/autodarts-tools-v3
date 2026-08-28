@@ -156,14 +156,14 @@
               v-for="match in filteredAndSorted"
               :key="match.matchId"
               class="cc-result"
-              :class="{ 'is-current': match === selectedMatch }"
+              :class="{ 'is-current': isSelectedMatch(match) }"
               :data-testid="`cc-hist-${match.matchId}`"
             >
               <button
                 @click="toggleSelect(match)"
                 class="cc-result-main"
                 type="button"
-                :aria-expanded="match === selectedMatch ? 'true' : 'false'"
+                :aria-expanded="isSelectedMatch(match) ? 'true' : 'false'"
                 :data-testid="`cc-hist-toggle-${match.matchId}`"
               >
                 <div class="cc-result-date">{{ formatDateDisplay(match.recordedAt ?? match.createdAt) }}</div>
@@ -183,12 +183,12 @@
                   {{ scoreOf(match) }}
                 </div>
                 <span class="cc-result-chevron">
-                  <span :class="match === selectedMatch ? 'icon-[pixelarticons--chevron-up]' : 'icon-[pixelarticons--chevron-down]'" />
+                  <span :class="isSelectedMatch(match) ? 'icon-[pixelarticons--chevron-up]' : 'icon-[pixelarticons--chevron-down]'" />
                 </span>
               </button>
 
               <!-- Detail-Ansicht (eingeklappt im Listenknoten) -->
-              <div v-if="match === selectedMatch" class="cc-detail" data-testid="cc-history-detail">
+              <div v-if="isSelectedMatch(match)" class="cc-detail" data-testid="cc-history-detail">
                 <!-- Spieler-Details -->
                 <div class="cc-detail-section">
                   <div class="cc-detail-heading">Spieler</div>
@@ -477,6 +477,16 @@ function toggleSelect(match: ICmrMatchDisplay): void {
     selectedMatch.value = match;
     showTechnical.value = false;
   }
+}
+
+/**
+ * Auswahl-Vergleich über die stabile `matchId` statt über Objekt-Identität:
+ * `selectedMatch.value` ist eine reaktive Proxy-Instanz (ref wrappt beim
+ * Zuweisen), die v-for-`match`-Objekte sind es nicht — `match === selectedMatch`
+ * wäre IMMER false und Details ließen sich nie öffnen (Live-Test 2026-08-28).
+ */
+function isSelectedMatch(match: ICmrMatchDisplay): boolean {
+  return selectedMatch.value !== null && selectedMatch.value.matchId === match.matchId;
 }
 
 /* ─── Display Helpers ───────────────────────────────────────────────────────── */
