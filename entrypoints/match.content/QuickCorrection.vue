@@ -245,7 +245,40 @@ watch(open, (newVal) => {
 
 onUnmounted(() => {
   window.removeEventListener("keydown", handleKeyDown);
+  window.removeEventListener("keydown", handleOpenShortcutKeyDown);
 });
+
+/**
+ * Numpad-Kurzbefehle (`/`, `*`, `-`) zum Öffnen der Korrektur für Throw 1/2/3.
+ * Benannte Funktion statt Inline-Arrow in onMounted() — sonst gibt es keine
+ * Referenz, um den Listener in onUnmounted() wieder zu entfernen. Component
+ * wird pro Match neu gemountet/unmounted (siehe match.content/index.ts:
+ * initQuickCorrection() bei jedem Matchstart, shadowUis.quickCorrection.remove()
+ * bei clearMatch()) — ohne diesen Fix akkumuliert sich pro gespieltem Match
+ * ein weiterer, nie entfernter `window`-keydown-Listener mit Closures auf die
+ * (dann stale) throw1/2/3-Refs der jeweils vorherigen Match-Instanz.
+ */
+function handleOpenShortcutKeyDown(event: KeyboardEvent) {
+  if (open.value) return;
+
+  switch (event.key) {
+    case "/":
+    case "NumpadDivide":
+      if (throw1.value) throw1.value.click();
+      event.preventDefault();
+      break;
+    case "*":
+    case "NumpadMultiply":
+      if (throw2.value) throw2.value.click();
+      event.preventDefault();
+      break;
+    case "-":
+    case "NumpadSubtract":
+      if (throw3.value) throw3.value.click();
+      event.preventDefault();
+      break;
+  }
+}
 
 function handleKeyDown(event: KeyboardEvent) {
   if (!open.value) return;
@@ -412,27 +445,7 @@ onMounted(async () => {
     }
   });
 
-  window.addEventListener("keydown", (event) => {
-    if (open.value) return;
-
-    switch (event.key) {
-      case "/":
-      case "NumpadDivide":
-        if (throw1.value) throw1.value.click();
-        event.preventDefault();
-        break;
-      case "*":
-      case "NumpadMultiply":
-        if (throw2.value) throw2.value.click();
-        event.preventDefault();
-        break;
-      case "-":
-      case "NumpadSubtract":
-        if (throw3.value) throw3.value.click();
-        event.preventDefault();
-        break;
-    }
-  });
+  window.addEventListener("keydown", handleOpenShortcutKeyDown);
 });
 
 async function openCorrection(throwElement?: HTMLElement) {

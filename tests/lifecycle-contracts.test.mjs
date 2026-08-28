@@ -137,6 +137,33 @@ test('ai-commentator "Game On" fires regardless of which player starts (no curre
   );
 });
 
+/**
+ * Regression: QuickCorrection.vue registrierte in onMounted() zwei
+ * `window`-keydown-Listener — `handleKeyDown` (benannte Funktion, korrekt in
+ * onUnmounted() entfernt) UND einen zweiten, ANONYMEN Inline-Arrow-Handler
+ * für die Numpad-Kurzbefehle (`/`,`*`,`-`) zum Öffnen der Korrektur. Da
+ * anonym, gab es keine Referenz, um ihn in onUnmounted() zu entfernen.
+ * Component wird pro Match neu gemountet/unmounted (match.content/index.ts:
+ * initQuickCorrection() bei jedem Matchstart, shadowUis.quickCorrection.remove()
+ * bei clearMatch()) — jedes gespielte Match akkumulierte also einen weiteren,
+ * nie entfernten `window`-keydown-Listener mit Closures auf die (dann stale)
+ * throw1/2/3-Refs der vorherigen Match-Instanz.
+ */
+test('QuickCorrection.vue removes both keydown listeners on unmount (no anonymous leak)', async () => {
+  const text = await source('entrypoints/match.content/QuickCorrection.vue');
+  assertContains(text, [
+    /function handleOpenShortcutKeyDown\(event: KeyboardEvent\)/,
+    /window\.addEventListener\("keydown", handleOpenShortcutKeyDown\)/,
+    /window\.removeEventListener\("keydown", handleOpenShortcutKeyDown\)/,
+    /window\.removeEventListener\("keydown", handleKeyDown\)/,
+  ], 'QuickCorrection.vue');
+  assert.doesNotMatch(
+    text,
+    /window\.addEventListener\("keydown", \(event\) => \{/,
+    'QuickCorrection.vue: no anonymous inline keydown handler must remain (it cannot be removed on unmount)',
+  );
+});
+
 test('training summary timeout is lifecycle-owned', async () => {
   const text = await source('entrypoints/match.content/training-mode.ts');
   assertContains(text, [
