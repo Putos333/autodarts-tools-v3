@@ -11,6 +11,7 @@ import { AutodartsToolsGameData, type IGameData } from "@/utils/game-data-storag
 import { getUserIdFromToken } from "@/utils/helpers";
 import { getThrows, computeStats } from "@/utils/heatmap-storage";
 import { submitMatch, getIdentity, type EloSubmitResponse } from "@/utils/elo-client";
+import { didMatchJustFinish } from "@/utils/match-finish";
 
 let unwatch: (() => void) | null = null;
 let alreadyShown = false;
@@ -36,10 +37,8 @@ async function onGameData(gd: IGameData, old: IGameData): Promise<void> {
   if (alreadyShown) return;
   const match = gd?.match;
   if (!match) return;
-  // Match hat gerade geendet
-  const wasFinished = !!old?.match?.winner || old?.match?.winner === 0;
-  const nowFinished = typeof match.winner === "number" && match.winner >= 0;
-  if (!nowFinished || wasFinished) return;
+  // Match hat gerade geendet.
+  if (!didMatchJustFinish(old?.match?.winner, match.winner)) return;
 
   alreadyShown = true;
   await renderCard(match).catch(err => console.warn("ShareCard: Fehler", err));
