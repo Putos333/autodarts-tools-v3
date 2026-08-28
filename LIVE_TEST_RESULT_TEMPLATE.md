@@ -1,0 +1,166 @@
+# LIVE TEST RESULT TEMPLATE
+
+**Basis:** `PRE_LIVE_SNAPSHOT.md` (HEAD `2707ae9`) · Diagnose-Hilfe: `POST_LIVE_DIAGNOSTIC_MATRIX.md`
+**Datum/Session:** _______________
+
+Für jeden Testbereich aus `HUMAN_LIVE_TEST_CHECKLIST.md` einen Block ausfüllen. Bei PASS reichen TEST + ERGEBNIS.
+
+---
+
+```
+TEST:
+ERGEBNIS: PASS/FAIL
+SYMPTOM:
+ZEITPUNKT:
+CONSOLE:
+ERWARTET:
+TATSÄCHLICH:
+```
+
+---
+
+## Blöcke (einen pro Testbereich kopieren/ausfüllen)
+
+```
+TEST: Match Start
+ERGEBNIS:
+SYMPTOM:
+ZEITPUNKT:
+CONSOLE:
+ERWARTET:
+TATSÄCHLICH:
+```
+
+```
+TEST: Schnelle Würfe
+ERGEBNIS:
+SYMPTOM:
+ZEITPUNKT:
+CONSOLE:
+ERWARTET:
+TATSÄCHLICH:
+```
+
+```
+TEST: Spielerwechsel
+ERGEBNIS:
+SYMPTOM:
+ZEITPUNKT:
+CONSOLE:
+ERWARTET:
+TATSÄCHLICH:
+```
+
+```
+TEST: Match-/Winner-Ende
+ERGEBNIS:
+SYMPTOM:
+ZEITPUNKT:
+CONSOLE:
+ERWARTET:
+TATSÄCHLICH:
+```
+
+```
+TEST: Quick Correction
+ERGEBNIS:
+SYMPTOM:
+ZEITPUNKT:
+CONSOLE:
+ERWARTET:
+TATSÄCHLICH:
+```
+
+```
+TEST: Caller
+ERGEBNIS:
+SYMPTOM:
+ZEITPUNKT:
+CONSOLE:
+ERWARTET:
+TATSÄCHLICH:
+```
+
+```
+TEST: SoundFX
+ERGEBNIS:
+SYMPTOM:
+ZEITPUNKT:
+CONSOLE:
+ERWARTET:
+TATSÄCHLICH:
+```
+
+```
+TEST: WLED
+ERGEBNIS:
+SYMPTOM:
+ZEITPUNKT:
+CONSOLE:
+ERWARTET:
+TATSÄCHLICH:
+```
+
+```
+TEST: Enhanced Scoring
+ERGEBNIS:
+SYMPTOM:
+ZEITPUNKT:
+CONSOLE:
+ERWARTET:
+TATSÄCHLICH:
+```
+
+```
+TEST: Control Center
+ERGEBNIS:
+SYMPTOM:
+ZEITPUNKT:
+CONSOLE:
+ERWARTET:
+TATSÄCHLICH:
+```
+
+```
+TEST: Training
+ERGEBNIS:
+SYMPTOM:
+ZEITPUNKT:
+CONSOLE:
+ERWARTET:
+TATSÄCHLICH:
+```
+
+```
+TEST: Mobile Navigation
+ERGEBNIS:
+SYMPTOM:
+ZEITPUNKT:
+CONSOLE:
+ERWARTET:
+TATSÄCHLICH:
+```
+
+```
+TEST: Netzwerk-/WebSocket-Unterbrechung
+ERGEBNIS:
+SYMPTOM:
+ZEITPUNKT:
+CONSOLE:
+ERWARTET:
+TATSÄCHLICH:
+```
+
+---
+
+## Zusatzbeobachtungen (außerhalb der Checkliste)
+
+```
+TEST:
+ERGEBNIS:
+SYMPTOM:
+ZEITPUNKT:
+CONSOLE:
+ERWARTET:
+TATSÄCHLICH:
+```

@@ -16,12 +16,13 @@ import { describe, it } from "node:test";
 import { deriveLiveThrow } from "../utils/live-throw";
 import type { IMatch, IThrow, ITurn } from "../utils/websocket-helpers";
 
-function throwAt(name: string): IThrow {
+function throwAt(name: string, coords?: { x: number; y: number }): IThrow {
   return {
     id: `t-${name}-${Math.random()}`,
     throw: 1,
     createdAt: "2026-08-26T10:00:00.000Z",
     segment: { name, number: 20, bed: "Triple", multiplier: 3 },
+    coords,
     entry: "manual",
     marks: null,
   };
@@ -101,20 +102,26 @@ describe("deriveLiveThrow", () => {
     const result = deriveLiveThrow(m);
     assert.equal(result.hasTurn, true);
     assert.deepEqual(result.darts, [
-      { hit: false, label: null },
-      { hit: false, label: null },
-      { hit: false, label: null },
+      { hit: false, label: null, coords: null },
+      { hit: false, label: null, coords: null },
+      { hit: false, label: null, coords: null },
     ]);
     assert.equal(result.visitScore, 0);
     assert.equal(result.previousVisit, null);
   });
 
-  it("5. ein Dart geworfen → nur Slot 1 hit, echtes segment.name unverändert", () => {
+  it("5. ein Dart geworfen → nur Slot 1 hit, echtes segment.name unverändert, keine coords gemeldet → null", () => {
     const m = match({ turns: [ turn({ points: 20, throws: [ throwAt("T20") ] }) ] });
     const result = deriveLiveThrow(m);
-    assert.deepEqual(result.darts[0], { hit: true, label: "T20" });
+    assert.deepEqual(result.darts[0], { hit: true, label: "T20", coords: null });
     assert.equal(result.darts[1].hit, false);
     assert.equal(result.visitScore, 20);
+  });
+
+  it("5b. ein Dart mit echten Board-Koordinaten → coords 1:1 aus IThrow.coords übernommen, kein Runden/Erfinden", () => {
+    const m = match({ turns: [ turn({ points: 60, throws: [ throwAt("T20", { x: 1.5, y: -103.2 }) ] }) ] });
+    const result = deriveLiveThrow(m);
+    assert.deepEqual(result.darts[0], { hit: true, label: "T20", coords: { x: 1.5, y: -103.2 } });
   });
 
   it("6. drei Darts geworfen → alle 3 Slots hit, Labels 1:1 von den echten Würfen", () => {
@@ -199,6 +206,32 @@ describe("Wave 2 Slice 1 — Regression", () => {
       /data-testid="cc-hero"/,
       /Kein aktives Match/,
     ], "CcMatchHero.vue existing markup");
+  });
+
+  it("CcMatchHero.vue bindet CcLiveBoard NUR im Live-Throw-Zweig (v-else) ein, nicht im Checkout-Route-Zweig (v-if)", async () => {
+    const text = await source("components/ControlCenter/CcMatchHero.vue");
+    assert.match(text, /import CcLiveBoard from "\.\/CcLiveBoard\.vue";/, "CcLiveBoard muss importiert werden");
+
+    const ifStart = text.indexOf("<template v-if=\"checkoutPath.visible\">");
+    const elseStart = text.indexOf("<template v-else>");
+    assert.ok(ifStart !== -1 && elseStart !== -1 && ifStart < elseStart, "beide Zweige müssen in der erwarteten Reihenfolge vorhanden sein");
+
+    const checkoutBranch = text.slice(ifStart, elseStart);
+    assert.doesNotMatch(checkoutBranch, /CcLiveBoard/, "Checkout-Route-Zweig darf das Board nicht zeigen");
+
+    const liveThrowBranch = text.slice(elseStart);
+    assert.match(liveThrowBranch, /<CcLiveBoard :darts="liveThrow\.darts" \/>/, "Live-Throw-Zweig muss das Board mit denselben liveThrow.darts speisen (keine zweite Ableitung)");
+  });
+
+  it("Implementierung Phase 2 bewahrt Mobile Bottom Navigation und das restliche Match-Layout unangetastet", async () => {
+    const sidebar = await source("components/ControlCenter/CcSidebar.vue");
+    assert.match(sidebar, /cc-bottom-nav/, "Bottom-Nav-Struktur muss unverändert vorhanden sein");
+    const matchView = await source("components/ControlCenter/views/CcMatch.vue");
+    assertContains(matchView, [
+      /CcPlayersCard/,
+      /CcMatchDetails/,
+      /CcMatchHistory/,
+    ], "bestehende Match-Bereichs-Komponenten müssen erhalten bleiben");
   });
 
   it("useControlCenterStatus.ts surfacet plus100/plus140 real aus matchStats, nicht erfunden", async () => {

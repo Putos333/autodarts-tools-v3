@@ -186,6 +186,12 @@
           <span class="cc-throw-eyebrow">Aktueller Visit</span>
           <span class="cc-throw-value" data-testid="cc-live-visit-score">{{ liveThrow.visitScore ?? "–" }}</span>
         </div>
+        <!-- Grafische Live-Dartscheibe (Implementierung Phase 2) — reine
+             Presentation Component, bekommt exakt dieselben `liveThrow.darts`
+             wie der Text-Track oben, keine zweite Ableitung. -->
+        <div class="cc-hero-board-visual" data-testid="cc-hero-board-visual">
+          <CcLiveBoard :darts="liveThrow.darts" />
+        </div>
       </template>
     </div>
 
@@ -277,6 +283,7 @@ import { computed } from "vue";
 import CcPlayerBadge from "./CcPlayerBadge.vue";
 import CcStatusPill from "./CcStatusPill.vue";
 import CcEmptyState from "./CcEmptyState.vue";
+import CcLiveBoard from "./CcLiveBoard.vue";
 import { openAutodarts } from "./open-autodarts";
 import { useControlCenterStatus } from "@/composables/useControlCenterStatus";
 

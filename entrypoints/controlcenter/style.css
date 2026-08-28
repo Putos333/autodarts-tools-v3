@@ -770,6 +770,7 @@ ul {
 }
 
 .cc-hero-side {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 14px;
@@ -779,6 +780,29 @@ ul {
 .cc-hero-side.is-right {
   flex-direction: row-reverse;
   text-align: right;
+}
+
+/* Aktiver Spieler deutlich hervorheben (Phase 3) — bislang gab es nur
+   während eines Checkouts ein Glow (siehe .cc-hero.is-checkout weiter
+   unten). Absolut positioniertes Pseudo-Element hinter dem Inhalt, damit
+   sich am Layout/Reflow nichts ändert. Rot = links/lokal, Blau = rechts/
+   Gegner (Elite-Konvention, siehe Tokens oben). */
+.cc-hero-side.is-active-side::before {
+  content: "";
+  position: absolute;
+  inset: -10px -12px;
+  z-index: -1;
+  border-radius: 16px;
+  border: 1px solid var(--cc-accent-line);
+  background: var(--cc-accent-soft);
+  box-shadow: 0 0 26px rgba(232, 0, 45, 0.16);
+  transition: box-shadow 0.4s ease, border-color 0.4s ease, background 0.4s ease;
+}
+
+.cc-hero-side.is-right.is-active-side::before {
+  border-color: var(--cc-blue-line);
+  background: var(--cc-blue-soft);
+  box-shadow: 0 0 26px rgba(59, 130, 246, 0.16);
 }
 
 .cc-hero-side-info { min-width: 0; }
@@ -2394,6 +2418,39 @@ ul {
   }
 }
 
+/* Phase 3.5 — Pre-Live Hardening: .cc-hero-body (3-Spalten-Duell-Layout)
+   hatte bislang KEINEN eigenen schmalen Breakpoint. Der feste 104px-Badge
+   plus 58px-Score sprengten unterhalb von ~480px die verfügbare
+   Spaltenbreite und überlappten sichtbar mit VS/Score der Gegenseite
+   (per Responsive-Stress-Test bei 360/390/430px nachgewiesen). Rein
+   proportionale Verkleinerung derselben Elemente, keine Struktur- oder
+   Logikänderung. Bewusst NACH den Basis-Regeln (u.a. .cc-badge.is-xl,
+   .cc-hero-remaining) platziert, damit die Cascade-Reihenfolge sie
+   tatsächlich überschreibt, statt selbst überschrieben zu werden. */
+@media (max-width: 480px) {
+  .cc-hero-body { gap: 6px; padding: 14px 10px 16px; }
+  .cc-hero-side { gap: 6px; }
+  .cc-hero-center { min-width: 48px; padding: 0 2px; }
+  .cc-badge.is-xl { width: 44px; height: 44px; font-size: 16px; border-radius: 10px; }
+  .cc-hero-name { font-size: 14px; }
+  .cc-hero-remaining { font-size: 24px; }
+  .cc-hero-remaining-label { font-size: 8px; letter-spacing: 1px; }
+  .cc-hero-vs { font-size: 12px; letter-spacing: 1.5px; }
+  .cc-hero-score-label { font-size: 9px; }
+  .cc-hero-chips { gap: 8px; margin-top: 4px; }
+  .cc-hero-chip .v { font-size: 12px; }
+  /* .cc-tag ist ein Flex-Kind von .cc-hero-tags ohne eigene Breitenangabe —
+     ohne min-width:0 verweigert der Browser (Flexbox-Default min-width:auto)
+     das Schrumpfen unter die Wortbreite von "WURF"/"SIEGER" und der Pill
+     lief bei ~75px Spaltenbreite sichtbar in die VS-Spalte hinein (per
+     Responsive-Stress-Test bei 360px exakt vermessen: 37px Überlappung).
+     overflow-wrap:anywhere garantiert Zeilenumbruch auch mitten im Wort,
+     falls selbst das kürzeste Wort nicht mehr passt — kein Überlauf mehr,
+     unabhängig von der genauen Restbreite. */
+  .cc-hero-tags { min-width: 0; gap: 4px; margin-top: 4px; }
+  .cc-tag { min-width: 0; overflow-wrap: anywhere; font-size: 8px; padding: 1px 5px; letter-spacing: 0.3px; }
+}
+
 /* ─── Training-Exercise-Card ─────────────────────────────────────────────────── */
 
 .cc-ex {
@@ -2726,4 +2783,143 @@ ul {
   .cc-challenge-grid { grid-template-columns: 1fr; }
   .cc-challenge-center { flex-direction: row; }
   .cc-recent-row { grid-template-columns: auto 1fr; row-gap: 8px; }
+}
+
+/* ── CC Live Board (Implementierung Phase 1) ─────────────────────────────
+   components/ControlCenter/CcLiveBoard.vue — reine Darstellungskomponente,
+   noch nicht in CcMatchHero.vue/das Dashboard integriert. Board-Geometrie
+   kommt aus utils/dartboard-geometry.ts (extrahiert aus, aber unabhängig
+   von, components/Settings/PrecisionMap.vue). Ausschließlich additive,
+   neue Klassennamen — keine bestehende Regel wird berührt. */
+.cc-live-board {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+}
+
+.cc-live-board-svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.cc-lb-rim {
+  fill: #05070b;
+}
+
+.cc-lb-face {
+  fill: #0d1015;
+}
+
+.cc-lb-single.is-light {
+  fill: #cbbfa0;
+}
+
+.cc-lb-single.is-dark {
+  fill: #14171f;
+}
+
+.cc-lb-ring.is-red {
+  fill: #c81e34;
+}
+
+.cc-lb-ring.is-green {
+  fill: #1f7a4d;
+}
+
+.cc-lb-bull {
+  fill: #1f7a4d;
+}
+
+.cc-lb-bullseye {
+  fill: #c81e34;
+}
+
+.cc-lb-lines line {
+  stroke: rgba(0, 0, 0, 0.45);
+  stroke-width: 0.75;
+}
+
+.cc-lb-number {
+  fill: var(--cc-text);
+  font-family: var(--cc-font-display);
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  user-select: none;
+}
+
+.cc-lb-dart {
+  stroke: var(--cc-bg);
+  stroke-width: 1.5;
+}
+
+.cc-lb-dart.is-dart-1 {
+  fill: var(--cc-accent);
+}
+
+.cc-lb-dart.is-dart-2 {
+  fill: var(--cc-blue);
+}
+
+.cc-lb-dart.is-dart-3 {
+  fill: var(--cc-gold);
+}
+
+/* Dezentes Erscheinen eines neuen Markers — nur Opacity (kein transform:scale
+   auf SVG-Elementen, das würde ohne passenden transform-origin um den
+   SVG-Ursprung statt um den Marker-Mittelpunkt skalieren). Einmaliger
+   Enter-Übergang, keine Dauerschleife/kein Performance-Risiko. */
+.cc-lb-dart-pop-enter-active {
+  transition: opacity 0.18s ease;
+}
+
+.cc-lb-dart-pop-enter-from {
+  opacity: 0;
+}
+
+/* ── CC Live Board (Phase 3 — visuelle Elite-Integration) ────────────────
+   Reine Präsentations-Verstärkung des bestehenden Phase-1/2-Boards: keine
+   neue Dartboard-Engine, keine Änderung an CcLiveBoard.vue oder
+   dartboard-geometry.ts. Das Board bekommt ein eigenes Glass-Panel (statt
+   frei zu schweben) und skaliert über die Breakpoints deutlich stärker,
+   damit es auf Desktop/TV als zentrales visuelles Match-Element wirkt und
+   auf Mobile sinnvoll kompakt bleibt. */
+.cc-hero-board-visual {
+  width: 150px;
+  flex-shrink: 0;
+  padding: 8px;
+  border-radius: var(--cc-radius-sm);
+  background:
+    radial-gradient(120% 120% at 30% 20%, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0) 60%),
+    var(--cc-surface);
+  border: 1px solid var(--cc-border-bright);
+  box-shadow:
+    0 10px 28px rgba(0, 0, 0, 0.4),
+    0 0 22px rgba(232, 0, 45, 0.08),
+    0 0 22px rgba(59, 130, 246, 0.08);
+  transition: box-shadow 0.4s ease, border-color 0.4s ease;
+}
+
+/* Checkout-Phase: dasselbe zurückhaltende Gold-Glow wie der Rest der
+   Throw-Zone (siehe .cc-throw-zone.is-checkout) — Board bleibt im selben
+   Slot, keine zweite Darstellung. */
+.cc-throw-zone.is-checkout .cc-hero-board-visual {
+  border-color: rgba(245, 200, 66, 0.35);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.4), 0 0 22px rgba(245, 200, 66, 0.12);
+}
+
+@media (min-width: 1280px) {
+  .cc-hero-board-visual { width: 190px; }
+}
+
+@media (min-width: 1800px) {
+  .cc-hero-board-visual { width: 250px; padding: 10px; }
+}
+
+/* Mobile: kleiner, aber der bestehende `flex-wrap` in .cc-throw-zone
+   staffelt das Board bei Platzmangel bereits organisch unter Darts-Reihe
+   + Label (visuell geprüft) — keine zusätzliche Stack-Regel nötig. */
+@media (max-width: 640px) {
+  .cc-hero-board-visual { width: 96px; padding: 6px; }
 }

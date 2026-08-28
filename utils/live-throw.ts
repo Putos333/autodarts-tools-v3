@@ -21,6 +21,14 @@ export interface ICcLiveDart {
   hit: boolean;
   /** `segment.name` taken verbatim from Autodarts (e.g. "T20", "D16", "Bull"). */
   label: string | null;
+  /**
+   * `IThrow.coords` verbatim from Autodarts (board mm, origin = center),
+   * when the board reported one. `null` when there is no throw yet or no
+   * coordinate was reported for it — never a guessed/derived position
+   * (see utils/dartboard-geometry.ts for the segment-based fallback that
+   * consumes this).
+   */
+  coords: { x: number; y: number } | null;
 }
 
 /** The active player's own previous completed visit (not just the last turn overall). */
@@ -58,7 +66,11 @@ export function deriveLiveThrow(match: IMatch | undefined): ICcLiveThrow {
   const throws = Array.isArray(current.throws) ? current.throws : [];
   const darts: ICcLiveDart[] = [0, 1, 2].map((i) => {
     const t = throws[i];
-    return { hit: Boolean(t), label: t ? (t.segment?.name ?? null) : null };
+    return {
+      hit: Boolean(t),
+      label: t ? (t.segment?.name ?? null) : null,
+      coords: t?.coords ? { x: t.coords.x, y: t.coords.y } : null,
+    };
   });
 
   const visitScore = typeof current.points === "number" ? current.points : null;
