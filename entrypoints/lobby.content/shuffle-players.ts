@@ -35,11 +35,30 @@ function getPlayerNameFromRow(row: HTMLTableRowElement) {
   return row.querySelector("td:nth-of-type(2) > span > div p")?.textContent;
 }
 
-function getIndexByPlayerName(playerName: string) {
-  for (let i = 0; i < playerRows.length; i++) {
-    const row = playerRows[i];
-    if (getPlayerNameFromRow(row) === playerName) return i;
+/**
+ * Pure occurrence-lookup: returns the index of the `occurrence`-th (0-based)
+ * entry in `names` that equals `target`, or undefined if there is no such
+ * occurrence. Extracted (no DOM) so the duplicate-name disambiguation below
+ * — the fix for players/bots sharing the exact same displayed name — is
+ * unit-testable without mocking the page DOM.
+ */
+export function findNthOccurrenceIndex(
+  names: (string | null | undefined)[],
+  target: string,
+  occurrence: number,
+): number | undefined {
+  let seen = 0;
+  for (let i = 0; i < names.length; i++) {
+    if (names[i] === target) {
+      if (seen === occurrence) return i;
+      seen++;
+    }
   }
+  return undefined;
+}
+
+function getIndexByPlayerName(playerName: string, occurrence: number) {
+  return findNthOccurrenceIndex(playerRows.map(row => getPlayerNameFromRow(row)), playerName, occurrence);
 }
 
 async function handleShuffle() {
@@ -66,36 +85,64 @@ async function handleShuffle() {
     shuffledArrayIsDifferent = !playerNames.every((value, index) => value === shuffledPlayerNames[index]);
   }
 
-  const playerButtons = {};
+  const playerButtons: Record<string, { up: HTMLButtonElement; down: HTMLButtonElement }> = {};
 
+  // Players/bots can share the exact same displayed name (generic bot names
+  // are common). Keying purely by name — like the previous implementation —
+  // collapses duplicates onto a single button, while getIndexByPlayerName
+  // always resolved to the *first* matching row. The row being clicked and
+  // the row being measured could then silently diverge, spinning the reorder
+  // loop below forever. Disambiguate both by "Nth occurrence of this name in
+  // current row order" instead (see findNthOccurrenceIndex above).
   function updatePlayerButtons() {
+    const occurrenceCounts: Record<string, number> = {};
     for (const row of playerRows) {
       const playerName = row.querySelector("td:nth-of-type(2) > span > div p")?.textContent;
+      if (!playerName) continue;
+      const occurrence = occurrenceCounts[playerName] ?? 0;
+      occurrenceCounts[playerName] = occurrence + 1;
       const playerButtonUp = row.querySelector("button:nth-of-type(1)");
       const playerButtonDown = row.querySelector("button:nth-of-type(2)");
-      playerButtons[playerName!] = { up: playerButtonUp as HTMLButtonElement, down: playerButtonDown as HTMLButtonElement };
+      playerButtons[`${playerName}::${occurrence}`] = { up: playerButtonUp as HTMLButtonElement, down: playerButtonDown as HTMLButtonElement };
     }
   }
 
   updatePlayerButtons();
 
+  // Hard safety cap: even with the disambiguation above, this loop drives
+  // real DOM clicks against a page we don't control — bound both the
+  // per-player retries and the total passes so a future selector/markup
+  // change degrades to "shuffle gave up" instead of "button stuck on
+  // Shuffling... forever".
+  const MAX_STEP_CLICKS = 30;
+  const MAX_TOTAL_PASSES = 50;
+
   let orderIsCorrect = false;
-  while (!orderIsCorrect) {
+  let totalPasses = 0;
+  while (!orderIsCorrect && totalPasses < MAX_TOTAL_PASSES) {
     orderIsCorrect = true;
+    totalPasses++;
+    const occurrenceSoFar: Record<string, number> = {};
 
     for (let i = 0; i < shuffledPlayerNames.length; i++) {
       const playerName = shuffledPlayerNames[i];
-      let playerIndex = getIndexByPlayerName(playerName);
+      const occurrence = occurrenceSoFar[playerName] ?? 0;
+      occurrenceSoFar[playerName] = occurrence + 1;
+      const buttonKey = `${playerName}::${occurrence}`;
 
-      while (playerIndex !== i) {
+      let playerIndex = getIndexByPlayerName(playerName, occurrence);
+      let stepClicks = 0;
+
+      while (playerIndex !== i && stepClicks < MAX_STEP_CLICKS) {
         orderIsCorrect = false;
 
-        playerButtons[playerName].up.click();
+        playerButtons[buttonKey]?.up?.click();
         await new Promise(resolve => setTimeout(resolve, 100));
         await checkPlayers();
         updatePlayerButtons();
 
-        playerIndex = getIndexByPlayerName(playerName);
+        playerIndex = getIndexByPlayerName(playerName, occurrence);
+        stepClicks++;
       }
     }
   }
