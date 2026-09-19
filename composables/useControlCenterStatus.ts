@@ -136,6 +136,12 @@ const now = ref(Date.now());
  * Live-Aktivität als zusätzliches Frische-Signal ab (siehe `lastLiveAt`).
  */
 const lastLiveActivityAt = ref<number | null>(null);
+/**
+ * Letzte Ankunft eines BOARD-Signals (nur `local:board-data`). Bewusst getrennt
+ * von `lastLiveActivityAt`: ein Lobby-/Game-Update ist kein Beweis dafür, dass
+ * das Board selbst noch aktuell meldet (Codex-Finding P2 #1).
+ */
+const lastBoardActivityAt = ref<number | null>(null);
 /** Gespeicherte Match-Ergebnisse (P2-Store), neueste zuerst. Nur gelesen. */
 const recentResults = ref<ICanonicalMatchResult[]>([]);
 /** Zentrale Nutzer-Identität (Player-Identity-Fix / N2 Centralization). */
@@ -266,6 +272,7 @@ function attach(): void {
     if (value) boardData.value = value;
     now.value = Date.now();
     lastLiveActivityAt.value = Date.now();
+    lastBoardActivityAt.value = Date.now();
   });
   const unwatchGame = AutodartsToolsGameData.watch((value: IGameData) => {
     if (value) {
@@ -394,6 +401,21 @@ export function useControlCenterStatus() {
 
   const lastSignalAgo = computed(() => formatAgo(lastLiveAt.value, now.value));
 
+  /**
+   * Frische des BOARDS: ausschließlich Ankunft von Board-Daten (`local:board-data`).
+   * Weder Lobby-/Game-Aktivität noch `adt-ws-status.when` zählen — Letzteres
+   * wird bei JEDEM Socket-Event (auch `disconnected`/`error`) geschrieben und
+   * sagt nichts über das Board aus. `liveness` (Verbindung, BUG 1) bleibt
+   * unverändert. Bekannte Grenze: `board-data` hat keinen Heartbeat und
+   * `refresh()` kennt kein Alter der gelesenen Daten — nach dem Öffnen oder
+   * >90 s ohne Board-Event ist das Board "unknown"/"stale" statt geraten "live".
+   */
+  const boardLiveness = computed<TLiveness>(() => {
+    const boardAt = lastBoardActivityAt.value;
+    if (typeof boardAt !== "number" || !Number.isFinite(boardAt) || boardAt <= 0) return "unknown";
+    return now.value - boardAt <= LIVE_WINDOW_MS ? "live" : "stale";
+  });
+
   const connection = computed<TConnectionState>(() => {
     if (liveness.value === "unknown") return "unknown";
     // Alte Daten sind kein Beweis für "getrennt" — nur für "nicht aktuell".
@@ -478,9 +500,9 @@ export function useControlCenterStatus() {
   });
 
   const boardTone = computed<TTone>(() => {
-    if (!hasBoardSignal.value || liveness.value === "unknown") return "idle";
+    if (!hasBoardSignal.value || boardLiveness.value === "unknown") return "idle";
     // Ohne frische Daten keine grüne Ampel — der Stand kann beliebig alt sein.
-    if (liveness.value === "stale") return "warn";
+    if (boardLiveness.value === "stale") return "warn";
     if (!board.value?.connected) return "bad";
     const status = board.value?.status ?? "";
     return BOARD_STATUS_LABELS[status]?.tone ?? "ok";
@@ -983,6 +1005,7 @@ export function useControlCenterStatus() {
     myUserId,
 
     // Board
+    boardLiveness,
     hasBoardSignal,
     boardStatusLabel,
     boardTone,

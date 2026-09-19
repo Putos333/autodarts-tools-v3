@@ -1,7 +1,7 @@
 <template>
   <div class="cc-system-strip" data-testid="cc-system-strip">
     <span class="cc-sys-item" data-testid="cc-sys-board">
-      Board <b>{{ boardData.connected ? "verbunden" : hasBoardSignal ? "getrennt" : "unbekannt" }}</b>
+      Board <b>{{ boardStatusLabel }}</b>
     </span>
     <span v-if="autoscoringLabel" class="cc-sys-item" data-testid="cc-sys-autoscoring">
       Autoscoring <b>{{ autoscoringLabel }}</b>
@@ -29,11 +29,22 @@ import { computed, onBeforeUnmount, onMounted, ref } from "vue";
 import { useControlCenterStatus } from "@/composables/useControlCenterStatus";
 import { AutodartsToolsConfig, defaultConfig, type IConfig } from "@/utils/storage";
 
-const { hasBoardSignal, boardData, liveness } = useControlCenterStatus();
+const { hasBoardSignal, boardData, boardLiveness } = useControlCenterStatus();
+
+/**
+ * Wie `autoscoringLabel` unten: ein veraltetes `boardData.connected` (Signal
+ * vorhanden, aber `boardLiveness !== "live"`) darf nicht als aktuell "verbunden"
+ * angezeigt werden — sonst zeigt die Zeile einen stale Zustand als live an.
+ */
+const boardStatusLabel = computed(() => {
+  if (!hasBoardSignal.value) return "unbekannt";
+  if (boardLiveness.value !== "live") return "unbekannt";
+  return boardData.value.connected ? "verbunden" : "getrennt";
+});
 
 const autoscoringLabel = computed(() => {
   if (!hasBoardSignal.value) return null;
-  if (liveness.value !== "live") return "unbekannt";
+  if (boardLiveness.value !== "live") return "unbekannt";
   return boardData.value.connected ? "aktiv" : "inaktiv";
 });
 

@@ -145,4 +145,50 @@ describe("useControlCenterStatus — Live-Frische (BUG 1)", () => {
       wrapper.unmount();
     }
   });
+  it("5. Lobby-Update und WS-Status-Event machen ein altes Board NICHT wieder 'ok' (Board-Frische zählt nur Board-Daten)", async () => {
+    // Codex-Finding P2 #1: Lobby-Daten und Socket-Events (auch `disconnected`)
+    // sind kein Board-Signal. Die globale Verbindungs-Frische (BUG 1, Test 4)
+    // bleibt davon unberührt.
+    handle.seed("adt-ws-status", staleWsStatus(24 * 60));
+    const { AutodartsToolsBoardData } = await import("@/utils/board-data-storage");
+    const { AutodartsToolsLobbyData } = await import("@/utils/lobby-data-storage");
+    const { wrapper, exposed } = await mountHarness();
+    const realNow = Date.now();
+    let nowSpy: ReturnType<typeof vi.spyOn> | undefined;
+    try {
+      // Ein echtes Board-Signal trifft ein (Watcher ist durch mount() aktiv) → aktuell.
+      await AutodartsToolsBoardData.setValue({ connected: true, status: "Takeout finished", numThrows: 3 } as any);
+      expect(exposed.boardLiveness.value).toBe("live");
+      expect(exposed.boardTone.value).toBe("ok");
+
+      // 10 Minuten ohne Board-Event → Board veraltet.
+      nowSpy = vi.spyOn(Date, "now").mockReturnValue(realNow + 10 * 60 * 1000);
+      await exposed.refresh();
+      expect(exposed.boardLiveness.value).toBe("stale");
+      expect(exposed.boardTone.value).toBe("warn");
+
+      // Reines Lobby-Update: globale Frische live (BUG 1), Board bleibt veraltet.
+      await AutodartsToolsLobbyData.setValue({} as any);
+      expect(exposed.liveness.value).toBe("live");
+      expect(exposed.connectionLabel.value).toBe("Verbunden");
+      expect(exposed.boardLiveness.value).toBe("stale");
+      expect(exposed.boardTone.value).toBe("warn");
+
+      // WS-Status-Event (z. B. disconnect) schreibt `when` = jetzt → ebenfalls kein Board-Signal.
+      await (globalThis as any).browser.storage.local.set({
+        "adt-ws-status": { status: "disconnected", openSockets: 0, when: Date.now(), info: null },
+      });
+      await flushPromises();
+      expect(exposed.boardLiveness.value).toBe("stale");
+      expect(exposed.boardTone.value).toBe("warn");
+
+      // Erneutes Board-Signal → wieder aktuell.
+      await AutodartsToolsBoardData.setValue({ connected: true, status: "Throw", numThrows: 4 } as any);
+      expect(exposed.boardLiveness.value).toBe("live");
+      expect(exposed.boardTone.value).toBe("ok");
+    } finally {
+      nowSpy?.mockRestore();
+      wrapper.unmount();
+    }
+  });
 });

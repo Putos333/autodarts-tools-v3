@@ -57,6 +57,7 @@ const {
   hasBoardSignal,
   boardData,
   boardTone,
+  boardLiveness,
   liveness,
   openableMatchId,
   openableLobbyId,
@@ -101,12 +102,14 @@ onBeforeUnmount(() => {
  */
 const autoscoringLabel = computed(() => {
   if (!hasBoardSignal.value) return null;
-  if (liveness.value !== "live") return "Unbekannt";
+  if (boardLiveness.value !== "live") return "Unbekannt";
   return boardData.value.connected ? "Aktiv" : "Inaktiv";
 });
 
 const boardStatusShort = computed(() => {
   if (!hasBoardSignal.value) return "unbekannt";
+  // Gespeichertes `connected` ist ohne frisches Board-Signal kein aktueller Stand.
+  if (boardLiveness.value !== "live") return "unbekannt";
   return boardData.value.connected ? "verbunden" : "getrennt";
 });
 

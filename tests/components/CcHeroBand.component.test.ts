@@ -54,6 +54,7 @@ function makeStatus(overrides: Record<string, unknown> = {}) {
     hasBoardSignal: ref(true),
     boardData: ref({ connected: true }),
     boardTone: ref("ok"),
+    boardLiveness: ref("live"),
     liveness: ref("live"),
     openableMatchId: ref(null),
     openableLobbyId: ref(null),

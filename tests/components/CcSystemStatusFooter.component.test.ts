@@ -32,7 +32,7 @@ function makeStatus(overrides: Record<string, unknown> = {}) {
   return {
     hasBoardSignal: ref(true),
     boardData: ref({ connected: true }),
-    liveness: ref("live"),
+    boardLiveness: ref("live"),
     ...overrides,
   };
 }

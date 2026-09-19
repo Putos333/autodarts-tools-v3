@@ -7,11 +7,11 @@
   >
     <template #status>
       <!-- Ampel: rot / gelb / grün, genau ein Licht aktiv -->
-      <div class="cc-lamp" :title="boardStatusLabel" data-testid="cc-board-lamp">
+      <div class="cc-lamp" :title="lampLabel" data-testid="cc-board-lamp">
         <span :class="[ 'cc-lamp-dot', 'is-red', lamp === 'red' && 'is-on' ]" />
         <span :class="[ 'cc-lamp-dot', 'is-amber', lamp === 'amber' && 'is-on' ]" />
         <span :class="[ 'cc-lamp-dot', 'is-green', lamp === 'green' && 'is-on' ]" />
-        <span class="cc-lamp-text">{{ boardStatusLabel }}</span>
+        <span class="cc-lamp-text">{{ lampLabel }}</span>
       </div>
     </template>
 
@@ -30,7 +30,7 @@
         />
         <CcStatTile
           label="Board"
-          :value="boardData.connected ? 'Verbunden' : 'Getrennt'"
+          :value="boardConnectionLabel"
         />
       </div>
 
@@ -80,6 +80,7 @@ const {
   boardTone,
   boardEvent,
   boardThrows,
+  boardLiveness,
   liveness,
   lastSignalAgo,
 } = useControlCenterStatus();
@@ -101,12 +102,27 @@ const lamp = computed<"red" | "amber" | "green" | "off">(() => {
  */
 const autoscoringLabel = computed(() => {
   if (!hasBoardSignal.value) return null;
-  if (liveness.value !== "live") return "Unbekannt";
+  if (boardLiveness.value !== "live") return "Unbekannt";
   return boardData.value.connected ? "Aktiv" : "Inaktiv";
 });
 
+/**
+ * Ampeltext: der gespeicherte Board-Status (z. B. "Verbunden") gilt nur bei
+ * frischem Board-Signal — sonst "Unbekannt", passend zu Kachel und Autoscoring.
+ */
+const lampLabel = computed(() => {
+  if (hasBoardSignal.value && boardLiveness.value !== "live") return "Unbekannt";
+  return boardStatusLabel.value;
+});
+
+/** Wie Autoscoring: gespeichertes `connected` gilt nur bei frischem Board-Signal. */
+const boardConnectionLabel = computed(() => {
+  if (boardLiveness.value !== "live") return "Unbekannt";
+  return boardData.value.connected ? "Verbunden" : "Getrennt";
+});
+
 const autoscoringHint = computed(() => {
-  if (liveness.value !== "live") return "keine aktuellen Daten";
+  if (boardLiveness.value !== "live") return "keine aktuellen Daten";
   return boardData.value.connected ? "Board meldet Würfe" : "Board meldet sich nicht";
 });
 </script>
