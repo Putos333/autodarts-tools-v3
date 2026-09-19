@@ -33,7 +33,10 @@ function resolveMe(match: ICmrMatchDisplay, myUserId: string | null | undefined)
  * The most recently recorded match, summarized for a compact "last match"
  * display. Returns `null` when there is no history yet — never a placeholder
  * match. `result` is "undecided" whenever identity or a winner can't be
- * resolved (never guessed).
+ * resolved (never guessed). Same rule for `opponentName`: when `myUserId`
+ * doesn't resolve to a player in this match, the opponent is left
+ * unresolved (falls back to "Unbekannt") instead of guessing the first
+ * player — mirrors the `if (!me) continue` safeguard in getRecentOpponents().
  */
 export function getLastMatchSummary(
   records: ICanonicalMatchResult[],
@@ -46,7 +49,7 @@ export function getLastMatchSummary(
   if (!match) return null;
 
   const me = resolveMe(match, myUserId);
-  const opponent = match.players.find(p => p !== me) ?? match.players.find((_, i) => i !== me?.index);
+  const opponent = me ? match.players.find(p => p !== me) : undefined;
 
   let result: TLastMatchResult = "undecided";
   if (me && match.finished && match.winnerIndex !== undefined) {
