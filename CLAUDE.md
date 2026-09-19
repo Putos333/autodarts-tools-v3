@@ -63,3 +63,23 @@ OBSERVATION → POST_LIVE_DIAGNOSTIC_MATRIX.md → REPRODUCE → ROOT CAUSE → 
 **Protected scoring core** (`utils/canonical-match-result.ts`, `utils/canonical-match-result-storage.ts`, `utils/event-dedupe.ts`, `utils/websocket-helpers.ts`): STOP before any change and report the finding — never modify automatically.
 
 Push only after explicit user approval — never automatic.
+
+## Truth & Verification Contract v1.0
+
+Gilt für jede Arbeit an diesem Projekt. Ergänzt die Regeln oben, ersetzt sie nicht.
+
+**Setup-Check vor jeder Bauphase** (kleinstes Setup, das die Aufgabe zuverlässig löst; nicht möglichst viele Agents/MCPs): zuerst ausgeben, dann erst arbeiten:
+`SETUP CHECK` → TASK / LEAD AGENT / SUPPORTING AGENTS / SKILLS / MCPs / TOOLS / TEST/QA / REASON
+
+1. **Wahrheit vor Zustimmung**: technisch falsche oder unbelegte Annahmen ausdrücklich benennen und begründen.
+2. **Nie unausgeführte Ergebnisse behaupten** (Test, Build, Command, MCP/API-Aufruf, Browser-Test, Git-Vorgang, Agent, Hook, Deployment). Nicht ausgeführt = `NOT VERIFIED`, nie PASS.
+3. **PASS nur mit Evidenz**: Build = ausgeführt + Exit-Code 0; Tests = ausgeführt + Ergebnis geprüft; MCP = Verbindung UND Funktion getestet ("connected" allein reicht nicht); Fix = Fehler reproduziert/verstanden, Fix angewendet, gezielt erneut getestet. Keine extrapolierten PASS.
+4. **Evidenzklassen**: VERIFIED (Datei/Command/Test/Tool/API direkt bestätigt) · INFERRED (Schluss aus Verifiziertem, nie als VERIFIED darstellen) · UNKNOWN · BLOCKED. Bei wichtigen Aussagen Unsicherheit offenlegen und benennen, was zur Verifikation fehlt.
+5. **Nichts erfinden**: Dateien, Branches, Commits, Funktionen, APIs, Dependencies, Tests, Agents, Skills, MCPs, Configs, Logs, Versionen, URLs, Issues, Releases. Unbekanntes zuerst untersuchen; prüfbare Fakten prüfen statt raten (Projektzustand > Test/Build > Git-Historie > offizielle Doku > MCP/API > Inferenz). Zeitabhängiges: aktuelle offizielle Doku.
+6. **Inspect before modifying**: relevante Dateien lesen, Architektur/Abhängigkeiten/Tests/Risiken bestimmen. Keine Blind-Patches.
+7. **Konflikte** (Tests, Agents, Doku vs. Runtime, MCP vs. lokale Dateien): CONFLICT → INVESTIGATE → PRIMARY EVIDENCE → RESOLVE → VERIFY. Nie das gewünschte Ergebnis auswählen.
+8. **Fix-Workflow**: REPRODUCE → ROOT CAUSE → MINIMAL FIX → TARGETED RETEST → RELEVANT REGRESSION → FINAL VERIFICATION. Kein Refactoring, wo nicht technisch nötig.
+9. **Bestehende Arbeit schützen**: nie ungeprüft löschen/überschreiben/resetten/stashen/committen/verwerfen. Vor riskanten Änderungen `git status`, betroffene Dateien, Backup/Branch bewerten.
+10. **Source vs. generiert** (`.output/`, `.wxt/`, `dist/`, `build/`, `coverage/`): vor Dateizahlen TRACKED SOURCE von UNTRACKED GENERATED trennen.
+11. **Secrets** (Tokens, PATs, API-Keys, Passwörter, Cookies, Authorization-Header) nie ausgeben oder loggen; Existenz booleschen prüfen; nicht unnötig in Projektdateien speichern.
+12. **Abschlussbericht nach einer Bauphase**: IMPLEMENTATION / TARGETED TESTS / REGRESSION / BUILD / RUNTIME QA (je PASS/FAIL/NOT RUN bzw. NOT APPLICABLE) · GIT STATUS (verifiziert) · KNOWN ISSUES · UNVERIFIED · FINAL STATUS (PASS / PASS WITH LIMITATIONS + Einschränkungen / BLOCKED / FAIL).
