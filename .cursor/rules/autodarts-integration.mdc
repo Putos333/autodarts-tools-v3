@@ -1,0 +1,56 @@
+---
+description:
+globs:
+alwaysApply: false
+---
+# Autodarts Integration
+
+This document outlines how the extension integrates with the Autodarts platform.
+
+## API Integration
+
+- The extension interacts with Autodarts through its APIs, primarily:
+  - `api.autodarts.io` - Main API endpoint
+  - `play.autodarts.io` - Web interface
+
+## WebSocket Monitoring
+
+- The extension provides websocket monitoring capabilities through:
+  - `websocket-monitor.content.ts` - Monitors websocket traffic
+  - `websocket-capture.ts` - Captures websocket messages
+
+## Page Contexts
+
+The extension integrates with different Autodarts pages:
+
+1. **Lobby Pages**
+   - Features for creating and managing game lobbies
+   - Integration with Discord webhooks for invitations
+
+2. **Match Pages**
+   - Features for enhancing the match experience
+   - Score display enhancements
+   - Game analysis tools
+
+3. **Boards Pages**
+   - Tools for board management and configuration
+   - Board status monitoring
+
+## Authentication Integration
+
+- Cookie monitoring for authentication status via `auth-cookie.ts`
+- Access to Autodarts API requires authentication
+
+## Content Script Injection
+
+- Content scripts are injected into specific Autodarts pages based on URL patterns
+- Scripts modify the DOM to enhance functionality or add UI elements
+- Scripts can communicate with the background process for persistent operations
+
+## Features
+
+Features that integrate with Autodarts include:
+- Discord webhook integration for lobby invitations
+- Enhanced UI components for the web interface
+- Additional statistics and visualizations
+- Custom settings and configurations for matches and boards

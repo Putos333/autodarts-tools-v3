@@ -1,0 +1,35 @@
+{
+  "patterns": {},
+  "memories": [],
+  "trajectories": [],
+  "errors": {},
+  "file_sequences": [],
+  "agents": {},
+  "edges": [],
+  "stats": {
+    "total_patterns": 0,
+    "total_memories": 0,
+    "total_trajectories": 0,
+    "total_errors": 0,
+    "session_count": 0,
+    "last_session": 0
+  },
+  "embeddingProvenance": null,
+  "activeTrajectories": {
+    "traj_1787263672140_ch8dl9xql": {
+      "id": "traj_1787263672140_ch8dl9xql",
+      "context": "20260820220751-inspect-live-dom-structure-for-t: Inspect live DOM structure for Tools for Autodarts extension UI selectors",
+      "agent": "browser-session",
+      "file": null,
+      "steps": [
+        {
+          "action": "browser_open {\"url\":\"https://play.autodarts.com/\"}",
+          "result": "ok",
+          "reward": 0.5,
+          "time": 1787263683303
+        }
+      ],
+      "startTime": 1787263672140
+    }
+  }
+}

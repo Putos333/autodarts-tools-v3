@@ -1,0 +1,47 @@
+---
+description: How to implement user notifications
+globs: 
+alwaysApply: false
+---
+# Notifications
+
+## Vue Component Usage
+
+### Template Implementation
+```vue
+<AppNotification
+  @close="showNotification = false"
+  :show="showNotification"
+  message="Settings migrated successfully. Page is reloading..."
+  type="success"
+  :duration="3000"
+/>
+```
+
+### Script Implementation
+
+```ts
+import AppNotification from "@/components/AppNotification.vue";
+
+// State for controlling notification visibility
+const showNotification = ref(false);
+
+// Show notification
+function showSuccess() {
+  showNotification.value = true;
+  
+  // Optional: Auto-hide after custom duration
+  setTimeout(() => {
+    window.location.reload();
+  }, 2000);
+}
+```
+
+### Available Props
+- `show`: Boolean to control visibility 
+- `message`: Notification text (supports HTML)
+- `type`: "success" or "error"
+- `duration`: Time in ms before auto-hiding (default: 5000)
+
+### Events
+- `@close`: Emitted when close button is clicked

@@ -1,0 +1,41 @@
+---
+description:
+globs:
+alwaysApply: false
+---
+# Project Structure
+
+This document outlines the project structure for the Autodarts Tools browser extension.
+
+## Main Directories
+
+- `components/` - Vue components used throughout the extension
+  - `Settings/` - Feature components with their settings
+  - App* components - Reusable UI components with "App" prefix (AppButton, AppInput, etc.)
+  
+- `entrypoints/` - Main entry points for the extension
+  - `background.ts` - Background service worker
+  - `*.content.ts` - Content scripts injected into autodarts.io pages
+  - Various content script directories for different autodarts.io pages
+
+- `utils/` - Utility functions and shared code
+  
+- `composables/` - Vue composables for shared functionality
+
+- `public/` - Static assets accessible via browser.runtime.getURL
+
+- `assets/` - Static assets bundled with the extension
+
+## Configuration Files
+
+- `wxt.config.ts` - WXT (Web Extension Toolkit) configuration
+- `tailwind.config.ts` - TailwindCSS configuration
+- `tsconfig.json` - TypeScript configuration
+
+## Extension Structure
+
+The browser extension follows the WXT architecture:
+- Background script handles global state and background operations
+- Content scripts are injected into specific pages of autodarts.io
+- Features are implemented as Vue components in the Settings directory
+- Component-based architecture with reusable UI elements

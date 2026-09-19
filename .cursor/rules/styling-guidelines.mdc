@@ -1,0 +1,72 @@
+---
+description:
+globs:
+alwaysApply: false
+---
+# Styling Guidelines
+
+This document outlines the styling approach and conventions used in the Autodarts Tools project.
+
+## TailwindCSS
+
+The project uses TailwindCSS for styling with the following conventions:
+
+- Utility-first approach with Tailwind classes
+- Custom container class `adt-container` for consistent spacing
+- Use of opacity modifiers for text colors (e.g., `text-white/70`)
+- Consistent spacing using Tailwind's spacing scale
+
+## Common Classes
+
+```
+// Container with standard styling
+.adt-container {
+  @apply relative overflow-hidden rounded-md bg-black/50 p-6 shadow-lg;
+}
+
+// Gradient mask for image overlays
+.gradient-mask-left {
+  mask-image: linear-gradient(to right, transparent, black);
+}
+```
+
+## Color Scheme
+
+- Primary background: Dark theme (black with transparency)
+- Text: White with opacity variations
+- Accents: Follow the Autodarts brand colors
+- Border colors: `border-white/20` for subtle borders
+
+## Component Styling
+
+- Buttons use the `AppButton` component with size and variant props
+- Forms use consistent input components with proper sizing
+- Modal dialogs use the `AppModal` component
+- Toggle switches use the `AppToggle` component
+
+## Icons
+
+- Icons use the Iconify system with CSS mode
+- Icon syntax: `<span class="icon-[pixelarticons--link]" />`
+- Available icon sets:
+  - `pixelarticons` - For general UI icons
+  - `material-symbols` - For additional icons
+
+## Layout Guidelines
+
+- Use flex and grid layouts for responsive designs
+- Standard card height for feature cards: `h-56`
+- Use consistent spacing between elements
+- Use responsive classes for different screen sizes
+
+## Interactivity
+
+- Use hover states for interactive elements (e.g., `hover:-translate-y-0.5`)
+- Provide visual feedback for user interactions
+- Use transitions for smooth animations
+
+## Images
+
+- Images in cards use `object-cover` and appropriate opacity
+- Use gradient masks for text overlay visibility
+- Access images via `browser.runtime.getURL("/images/...")`

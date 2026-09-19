@@ -1,0 +1,18 @@
+{
+  "agents": {
+    "agent-1787159273618-9uebfz": {
+      "agentId": "agent-1787159273618-9uebfz",
+      "agentType": "general-purpose",
+      "status": "idle",
+      "health": 1,
+      "taskCount": 0,
+      "config": {
+        "model": "haiku"
+      },
+      "createdAt": "2026-08-19T17:07:53.622Z",
+      "model": "haiku",
+      "modelRoutedBy": "explicit"
+    }
+  },
+  "version": "3.0.0"
+}

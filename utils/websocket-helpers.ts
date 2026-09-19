@@ -1,0 +1,421 @@
+import { AutodartsToolsBoardData, type IBoard } from "./board-data-storage";
+import { AutodartsToolsBoardImages } from "./board-image-storage";
+import { type IDedupeState, createDedupeState, shouldProcessSnapshot } from "./event-dedupe";
+import { AutodartsToolsFriendPresence } from "./friend-presence-storage";
+import { AutodartsToolsGameData } from "./game-data-storage";
+import { AutodartsToolsLobbyData } from "./lobby-data-storage";
+import { AutodartsToolsTournamentData, type ITournament } from "./tournament-data-storage";
+
+interface IUserSettings {
+  callCheckouts: boolean;
+  callScores: boolean;
+  caller: string;
+  callerEmotion: string;
+  callerLanguage: string;
+  callerVolume: number;
+  countEachThrow: boolean;
+  showAnimations: boolean;
+  showChalkboard: boolean;
+  showCheckoutGuide: boolean;
+  showSeasonalEffects: boolean;
+}
+
+interface IUser {
+  avatarUrl: string;
+  average: number;
+  averageUntil170: number;
+  checkoutRate: number;
+  country: string;
+  first9Average: number;
+  id: string;
+  legsPlayed: number;
+  name: string;
+  total180s: number;
+  tournament180s: number;
+  tournamentAverage: number;
+  tournamentAverageUntil170: number;
+  tournamentWins: number;
+  tournamentsPlayed: number;
+  userSettings: IUserSettings;
+}
+
+export interface IPlayer {
+  avatarUrl: string;
+  boardId: string;
+  boardName: string;
+  cpuPPR: number | null;
+  host: IUser;
+  hostId: string;
+  id: string;
+  index: number;
+  name: string;
+  user: IUser;
+  userId: string;
+}
+
+interface ILobbySettings {
+  baseScore: number;
+  bullMode: string;
+  inMode: string;
+  maxRounds: number;
+  outMode: string;
+}
+
+export interface ILobbies {
+  bullOffMode: "Off" | "Normal" | "Official";
+  createdAt: string;
+  host: IUser;
+  id: string;
+  isPrivate: boolean;
+  maxPlayers: number;
+  players: IPlayer[];
+  settings: ILobbySettings;
+  variant: "Bull-off" | "X01" | "Cricket" | "Bermuda" | "Shanghai" | "Gotcha" | "ATC" | "RTW" | "Random Checkout" | "CountUp" | "Segment Training" | "Bob's 27";
+}
+
+export interface IMatchSettings {
+  mode: string;
+  gameMode: string;
+}
+
+export interface ISegment {
+  name: string;
+  number: number;
+  bed: string;
+  multiplier: number;
+}
+
+export interface ICoords {
+  x: number;
+  y: number;
+}
+
+export interface IThrow {
+  id: string;
+  throw: number;
+  createdAt: string;
+  segment: ISegment;
+  coords?: ICoords;
+  entry: string;
+  marks: any | null;
+}
+
+export interface ITurn {
+  id: string;
+  createdAt: string;
+  finishedAt: string;
+  round: number;
+  turn: number;
+  playerId: string;
+  score: number;
+  points: number;
+  marks: any | null;
+  busted: boolean;
+  throws: IThrow[];
+}
+
+export interface IStats {
+  segmentNumber?: number;
+  bullDistance?: number;
+  coords?: ICoords | null;
+  average?: number;
+  averageUntil170?: number;
+  checkoutPercent?: number;
+  checkoutPoints?: number;
+  checkoutPointsAverage?: number;
+  checkouts?: number;
+  checkoutsHit?: number;
+  dartsThrown?: number;
+  dartsUntil170?: number;
+  first9Average?: number;
+  first9Score?: number;
+  gameId?: string;
+  less60?: number;
+  playerId?: string;
+  plus100?: number;
+  plus140?: number;
+  plus170?: number;
+  plus60?: number;
+  score?: number;
+  scoreUntil170?: number;
+  total180?: number;
+}
+
+export interface IPlayerStats {
+  matchStats: IStats;
+  setStats: IStats | null;
+  legStats: IStats | null;
+}
+
+export interface IChalkboardRow {
+  isPointsStruck: boolean;
+  isScoreStruck: boolean;
+  points: number;
+  round: number;
+  score: number;
+}
+
+export interface IChalkboard {
+  rows: IChalkboardRow[];
+}
+
+export interface IScore {
+  legs: number;
+  sets: number;
+}
+
+export interface IX01Settings extends IMatchSettings {
+  baseScore: number;
+  bullMode: string;
+  gameId: string;
+  inMode: string;
+  maxRounds: number;
+  outMode: string;
+}
+
+export interface IMatch {
+  body?: any;
+  id: string;
+  activated?: -1 | 0 | 1 | 2;
+  createdAt: string;
+  host: IUser;
+  variant: string;
+  settings: IX01Settings | IMatchSettings;
+  players: IPlayer[];
+  scores: IScore[] | null;
+  type: string;
+  set: number;
+  leg: number;
+  sets?: number;
+  legs?: number;
+  finished: boolean;
+  winner: number;
+  turns: ITurn[];
+  round: number;
+  player: number;
+  turnScore: number;
+  turnBusted: boolean;
+  gameScores: number[];
+  gameFinished: boolean;
+  gameWinner: number;
+  stats: IPlayerStats[];
+  state: Record<string, any>;
+  chalkboards?: IChalkboard[];
+}
+
+/**
+ * P1 Schritt 1 – Zustand der exakten Duplikat-Unterdrückung für
+ * `autodarts.matches`. Modul-Scope, also pro Content-Script-Instanz und pro Tab:
+ * nach einem Reload ist er leer und der erste Snapshot passiert immer.
+ */
+const matchSnapshotDedupe: IDedupeState = createDedupeState();
+
+/**
+ * Diagnose: Anzahl der bisher unterdrückten byte-identischen Match-Snapshots.
+ * Verändert kein Verhalten, dient der späteren Runtime-Messung.
+ */
+export function getSuppressedMatchSnapshotCount(): number {
+  return matchSnapshotDedupe.suppressed;
+}
+
+export async function processWebSocketMessage(channel: string, data: ILobbies | IMatch | IBoard | ITournament | string) {
+  // do a switch on the channel
+  switch (channel) {
+    case "autodarts.lobbies": {
+      data = data as ILobbies;
+      const id = window.location.href.match(/lobbies\/([0-9a-f-]+)/)?.[1];
+      if (id !== data.id) return;
+
+      AutodartsToolsLobbyData.setValue(data as ILobbies);
+
+      break;
+    }
+    case "autodarts.matches": {
+      data = data as IMatch;
+      if (data.body) return;
+
+      const id = window.location.href.match(/matches\/([0-9a-f-]+)/)?.[1];
+      const playersBoard = data.players?.find(player => player.boardId === window.location.href.match(/boards\/([0-9a-f-]+)/)?.[1]);
+      if ((id !== data.id && !playersBoard) && (data as IMatch).activated === undefined) return;
+
+      const gameData = await AutodartsToolsGameData.getValue();
+
+      // P1 Schritt 1: exakte Duplikat-Unterdrückung. Ein byte-identischer
+      // Folge-Snapshot würde über setValue() sämtliche registrierten
+      // AutodartsToolsGameData-Watcher auslösen, ohne dass sich etwas geändert
+      // hat. Unterdrückt wird nur, wenn der Payload sowohl dem direkten
+      // Vorgänger dieser Instanz als auch dem gespeicherten Zustand exakt
+      // entspricht – der Storage-Vergleich macht Writes der jeweils anderen
+      // Content-Script-Instanz (Socket-Pfad vs. REST-Bootstrap) sichtbar.
+      // Ohne stabile data.id wird nicht unterdrückt (fail open).
+      if (!shouldProcessSnapshot(matchSnapshotDedupe, data.id, data, gameData.match)) return;
+
+      let mergedMatch: IMatch;
+      if ((data as IMatch).activated !== undefined) {
+        // Merge activated state with existing match data
+        mergedMatch = gameData.match
+          ? { ...gameData.match, activated: (data as IMatch).activated }
+          : { ...data as IMatch };
+        AutodartsToolsGameData.setValue({ ...gameData, match: mergedMatch });
+      } else {
+        // Replace entire match data
+        mergedMatch = data as IMatch;
+        AutodartsToolsGameData.setValue({ ...gameData, match: mergedMatch });
+      }
+
+      // TEMP-DIAG (Phase 5, Human Test 301/2 Legs): sicherer Diagnose-Log für
+      // den realen Spielverlauf — niemals Tokens/Cookies, nur bereits public
+      // sichtbare Matchdaten. `event` unterscheidet grob zwischen Aktivierungs-
+      // phase, Matchende und regulärem Snapshot; Feinunterscheidung (Wurf/
+      // Spielerwechsel/Leg-Ende) übernimmt CcMatchHumanTestPanel.vue rein
+      // lesend aus genau diesen bereits vorhandenen Daten — kein zweiter
+      // Auswertungspfad.
+      {
+        const activePlayerIndex = typeof mergedMatch.player === "number" ? mergedMatch.player : -1;
+        const activePlayer = mergedMatch.players?.[activePlayerIndex];
+        const event = (data as IMatch).activated !== undefined
+          ? "activated"
+          : mergedMatch.finished === true
+            ? "finished"
+            : "snapshot";
+        console.log(
+          `[AD-ELITE MATCH]\nevent=${event}\nmatchId=${mergedMatch.id ?? "–"}\n`
+          + `player=${activePlayer?.name ?? activePlayer?.id ?? "–"}\n`
+          + `score=${typeof mergedMatch.turnScore === "number" ? mergedMatch.turnScore : "–"}\n`
+          + `remaining=${typeof mergedMatch.gameScores?.[activePlayerIndex] === "number" ? mergedMatch.gameScores[activePlayerIndex] : "–"}\n`
+          + `leg=${typeof mergedMatch.leg === "number" ? mergedMatch.leg : "–"}`,
+        );
+      }
+
+      break;
+    }
+    case "autodarts.boards": {
+      data = data as IBoard;
+      const boardData = await AutodartsToolsBoardData.getValue();
+
+      AutodartsToolsBoardData.setValue({
+        ...boardData,
+        ...data,
+        status: data.status || "",
+      });
+
+      // Search DOM for img with blob: src URL after 250ms delay
+      setTimeout(async () => {
+        const images = document.querySelectorAll("img[src^=\"blob:\"]");
+        if (images.length === 0) return;
+
+        const img = images[0] as HTMLImageElement;
+        const blobUrl = img.src;
+
+        try {
+          // Convert blob URL to base64 data URL
+          const response = await fetch(blobUrl);
+          const blob = await response.blob();
+          const reader = new FileReader();
+          const base64DataUrl = await new Promise<string>((resolve, reject) => {
+            reader.onloadend = () => resolve(reader.result as string);
+            reader.onerror = reject;
+            reader.readAsDataURL(blob);
+          });
+
+          const boardImages = await AutodartsToolsBoardImages.getValue();
+          // Check for duplicates before adding
+          if (!boardImages.images.includes(base64DataUrl)) {
+            boardImages.images.push(base64DataUrl);
+            while (boardImages.images.length > 6) {
+              boardImages.images.shift();
+            }
+            AutodartsToolsBoardImages.setValue(boardImages);
+          }
+        } catch (error) {
+          console.error("Failed to convert blob URL to base64:", error);
+        }
+      }, 500);
+
+      break;
+    }
+    case "autodarts.boards.images": {
+      break; // Temp disabled because it's not working as expected since last update
+      data = data as any;
+      const boardImages = await AutodartsToolsBoardImages.getValue();
+      const imageUrl = `https://boards.ws.autodarts.io${(data as any).url as string}`;
+
+      // Check for duplicates before adding
+      if (!boardImages.images.includes(imageUrl)) {
+        boardImages.images.push(imageUrl);
+        while (boardImages.images.length > 6) {
+          boardImages.images.shift();
+        }
+        AutodartsToolsBoardImages.setValue(boardImages);
+      }
+
+      break;
+    }
+    case "autodarts.tournaments": {
+      data = data as ITournament;
+
+      AutodartsToolsTournamentData.setValue(data);
+
+      break;
+    }
+    case "autodarts.friends": {
+      // RUNTIME-FIX (Realtest 4): Live-Presence pro Freund. Kein neuer
+      // Capture-Layer — dieser generische WebSocket-Hook (websocket-capture.ts)
+      // sieht bereits jede Nachricht der Seite; hier wird nur ein weiterer,
+      // bislang unbehandelter Kanal ausgewertet (fiel bis jetzt in den
+      // `default`-Zweig als "Unknown channel").
+      //
+      // Herkunft laut echtem Autodarts-Bundle (assets/index-*.js,
+      // play.autodarts.com), Reverse-Engineering, nicht erfunden:
+      //   static onFriendStatusUpdate(t,n){ return un.getInstance().subscribe(
+      //     "autodarts.friends", `${t}.status`, n) }
+      //   ...switch(l.type){
+      //     case D4.Status: r(c=>({...c,[l.userId]:{...c[l.userId],status:l.status}}));
+      //     case D4.Activity: r(c=>({...c,[l.userId]:{...c[l.userId],activity:l.activity}}));
+      //   }
+      //   cc = { Online:"Online", Offline:"Offline", Incognito:"Incognito" }
+      //
+      // Autodarts' eigener Client abonniert das pro Freund einzeln — welche
+      // Form die Nachricht auf DIESEM (Extension-seitig generisch mitgelesenen)
+      // Kanal exakt hat, ist ohne echten Login nicht gegen echten Traffic
+      // verifizierbar. Deshalb TEMPORÄR das [AD-ELITE PRESENCE]-Rohlog, damit
+      // ein Mensch mit echtem Autodarts-Login die Feldnamen in den DevTools
+      // bestätigen kann — niemals Tokens/Cookies, nur die Presence-Felder.
+      const raw = data as any;
+      console.log("[AD-ELITE PRESENCE] raw autodarts.friends payload:", JSON.stringify(raw)?.slice(0, 300));
+
+      const userId: unknown = raw?.userId;
+      const status: unknown = raw?.status;
+      const KNOWN_STATUSES = [ "Online", "Offline", "Incognito" ];
+
+      // Nur echte Status-Events verarbeiten (Activity-Events tragen keinen
+      // `status`-String und werden hier bewusst nicht in einen Status
+      // umgedeutet — kein erfundener Wert). `userId` kommt aus geparstem,
+      // externem WebSocket-JSON — `__proto__`/`constructor`/`prototype` als
+      // Objekt-Key ausschließen, bevor er unten als [userId]-Key verwendet wird.
+      const UNSAFE_KEYS = [ "__proto__", "constructor", "prototype" ];
+      if (
+        typeof userId !== "string" || !userId || UNSAFE_KEYS.includes(userId)
+        || typeof status !== "string" || !KNOWN_STATUSES.includes(status)
+      ) {
+        break;
+      }
+
+      console.log(`[AD-ELITE PRESENCE]\nuserId=${userId}\nstatus=${status}\nsource=autodarts.friends`);
+
+      const presence = await AutodartsToolsFriendPresence.getValue();
+      await AutodartsToolsFriendPresence.setValue({
+        ...presence,
+        [userId]: { status: status as "Online" | "Offline" | "Incognito", at: Date.now() },
+      });
+
+      break;
+    }
+    default: {
+      console.log("Unknown channel", channel);
+      // console.log(data);
+
+      break;
+    }
+  }
+}

@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300">
+  <rect fill="#1a2d42" width="400" height="300"/>
+  <text x="200" y="120" text-anchor="middle" font-family="Arial, sans-serif" font-size="48" font-weight="bold" fill="#E8002D">27</text>
+  <path d="M150 180 L170 220 L130 220 Z" fill="#E8002D"/>
+  <path d="M200 180 L220 220 L180 220 Z" fill="#E8002D"/>
+  <path d="M250 180 L270 220 L230 220 Z" fill="#E8002D"/>
+  <text x="200" y="260" text-anchor="middle" font-family="Arial, sans-serif" font-size="24" font-weight="bold" fill="#F5C842">Bob's 27</text>
+</svg>

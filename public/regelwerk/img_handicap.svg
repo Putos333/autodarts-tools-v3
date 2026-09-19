@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300">
+  <rect fill="#1a2d42" width="400" height="300"/>
+  <rect x="80" y="80" width="100" height="140" rx="10" fill="#E8002D" opacity="0.8"/>
+  <rect x="220" y="80" width="100" height="140" rx="10" fill="#00C853" opacity="0.8"/>
+  <text x="130" y="155" text-anchor="middle" font-family="Arial, sans-serif" font-size="36" font-weight="bold" fill="white">701</text>
+  <text x="270" y="155" text-anchor="middle" font-family="Arial, sans-serif" font-size="36" font-weight="bold" fill="white">501</text>
+  <path d="M180 130 L220 170" stroke="#F5C842" stroke-width="3" stroke-linecap="round" marker-end="url(#arrow)"/>
+  <defs><marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 Z" fill="#F5C842"/></marker></defs>
+  <text x="200" y="260" text-anchor="middle" font-family="Arial, sans-serif" font-size="24" font-weight="bold" fill="#F5C842">Dynamisches Handicap</text>
+</svg>

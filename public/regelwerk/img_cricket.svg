@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300">
+  <rect fill="#1a2d42" width="400" height="300"/>
+  <circle cx="200" cy="150" r="80" fill="none" stroke="#E8002D" stroke-width="4"/>
+  <line x1="120" y1="70" x2="280" y2="230" stroke="#E8002D" stroke-width="4"/>
+  <line x1="120" y1="230" x2="280" y2="70" stroke="#E8002D" stroke-width="4"/>
+  <circle cx="200" cy="150" r="15" fill="none" stroke="#F5C842" stroke-width="3"/>
+  <text x="200" y="260" text-anchor="middle" font-family="Arial, sans-serif" font-size="24" font-weight="bold" fill="#F5C842">Cricket</text>
+</svg>
