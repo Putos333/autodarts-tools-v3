@@ -36,6 +36,7 @@ const views: Record<TCcSectionId, ReturnType<typeof defineAsyncComponent>> = {
   dashboard: defineAsyncComponent(() => import("@/components/ControlCenter/views/CcDashboard.vue")),
   board: defineAsyncComponent(() => import("@/components/ControlCenter/views/CcBoard.vue")),
   match: defineAsyncComponent(() => import("@/components/ControlCenter/views/CcMatch.vue")),
+  matchcenter: defineAsyncComponent(() => import("@/components/ControlCenter/CcMatchCenterShell.vue")),
   training: defineAsyncComponent(() => import("@/components/ControlCenter/views/CcTraining.vue")),
   party: defineAsyncComponent(() => import("@/components/ControlCenter/views/CcParty.vue")),
   stats: defineAsyncComponent(() => import("@/components/ControlCenter/views/CcStats.vue")),

@@ -618,7 +618,10 @@ test('style.css hides .cc-bottom-nav by default and switches to it only below th
   assert.match(text.slice(bottomNavBaseIdx, bottomNavBaseIdx + 200), /display: none;/, 'style.css: .cc-bottom-nav must be hidden by default (tablet/desktop unaffected)');
 
   const railBreakpointIdx = text.indexOf('@media (max-width: 1080px)');
-  const phoneBreakpointIdx = text.indexOf('@media (max-width: 640px)');
+  // Der Phone-Block ist der 640px-Block, der die Bottom-Nav einblendet — nicht
+  // das erste 640px-Vorkommen (andere Bereiche haben eigene 640px-Regeln).
+  const bottomNavOnIdx = text.indexOf('.cc-bottom-nav { display: flex; }');
+  const phoneBreakpointIdx = bottomNavOnIdx === -1 ? -1 : text.lastIndexOf('@media (max-width: 640px)', bottomNavOnIdx);
   assert.ok(railBreakpointIdx !== -1 && phoneBreakpointIdx !== -1, 'style.css: expected both the existing icon-rail breakpoint and a new phone breakpoint');
   assert.ok(phoneBreakpointIdx > railBreakpointIdx, 'style.css: the new phone breakpoint (640px) must be narrower than and layered after the existing tablet icon-rail breakpoint (1080px)');
 
@@ -808,4 +811,33 @@ test('walk-on unwatches the game-data watcher and stops pending audio on teardow
     /gameDataWatcherUnwatch\?\.\(\);/,
     /stopCurrentAudio/,
   ], 'walk-on.ts');
+});
+
+/**
+ * Codex-Finding P2 #2/#4 (Responsive-Remediation): .cc-tile war zeitweise ein
+ * Size-Container mit cqw-skalierter Wertschrift (verkleinerte auch kurze
+ * Zahlen global, z. B. 16px statt 34px in Einstellungen bei 390px) und
+ * `.cc-card-body--split .cc-tiles` reservierte fest 22rem — die Trainings-
+ * Textspalte schrumpfte bei 641px auf ~69px. Vertrag: feste Token-Schrift,
+ * keine Container-Query auf Kacheln, keine feste Kachelspalten-Mindestbreite,
+ * und der Einspalter des Split-Kartenkörpers gilt bis 980px (bestehender
+ * Breakpoint). Prüft nur Regeln — das Rendering belegt die Runtime-QA.
+ */
+test('style.css: tiles keep the fixed token font size and the training split body stacks up to 980px', async () => {
+  const text = await source('entrypoints/controlcenter/style.css');
+  assert.doesNotMatch(text, /container-type:/, 'style.css: no size containers — .cc-tile must not become a container (intrinsic-size collapse, global font shrink)');
+  assert.doesNotMatch(text, /\d\s*cqw\b/, 'style.css: no cqw-scaled font sizes on tiles');
+  assert.doesNotMatch(text, /\.cc-card-body--split \.cc-tiles\s*\{[^}]*min-width/, 'style.css: no fixed min-width reserved for the split tile column');
+
+  const tileValue = text.slice(text.indexOf('.cc-tile-value {'), text.indexOf('.cc-tile-value {') + 700);
+  assert.match(tileValue, /font-size:\s*34px;/, 'style.css: .cc-tile-value keeps the 34px design token size');
+  const tvRuleIdx = text.indexOf('.cc-tile-value { font-size: 40px; }');
+  assert.ok(tvRuleIdx !== -1, 'style.css: TV breakpoint keeps 40px tile values');
+  assert.match(text.slice(text.lastIndexOf('@media', tvRuleIdx), tvRuleIdx), /^@media \(min-width: 1800px\)/, 'style.css: the 40px tile value rule belongs to the 1800px TV breakpoint');
+
+  assert.match(
+    text,
+    /@media \(max-width: 980px\) \{\s*\.cc-card-body--split \{ grid-template-columns: minmax\(0, 1fr\); \}/,
+    'style.css: .cc-card-body--split must stack to one column up to 980px (text column measured 69px at 641px)',
+  );
 });

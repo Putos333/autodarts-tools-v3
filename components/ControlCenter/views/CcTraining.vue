@@ -20,7 +20,7 @@
           </div>
         </template>
 
-        <div class="cc-card-body" style="display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 16px; align-items: center;">
+        <div class="cc-card-body cc-card-body--split">
           <div>
             <p class="cc-note" style="font-size: 13px; margin-bottom: 8px;">
               Das Training läuft <b>in deinem Match auf play.autodarts.io</b>. Die Überwachung

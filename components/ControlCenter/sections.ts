@@ -11,6 +11,7 @@ export type TCcSectionId =
   | "dashboard"
   | "board"
   | "match"
+  | "matchcenter"
   | "training"
   | "party"
   | "stats"
@@ -60,6 +61,14 @@ export const CC_SECTIONS: ICcSection[] = [
     label: "Match",
     hint: "Live-Scoreboard, Spielerwerte und Match-Historie",
     icon: "icon-[pixelarticons--gamepad]",
+  },
+  {
+    id: "matchcenter",
+    label: "Match Center",
+    shortLabel: "Center",
+    hint: "3-Spalten-Match-Ansicht (Design Tokens + UI Shell, Phase 2C) — bereits als eigene Ansicht unter #matchcenter eingebunden",
+    icon: "icon-[pixelarticons--layout-columns]",
+    preview: true,
   },
   {
     id: "training",

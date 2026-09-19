@@ -90,6 +90,28 @@
   --cc-fs-tile-value: 34px;      /* .cc-tile-value */
   --cc-fs-tile-value-tv: 40px;   /* ab 1800px */
 
+  /* Phase 2C — Abstands-Skala (additiv, dokumentierend). Bestehende Regeln
+     behalten ihre literalen px-Werte (kein visueller Diff an Bestandscode);
+     diese Tokens sind das benannte Vokabular für neue Elite-Widgets wie
+     CcMatchCenterShell, damit die 12-Spalten-Grid-Abstände (--cc-space-4
+     entspricht dem bestehenden `.cc-grid { gap: 18px }`) nicht neu erfunden
+     werden. */
+  --cc-space-1: 4px;
+  --cc-space-2: 8px;
+  --cc-space-3: 12px;
+  --cc-space-4: 18px;
+  --cc-space-5: 24px;
+
+  /* Phase 2C — Glow-/Schatten-Tokens: benennen bereits im Bestand mehrfach
+     wiederholte Werte (siehe z. B. .cc-card box-shadow, die Sieger-/Live-Glows
+     auf .cc-hero-side.is-active-side), statt sie ein weiteres Mal literal zu
+     wiederholen. Bestehende Stellen werden dadurch NICHT umgeschrieben (kein
+     breites Refactoring) — die Tokens stehen für neuen Code bereit. */
+  --cc-shadow-card: 0 16px 44px rgba(0, 0, 0, 0.45);
+  --cc-glow-accent: 0 0 26px rgba(232, 0, 45, 0.16);
+  --cc-glow-blue: 0 0 26px rgba(59, 130, 246, 0.16);
+  --cc-glow-gold: 0 0 0 1px rgba(245, 200, 66, 0.08), 0 0 32px rgba(245, 200, 66, 0.06);
+
   /* ── Chakra-Shim ────────────────────────────────────────────────────────
      Nur die Variablen, die im Repo tatsächlich verwendet werden.            */
   --chakra-fonts-body: var(--cc-font-body);
@@ -262,9 +284,12 @@ ul {
 
 .cc-brand-title {
   font-family: var(--cc-font-display);
-  font-size: 17px;
+  /* 15px/1px statt 17px/1.6px: „CONTROL CENTER“ (174px) und die Sub-Zeile
+     (175px) waren breiter als die 155px Textspalte der Sidebar und stießen an
+     deren Kante. */
+  font-size: 15px;
   font-weight: 700;
-  letter-spacing: 1.6px;
+  letter-spacing: 1px;
   text-transform: uppercase;
   color: var(--cc-gold);
   white-space: nowrap;
@@ -272,7 +297,7 @@ ul {
 
 .cc-brand-sub {
   font-size: 10px;
-  letter-spacing: 2px;
+  letter-spacing: 0.8px;
   text-transform: uppercase;
   color: var(--cc-text-faint);
   white-space: nowrap;
@@ -1231,6 +1256,11 @@ ul {
 
 /* ── Quick Play ── */
 .cc-quickplay-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px; }
+/* In der schmalen 3/6/3-Shell-Spalte (.cc-col-3) sprengen sechs `1fr`-Tracks
+   (min-content je Kachel = Padding + längstes Label-Wort) den Container und
+   überlappen das Hero-Panel. `minmax(0, 1fr)` hebt die min-content-Untergrenze
+   auf; drei Spalten ergeben ein 3x2-Raster. Das Dashboard behält seine 6. */
+.cc-matchcenter-region .cc-quickplay-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .cc-quickplay-tile {
   display: flex; flex-direction: column; align-items: center; gap: 6px;
   padding: 16px 8px; border-radius: var(--cc-radius-sm);
@@ -1613,6 +1643,40 @@ ul {
   white-space: nowrap;
 }
 
+/* Verlauf (CcHistory): die Zeile ist ein <button class="cc-result-main"> plus
+   ein optionales .cc-detail. Das 3-Spalten-Grid von .cc-result gilt für flache
+   Zeilen (Training, Match-Details) und würde hier Button und Detail
+   nebeneinander legen — deshalb nur für diese Kinder auf volle Breite. */
+.cc-result > .cc-result-main {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.cc-result > .cc-detail { grid-column: 1 / -1; }
+
+.cc-result-chevron {
+  display: inline-flex;
+  align-items: center;
+  color: var(--cc-text-faint);
+}
+
+@media (max-width: 640px) {
+  .cc-result > .cc-result-main { grid-template-columns: minmax(0, 1fr) auto auto; }
+  .cc-result > .cc-result-main > .cc-result-date { grid-column: 1 / -1; }
+}
+
 /* ─── Großes Match-Scoreboard (Match-Bereich) ────────────────────────────── */
 
 .cc-hero.is-live {
@@ -1941,6 +2005,9 @@ ul {
   color: var(--cc-text);
   /* Auf TV-Distanz gut lesbar, ohne auf dem Desktop zu dominieren. */
   font-variant-numeric: tabular-nums;
+  /* Lange Textwerte („Status unbekannt", 34px) sprengten schmale Kacheln und
+     ragten in die Nachbarkachel; notfalls mitten im Wort umbrechen. */
+  overflow-wrap: anywhere;
 }
 
 .cc-tile.is-accent .cc-tile-value { color: var(--cc-accent); }
@@ -2371,6 +2438,12 @@ ul {
   .cc-col-5 { grid-column: span 12; }
   .cc-col-7 { grid-column: span 12; }
   .cc-col-8 { grid-column: span 12; }
+  /* Phase 2C: cc-col-3/-6 hatten bislang keine Breakpoint-Behandlung (anders
+     als -4/-5/-7/-8 oben) — bereits live genutzt in CcBoard.vue/CcTraining.vue
+     und Grundlage der 3/6/3-Shell (CcMatchCenterShell.vue). Gleiche
+     Kollaps-Politik wie -5/-7/-8: volle Breite, Stapelung untereinander. */
+  .cc-col-3 { grid-column: span 12; }
+  .cc-col-6 { grid-column: span 12; }
 }
 
 /* Sidebar wird zur Icon-Leiste. */
@@ -2416,6 +2489,33 @@ ul {
   .cc-bottom-nav:has(.cc-live-rail) ~ .cc-main .cc-content {
     padding-bottom: calc(56px + 96px + env(safe-area-inset-bottom, 0px) + 20px);
   }
+}
+
+/* Karten-Kopfzeile mobil: Die Status-Pill ist `white-space: nowrap` und kann
+   nicht unter ihre Textbreite schrumpfen. Da .cc-card-titles `min-width: 0`
+   hat, gab bisher nur der Titel nach (~18px bei 390px, Untertitel 0px). Mit
+   flex-wrap + Untergrenze wandert der Status-Slot in eine zweite Zeile, sobald
+   er nicht mehr neben Icon und Titel passt. 8rem ≈ längstes einzelnes
+   Titelwort in Großbuchstaben (17px, 1.4px Letter-Spacing). */
+@media (max-width: 640px) {
+  .cc-card-head { flex-wrap: wrap; }
+  .cc-card-titles { min-width: 8rem; }
+}
+
+/* Training-Kartenkörper: Text links, Status-Kacheln rechts. Die `auto`-Spalte
+   nimmt die max-content-Breite der Kacheln (34px-Wert, ~220px) und drückt die
+   Textspalte bei 390px auf ~60px. Bis 980px daher einspaltig (Kacheln unter dem Text). */
+.cc-card-body--split {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 16px;
+  align-items: center;
+}
+/* Die auto-Spalte braucht ~346px; gemessen blieben der Textspalte bei 641px
+   nur ~75px, bei 768px ~200px. Daher einspaltig bis 980px (bestehender
+   Breakpoint), darüber ≥ ~320px Text neben den Kacheln. */
+@media (max-width: 980px) {
+  .cc-card-body--split { grid-template-columns: minmax(0, 1fr); }
 }
 
 /* Phase 3.5 — Pre-Live Hardening: .cc-hero-body (3-Spalten-Duell-Layout)
