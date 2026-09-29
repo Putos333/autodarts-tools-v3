@@ -57,3 +57,11 @@ graphify-out/
 
 # Local AI/tooling runtime data
 ruvector.db
+
+# claude-flow/ruflo generated runtime state (Setup 2.0 Wave 5 — MCP registration
+# removed in Wave 2; these SQLite DB/WAL/SHM files are regenerable, non-authoritative
+# runtime state, not source. .swarm/schema.sql (a schema definition, not generated
+# data) is intentionally NOT ignored here.
+.swarm/*.db
+.swarm/*.db-wal
+.swarm/*.db-shm
