@@ -9,8 +9,10 @@
     </section>
 
     <section class="cc-col-3 cc-matchcenter-region" data-testid="cc-matchcenter-right">
-      <div class="cc-section-title">Aktivität</div>
-      <CcRecentActivity />
+      <template v-if="!(hasMatch && !matchFinished)">
+        <div class="cc-section-title">Aktivität</div>
+        <CcRecentActivity />
+      </template>
       <CcSystemStatusFooter />
     </section>
   </div>
@@ -37,11 +39,20 @@
  * mehr wie zuvor CcPreviewSection.vue/CcDashboardSummary.vue. `sections.ts`
  * markiert den Eintrag weiterhin mit `preview: true` ("bald"-Badge in der
  * Sidebar), weil das Feature funktional noch nicht abgeschlossen ist.
+ *
+ * Aktivität (Phase B): CcRecentActivity samt Überschrift erscheint nur, wenn
+ * kein Match live läuft — dieselbe Bedingung wie in CcDashboard.vue
+ * (`hasMatch && !matchFinished` = Live-Match). Im Live-Match zeigt das Center
+ * bereits CcMatchHero, daher entfällt die (dort sonst redundante) Aktivitätsliste;
+ * anders als das Dashboard braucht die Shell keinen Live-Teaser.
  */
 import CcQuickPlay from "./CcQuickPlay.vue";
 import CcMatchHero from "./CcMatchHero.vue";
 import CcRecentActivity from "./CcRecentActivity.vue";
 import CcSystemStatusFooter from "./CcSystemStatusFooter.vue";
+import { useControlCenterStatus } from "@/composables/useControlCenterStatus";
+
+const { hasMatch, matchFinished } = useControlCenterStatus();
 </script>
 
 <style scoped>

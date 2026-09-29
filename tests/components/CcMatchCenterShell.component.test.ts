@@ -139,11 +139,40 @@ describe("CcMatchCenterShell.vue", () => {
   });
 
   it("RIGHT enthält die echten CcRecentActivity- und CcSystemStatusFooter-Komponenten (kein Nachbau)", async () => {
-    const { wrapper } = mountShell();
+    // Kein Live-Match (matchFinished) → CcRecentActivity sichtbar (Dashboard-Semantik).
+    const { wrapper } = mountShell({ matchFinished: ref(true) });
     await flushPromises();
     const right = wrapper.find('[data-testid="cc-matchcenter-right"]');
     expect(right.find('[data-testid="cc-recent-activity"]').exists()).toBe(true);
     expect(right.find('[data-testid="cc-system-strip"]').exists()).toBe(true);
+  });
+
+  it("Aktivität: ohne Match sichtbar (hasMatch=false)", async () => {
+    const { wrapper } = mountShell({ hasMatch: ref(false), matchFinished: ref(false) });
+    await flushPromises();
+    const right = wrapper.find('[data-testid="cc-matchcenter-right"]');
+    expect(right.find('[data-testid="cc-recent-activity"]').exists()).toBe(true);
+    expect(right.text()).toContain("Aktivität");
+  });
+
+  it("Aktivität: Live-Match (hasMatch && !matchFinished) blendet CcRecentActivity und Überschrift aus, Footer bleibt", async () => {
+    const { wrapper } = mountShell({ hasMatch: ref(true), matchFinished: ref(false) });
+    await flushPromises();
+    const right = wrapper.find('[data-testid="cc-matchcenter-right"]');
+    expect(right.find('[data-testid="cc-recent-activity"]').exists()).toBe(false);
+    expect(right.find(".cc-section-title").exists()).toBe(false);
+    expect(right.find('[data-testid="cc-system-strip"]').exists()).toBe(true);
+  });
+
+  it("Aktivität: reagiert reaktiv auf Match-Ende (Live → beendet blendet CcRecentActivity ein)", async () => {
+    const matchFinished = ref(false);
+    const { wrapper } = mountShell({ hasMatch: ref(true), matchFinished });
+    await flushPromises();
+    const right = wrapper.find('[data-testid="cc-matchcenter-right"]');
+    expect(right.find('[data-testid="cc-recent-activity"]').exists()).toBe(false);
+    matchFinished.value = true;
+    await flushPromises();
+    expect(right.find('[data-testid="cc-recent-activity"]').exists()).toBe(true);
   });
 
   it("leerer Zustand (kein Match) verursacht keinen Crash", async () => {
