@@ -162,10 +162,20 @@ export function spendCoins(
   };
 }
 
+/** Gemeinsamer Schwellenwert-Check: exakt 180 (Maximum). */
+export function isScore180(score: number): boolean {
+  return score === 180;
+}
+
+/** Gemeinsamer Schwellenwert-Check: 140 oder mehr (schließt 180 mit ein). */
+export function is140Plus(score: number): boolean {
+  return score >= 140;
+}
+
 /** Convenience: Coins pro Score. */
 export function coinsForScore(score: number): number {
-  if (score === 180) return COIN_REWARDS.scored180;
+  if (isScore180(score)) return COIN_REWARDS.scored180;
   if (score >= 170) return COIN_REWARDS.scored170;
-  if (score >= 140) return COIN_REWARDS.scored140plus;
+  if (is140Plus(score)) return COIN_REWARDS.scored140plus;
   return 0;
 }

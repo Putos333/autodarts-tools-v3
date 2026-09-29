@@ -23,6 +23,7 @@ import type { IGameData } from "@/utils/game-data-storage";
 import { speakText, type TTSConfig } from "@/utils/tts-provider";
 import { getUserIdFromToken } from "@/utils/helpers";
 import { generateAndSpeakDuo, duoIsSpeaking, duoStop, duoResetSession, type DuoEvent } from "@/utils/duo-commentator";
+import { is140Plus, isScore180 } from "@/utils/dart-coins";
 
 // ─── Kommentar-Bibliothek (Deutsch & Englisch) ────────────────────────────────
 
@@ -471,13 +472,13 @@ async function processGameData(gameData: IGameData, oldGameData: IGameData): Pro
   if (!isLastThrow) return;
 
   // ── 180 ───────────────────────────────────────────────────────────────────
-  if (points === 180) {
+  if (isScore180(points)) {
     await speak('score_180', { player: playerName, score: '180' });
     return;
   }
 
   // ── 140+ ──────────────────────────────────────────────────────────────────
-  if (points >= 140) {
+  if (is140Plus(points)) {
     await speak('score_140plus', { player: playerName, score: String(points) });
     return;
   }

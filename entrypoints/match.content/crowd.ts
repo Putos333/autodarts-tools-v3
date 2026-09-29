@@ -34,6 +34,7 @@ import {
 } from "@/utils/venue";
 import { getBundledCrowdSampleUrl } from "@/utils/crowd-samples";
 import type { CrowdEventKey } from "@/utils/crowd-events";
+import { is140Plus, isScore180 } from "@/utils/dart-coins";
 
 // ─── Typen ────────────────────────────────────────────────────────────────────
 
@@ -385,7 +386,7 @@ async function processGameData(gameData: IGameData, oldGameData: IGameData): Pro
   }
 
   // ── 180 ───────────────────────────────────────────────────────────────────
-  if (points === 180) {
+  if (isScore180(points)) {
     await playCrowdReaction('crowd_180');
     return;
   }
@@ -397,7 +398,7 @@ async function processGameData(gameData: IGameData, oldGameData: IGameData): Pro
   }
 
   // ── 140+ ──────────────────────────────────────────────────────────────────
-  if (points >= 140) {
+  if (is140Plus(points)) {
     await playCrowdReaction('crowd_140plus');
     return;
   }
