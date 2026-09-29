@@ -1,15 +1,15 @@
 name: pr-control-center
 
-# Pull-Request-Gate ausschließlich für PRs gegen feature/control-center.
+# Pull-Request-Gate für PRs gegen main und feature/control-center. Direkte
+# Pushes auf main lösen diesen Workflow nicht aus (nur pull_request).
 #
 # Führt die fünf bereits lokal verifizierten Checks über die bestehenden
 # package.json-Scripts aus (keine neuen Scripts, keine neuen Dependencies,
 # kein Testframework-Wechsel). Bewusst additiv und vollständig isoliert von
-# build-firefox.yml / release.yml — kein gemeinsamer Trigger, kein
-# gemeinsamer Job, keine gemeinsame Datei. Root Cause für 0 CI-Checks auf
-# PR #16 war ein reiner Trigger-Branch-Filter-Mismatch: weder
-# build-firefox.yml (pull_request nur gegen develop) noch release.yml (nur
-# push auf main/tools-2.0.0) reagieren auf PRs gegen feature/control-center.
+# build-firefox.yml — kein gemeinsamer Trigger, kein gemeinsamer Job, keine
+# gemeinsame Datei. Root Cause für 0 CI-Checks auf PR #16 war ein reiner
+# Trigger-Branch-Filter-Mismatch: build-firefox.yml (pull_request nur gegen
+# develop) reagierte nicht auf PRs gegen feature/control-center.
 #
 # Kein Gate hier nutzt continue-on-error — jeder Fehler lässt den Workflow
 # tatsächlich fehlschlagen.

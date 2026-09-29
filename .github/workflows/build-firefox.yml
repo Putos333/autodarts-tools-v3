@@ -6,8 +6,7 @@ name: build-firefox
 #   - autodarts-tools-<version>-sources.zip  (AMO-Reviewer-Bundle)
 # Werden als GitHub-Actions-Artefakte hochgeladen (30 Tage Retention).
 #
-# HINWEIS: Dieser Workflow läuft NICHT auf `main` oder Tags — der bestehende
-# release.yml (iOS/macOS/AltStore) bleibt davon unberührt.
+# HINWEIS: Dieser Workflow läuft NICHT auf `main` oder Tags.
 
 on:
   push:
