@@ -39,3 +39,23 @@ export function isMatchFinished(
 ): boolean {
   return match?.finished === true || (typeof match?.winner === "number" && match.winner >= 0);
 }
+
+/**
+ * Match-Ende als ÜBERGANG (prev → cur), `finished` ODER `winner` — die bis
+ * dahin wortgleich in match-card.ts und ft-auto-result.ts duplizierte
+ * Erkennung, unverändert übernommen: `finished` wird neu true, oder `winner`
+ * wechselt von "nicht gesetzt" (undefined/null/<0) auf einen Index >= 0.
+ * `prev` undefined (erster Snapshot / Reload) zählt als "nicht beendet".
+ * Bewusst NICHT identisch mit `didMatchJustFinish` (nur `winner`, share-card)
+ * und `isMatchFinished` (Zustand statt Übergang).
+ */
+export function didFinishTransition(
+  prev: { finished?: boolean; winner?: number | null } | null | undefined,
+  cur: { finished?: boolean; winner?: number | null },
+): boolean {
+  const wasFinished = prev?.finished === true;
+  const isFinished = cur.finished === true;
+  const winnerBecameSet = (cur.winner !== undefined && cur.winner !== null && cur.winner >= 0)
+    && (prev?.winner === undefined || prev?.winner === null || prev?.winner < 0);
+  return (!wasFinished && isFinished) || winnerBecameSet;
+}

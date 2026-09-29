@@ -10,6 +10,7 @@
 
 import { AutodartsToolsGameData } from '@/utils/game-data-storage';
 import type { IMatch } from '@/utils/websocket-helpers';
+import { didFinishTransition } from '@/utils/match-finish';
 
 const FT_STORAGE_KEY = 'ft-active-tournament';
 const FT_PENDING_KEY = 'local:ft-pending-results';
@@ -170,12 +171,7 @@ export function initFriendsTournamentAutoResult() {
     // Auslösen wenn:
     // - match.winner ist gesetzt und wechselt von "nicht gesetzt" auf einen Wert
     // - ODER match.finished ist neu true
-    const wasFinished = prev?.finished === true;
-    const isFinished = cur.finished === true;
-    const winnerBecameSet = (cur.winner !== undefined && cur.winner !== null && cur.winner >= 0)
-      && (prev?.winner === undefined || prev?.winner === null || prev?.winner < 0);
-
-    if ((!wasFinished && isFinished) || winnerBecameSet) {
+    if (didFinishTransition(prev, cur)) {
       try { await handleFinishedMatch(cur); } catch (e) { console.error('[FT-AutoResult]', e); }
     }
   });
