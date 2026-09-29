@@ -45,6 +45,14 @@ agentdb-learning, reasoningbank-agentdb, swarm-orchestration, github-code-review
 coordination, hive-mind, hooks, memory, monitoring, optimization, sparc, swarm,
 workflows, claude-flow-swarm.md, claude-flow-memory.md, claude-flow-help.md.
 
+**Commands archived later (Setup 2.0 P9, 4 files):** `github/code-review.md`,
+`github/issue-triage.md`, `github/pr-enhance.md`, `github/repo-analyze.md`.
+These were pure ruflo compatibility stubs whose only content is unpinned
+`npx @claude-flow/cli@latest github …` calls, and ruflo is disabled for this
+project (see `/CLAUDE.md`). They now sit in `commands/github/` of this archive,
+so the active `commands/github/` group has 15 commands, not 19. Restore with
+`mv .claude/scaffold-archive/commands/github/<name>.md .claude/commands/github/`.
+
 ## What was kept active (and why)
 
 - `github-release-management`, `github-workflow-automation`,
