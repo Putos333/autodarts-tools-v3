@@ -65,3 +65,12 @@ ruvector.db
 .swarm/*.db
 .swarm/*.db-wal
 .swarm/*.db-shm
+
+# ProjectAtlas generated runtime state (Setup 2.0 Package 6): SQLite index DB with
+# WAL/SHM sidecars and the graph-stage lock. Regenerable, not source. The tracked
+# .projectatlas/*.toml, *.toon and *.mcp.json / *.opencode.json configs are
+# intentionally NOT ignored here.
+.projectatlas/projectatlas.db
+.projectatlas/projectatlas.db-wal
+.projectatlas/projectatlas.db-shm
+.projectatlas/repository-graph-stage.lock
