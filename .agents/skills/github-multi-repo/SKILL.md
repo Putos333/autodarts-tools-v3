@@ -200,7 +200,7 @@ mcp__claude-flow__swarm_init({
     branch: "feature/github-integration",
     files: [
       {
-        path: "Codex-flow/.Codex/commands/github/github-modes.md",
+        path: "Codex-flow/.codex/commands/github/github-modes.md",
         content: "[GitHub modes documentation]"
       },
       {
@@ -282,11 +282,11 @@ mcp__claude-flow__swarm_init({
     repo: "Codex-project-template",
     files: [
       {
-        path: ".Codex/commands/github/github-modes.md",
+        path: ".codex/commands/github/github-modes.md",
         content: "[GitHub modes template]"
       },
       {
-        path: ".Codex/config.json",
+        path: ".codex/config.json",
         content: JSON.stringify({
           version: "1.0",
           mcp_servers: {
@@ -611,7 +611,7 @@ ruv-FANN/
 ├── packages/
 │   ├── Codex-flow/
 │   │   ├── src/
-│   │   ├── .Codex/
+│   │   ├── .codex/
 │   │   └── package.json
 │   ├── ruv-swarm/
 │   │   ├── src/
@@ -637,7 +637,7 @@ ruv-FANN/
 
 ### Command Structure
 ```
-.Codex/
+.codex/
 ├── commands/
 │   ├── github/
 │   │   ├── github-modes.md
@@ -851,9 +851,9 @@ npx @Codex-flow/cli@latest skill run github-multi-repo cross-team \
 
 ## Support and Resources
 
-- Documentation: https://github.com/ruvnet/Codex-flow
-- Issues: https://github.com/ruvnet/Codex-flow/issues
-- Examples: `.Codex/examples/github-multi-repo/`
+- Documentation: https://github.com/ruvnet/claude-flow
+- Issues: https://github.com/ruvnet/claude-flow/issues
+- Examples: `.codex/examples/github-multi-repo/`
 
 ---
 

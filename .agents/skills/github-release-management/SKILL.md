@@ -1015,9 +1015,9 @@ npx Codex-flow@alpha github version-sync \
 - **deployment-orchestration**: Advanced deployment strategies
 
 ### Support & Community
-- Issues: https://github.com/ruvnet/Codex-flow/issues
-- Discussions: https://github.com/ruvnet/Codex-flow/discussions
-- Documentation: https://Codex-flow.dev/docs
+- Issues: https://github.com/ruvnet/claude-flow/issues
+- Discussions: https://github.com/ruvnet/claude-flow/discussions
+- Documentation: https://claude-flow.dev/docs
 
 ---
 

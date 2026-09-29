@@ -1028,7 +1028,7 @@ echo "✅ GitHub workflow automation setup complete"
 
 - **GitHub CLI Docs**: https://cli.github.com/manual/
 - **GitHub Actions**: https://docs.github.com/en/actions
-- **Codex-Flow**: https://github.com/ruvnet/Codex-flow
+- **Codex-Flow**: https://github.com/ruvnet/claude-flow
 - **Ruv-Swarm**: https://github.com/ruvnet/ruv-swarm
 
 ## Version History
