@@ -19,6 +19,9 @@ on:
     branches:
       - 'main'
       - 'feature/control-center'
+  push:
+    branches:
+      - 'main'
 
 concurrency:
   group: pr-control-center-${{ github.ref }}
