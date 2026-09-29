@@ -50,12 +50,10 @@ jobs:
       - name: Run unit tests
         run: node --import tsx --test "tests/*.test.ts"
 
-      # Informational only (61 pre-existing errors in untouched legacy files as of
-      # 2026-08-18, see RELEASE_READINESS.md). Not a hard gate yet — a NO-NEW-
-      # TYPE-ERRORS mechanism (baseline diff or path-scoped check) is a follow-up,
-      # not part of this change.
-      - name: Typecheck (informational, non-blocking)
-        continue-on-error: true
+      # Blocking as of Setup 2.0 Wave 6 (2026-09-29): verified 0 type errors at
+      # promotion time. The prior "61 pre-existing errors" note (2026-08-18) is
+      # stale — the codebase was clean when this gate was promoted.
+      - name: Typecheck
         run: npx vue-tsc --noEmit
 
   build:
