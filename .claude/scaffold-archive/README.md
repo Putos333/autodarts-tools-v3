@@ -53,6 +53,21 @@ project (see `/CLAUDE.md`). They now sit in `commands/github/` of this archive,
 so the active `commands/github/` group has 15 commands, not 19. Restore with
 `mv .claude/scaffold-archive/commands/github/<name>.md .claude/commands/github/`.
 
+## Status update (Setup 2.0, checked 2026-09-30)
+
+This file is a dated log; the sections above and below are kept as written.
+Three statements in it no longer match the repository:
+
+- `.mcp.json` no longer configures a ruflo / claude-flow server; `mcpServers`
+  is empty (since Setup 2.0 P1).
+- There is no release workflow any more (`release.yml` was removed in
+  `56e9e24`; active workflows: `build-firefox.yml`, `pr-control-center.yml`).
+  The keep-reason "real GitHub Actions releases" below no longer applies.
+- Five of the six `v3-*` skill descriptions mention claude-flow (four say
+  "claude-flow v3"); they are not named after a v3 migration of this project.
+
+Whether these commands and skills get archived is open and not decided here.
+
 ## What was kept active (and why)
 
 - `github-release-management`, `github-workflow-automation`,
