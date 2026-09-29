@@ -17,6 +17,7 @@ name: pr-control-center
 on:
   pull_request:
     branches:
+      - 'main'
       - 'feature/control-center'
 
 concurrency:
