@@ -3,6 +3,9 @@ description: Tech Stack
 globs: 
 alwaysApply: false
 ---
+
+> **Note:** `/CLAUDE.md` at the repository root is authoritative for workflow, tooling and verification rules. This file is the source for code conventions (stack, styling, components); `/CLAUDE.md` does not duplicate them.
+
 # Autodarts Tools Tech Stack
 
 This document defines the technology stack used in the Autodarts Tools project.
