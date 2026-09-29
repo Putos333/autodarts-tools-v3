@@ -1,7 +1,7 @@
 name: pr-control-center
 
-# Pull-Request-Gate für PRs gegen main und feature/control-center. Direkte
-# Pushes auf main lösen diesen Workflow nicht aus (nur pull_request).
+# Gate für Pull Requests gegen main und feature/control-center sowie für
+# Pushes auf main.
 #
 # Führt die fünf bereits lokal verifizierten Checks über die bestehenden
 # package.json-Scripts aus (keine neuen Scripts, keine neuen Dependencies,
