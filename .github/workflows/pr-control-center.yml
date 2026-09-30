@@ -3,7 +3,7 @@ name: pr-control-center
 # Gate für Pull Requests gegen main und feature/control-center sowie für
 # Pushes auf main.
 #
-# Führt die fünf bereits lokal verifizierten Checks über die bestehenden
+# Führt die sechs bereits lokal verifizierten Checks über die bestehenden
 # package.json-Scripts aus (keine neuen Scripts, keine neuen Dependencies,
 # kein Testframework-Wechsel). Bewusst additiv und vollständig isoliert von
 # build-firefox.yml — kein gemeinsamer Trigger, kein gemeinsamer Job, keine
@@ -56,6 +56,9 @@ jobs:
 
       - name: Lifecycle Contract Tests
         run: yarn test:lifecycle
+
+      - name: Component Tests
+        run: yarn test:components
 
       - name: TypeScript
         run: yarn compile
