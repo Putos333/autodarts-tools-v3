@@ -29,7 +29,7 @@ else
 fi
 
 # ── Tests ────────────────────────────────────────────────────────────────────
-if npx tsx --test "tests/*.test.ts" > "$LOG_DIR/tests.log" 2>&1; then
+if yarn test > "$LOG_DIR/tests.log" 2>&1; then
   TEST_SUMMARY=$(grep -E "^ℹ (tests|pass|fail) " "$LOG_DIR/tests.log" | tr '\n' ' ')
   echo "Tests ........... PASS   ($TEST_SUMMARY)"
 else
