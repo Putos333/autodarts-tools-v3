@@ -89,7 +89,47 @@ function normalizeBackend(url: string): string {
   return u;
 }
 
+// ─── Explizite Zustimmung (Consent) ─────────────────────────────────────
+//
+// Jede Netzwerkkommunikation dieses Clients (Upload, Ranglisten-Abruf,
+// eigener Rang) läuft über bgFetch() und ist nur im Zustand "accepted"
+// erlaubt. Fehlender, ungültiger oder nicht lesbarer Zustand zählt als
+// "unknown" und sperrt (fail closed). Die Zustimmung liegt bewusst NICHT in
+// der Config (IConfig): Einstellungs-Import und -Reset ändern sie nicht, und
+// eine importierte Datei kann keine fremde Zustimmung mitbringen. Die
+// bisherigen Gates (elo.enabled, elo.submitEnabled, identity.submitEnabled)
+// bleiben unverändert und gelten zusätzlich.
+
+const CONSENT_KEY = "adt-elo-consent";
+export const ELO_CONSENT_VERSION = 1;
+export type EloConsentState = "unknown" | "accepted" | "declined";
+
+export async function getEloConsent(): Promise<EloConsentState> {
+  try {
+    const raw = await browser.storage.local.get(CONSENT_KEY);
+    const rec = raw?.[CONSENT_KEY] as { state?: unknown; v?: unknown } | undefined;
+    if (!rec || typeof rec !== "object" || rec.v !== ELO_CONSENT_VERSION) return "unknown";
+    return rec.state === "accepted" || rec.state === "declined" ? rec.state : "unknown";
+  } catch {
+    return "unknown";
+  }
+}
+
+/** Speichert die Entscheidung und prüft sie durch Zurücklesen. Gibt nur bei bestätigtem Schreiben `true` zurück. */
+export async function setEloConsent(state: "accepted" | "declined"): Promise<boolean> {
+  if (state !== "accepted" && state !== "declined") return false;
+  try {
+    await browser.storage.local.set({ [CONSENT_KEY]: { state, at: Date.now(), v: ELO_CONSENT_VERSION } });
+    return (await getEloConsent()) === state;
+  } catch {
+    return false;
+  }
+}
+
 async function bgFetch(url: string, options: RequestInit): Promise<any> {
+  if ((await getEloConsent()) !== "accepted") {
+    return { ok: false, error: "consent-required" };
+  }
   try {
     const resp = await browser.runtime.sendMessage({
       type: "FETCH_JSON",

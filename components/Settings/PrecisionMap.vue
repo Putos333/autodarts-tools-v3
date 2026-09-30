@@ -16,8 +16,12 @@ import {
   resetIdentity,
   fetchLeaderboard,
   fetchSelf,
+  getEloConsent,
+  setEloConsent,
+  type EloConsentState,
   type EloLeaderboardEntry,
 } from "@/utils/elo-client";
+import AppModal from "@/components/AppModal.vue";
 
 const config = ref(await AutodartsToolsConfig.getValue());
 const throws = ref<IHeatmapThrow[]>([]);
@@ -37,7 +41,64 @@ const selfRating = ref<any>(null);
 const eloLoading = ref(false);
 const eloError = ref("");
 
+// ── ELO-Consent: Übermittlung nur nach ausdrücklicher Zustimmung ──────────
+// Das verbindliche Gate liegt in utils/elo-client.ts (bgFetch). Diese UI
+// zeigt und ändert nur den Zustand; Schließen ohne Entscheidung lässt ihn
+// unverändert ("unknown").
+const eloConsent = ref<EloConsentState>(await getEloConsent());
+const showConsentDialog = ref(false);
+const consentError = ref("");
+
+const consentLabel = computed(() => {
+  if (eloConsent.value === "accepted") return "Zugestimmt";
+  if (eloConsent.value === "declined") return "Abgelehnt";
+  return "Noch nicht entschieden";
+});
+
+async function decideConsent(state: "accepted" | "declined") {
+  consentError.value = "";
+  const ok = await setEloConsent(state);
+  eloConsent.value = await getEloConsent();
+  if (!ok || eloConsent.value !== state) {
+    consentError.value = "Die Entscheidung konnte nicht gespeichert werden. Es werden keine ELO-Daten übertragen.";
+    return;
+  }
+  showConsentDialog.value = false;
+  if (state === "accepted") {
+    await loadEloState();
+  } else {
+    leaderboard.value = [];
+    selfRating.value = null;
+  }
+}
+
+/** Schließen ohne Entscheidung: der Zustand bleibt unverändert (keine Zustimmung). */
+function dismissConsentDialog() {
+  showConsentDialog.value = false;
+}
+
+/** Nutzung der ELO-Funktion ohne Zustimmung: Entscheidung anbieten statt zu senden. */
+function requestConsentIfNeeded(): boolean {
+  if (eloConsent.value === "accepted") return true;
+  if (eloConsent.value === "unknown") showConsentDialog.value = true;
+  return false;
+}
+
+async function refreshLadder() {
+  if (requestConsentIfNeeded()) await loadEloState();
+}
+
+async function onSubmitToggle() {
+  await persistSection("elo");
+  if (config.value.elo?.submitEnabled) requestConsentIfNeeded();
+}
+
 async function loadEloState() {
+  if (eloConsent.value !== "accepted") {
+    leaderboard.value = [];
+    selfRating.value = null;
+    return;
+  }
   eloLoading.value = true;
   eloError.value = "";
   try {
@@ -188,14 +249,73 @@ onMounted(async () => {
               Globaler ELO-Ladder
             </div>
             <div style="font-size:12px; color:#8899aa; margin-top:2px;">
-              Vollständig anonym · UUID lokal generiert · Nur Anzeigename &amp; ELO werden übertragen.
+              Zufällige Kennung (UUID) wird lokal erzeugt · Übertragung nur nach ausdrücklicher Zustimmung.
             </div>
           </div>
           <input data-testid="elo-submit-toggle" type="checkbox"
             v-model="config.elo.submitEnabled"
-            @change="persistSection('elo')"
+            title="Ergebnisse nach Match-Ende automatisch senden (wirkt nur mit Zustimmung)"
+            @change="onSubmitToggle"
             style="width:24px; height:24px; accent-color:#00C853; cursor:pointer;" />
         </div>
+
+        <!-- Zustimmung zur Datenübermittlung -->
+        <div data-testid="elo-consent-block"
+          style="padding:12px 14px; background:#0D1B2A; border:1px solid #1e3a5f; border-radius:6px; margin-bottom:12px; font-size:12px; color:#c8d4e0; line-height:1.5;">
+          <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;">
+            <div>
+              Zustimmung zur Datenübermittlung:
+              <strong data-testid="elo-consent-status"
+                :style="{ color: eloConsent === 'accepted' ? '#00C853' : eloConsent === 'declined' ? '#E8002D' : '#F5C842' }">
+                {{ consentLabel }}
+              </strong>
+            </div>
+            <div style="display:flex; gap:8px;">
+              <button v-if="eloConsent !== 'accepted'" @click="decideConsent('accepted')" data-testid="elo-consent-accept"
+                style="padding:6px 12px; background:#00C853; color:#0d1e10; border:none; border-radius:4px; cursor:pointer; font-size:11px; font-weight:800; letter-spacing:1px; text-transform:uppercase;">
+                Zustimmen
+              </button>
+              <button v-if="eloConsent !== 'declined'" @click="decideConsent('declined')" data-testid="elo-consent-decline"
+                style="padding:6px 12px; background:transparent; color:#E8002D; border:1px solid #E8002D; border-radius:4px; cursor:pointer; font-size:11px; font-weight:800; letter-spacing:1px; text-transform:uppercase;">
+                {{ eloConsent === 'accepted' ? 'Zustimmung widerrufen' : 'Ablehnen' }}
+              </button>
+            </div>
+          </div>
+          <div style="margin-top:8px; color:#8899aa;">
+            Mit Zustimmung sendet die Erweiterung nach jedem beendeten Match an das ELO-Backend
+            (<span data-testid="elo-consent-host">{{ config.elo?.backendUrl || 'kein Host gesetzt' }}</span>):
+            die zufällige Kennung, den Anzeigenamen, das Ergebnis (Sieg/Niederlage), den Average,
+            die Anzahl der 180er und das höchste Finish. Rangliste und eigener Rang werden über
+            dieselbe Verbindung abgerufen; dabei wird die Kennung übermittelt.
+            Ohne Zustimmung findet keine dieser Übertragungen statt. Die Entscheidung kann hier jederzeit geändert werden.
+          </div>
+          <div style="margin-top:6px; color:#8899aa;">
+            Der Schalter oben rechts steuert nur das automatische Senden nach Match-Ende und wirkt nur bei Zustimmung.
+            Anzeigename und Kennung bleiben lokal, bis du zustimmst.
+          </div>
+          <div v-if="consentError" data-testid="elo-consent-error" style="margin-top:6px; color:#E8002D;">{{ consentError }}</div>
+        </div>
+
+        <AppModal :show="showConsentDialog" title="Globaler ELO-Ladder: Zustimmung" size="md" @close="dismissConsentDialog">
+          <div data-testid="elo-consent-dialog" style="font-size:13px; line-height:1.5;">
+            Für Rangliste und Ergebnis-Upload wird eine Verbindung zum ELO-Backend
+            (<span>{{ config.elo?.backendUrl || 'kein Host gesetzt' }}</span>) aufgebaut.
+            Übertragen werden: zufällige Kennung, Anzeigename, Ergebnis (Sieg/Niederlage), Average,
+            Anzahl der 180er und höchstes Finish. Ohne Zustimmung wird nichts gesendet oder abgerufen.
+            Schließen ohne Auswahl ändert nichts. Die Entscheidung ist jederzeit im ELO-Bereich änderbar.
+            <div v-if="consentError" style="margin-top:8px; color:#E8002D;">{{ consentError }}</div>
+          </div>
+          <template #footer>
+            <button @click="decideConsent('declined')" data-testid="elo-dialog-decline"
+              style="padding:8px 14px; background:transparent; color:#E8002D; border:1px solid #E8002D; border-radius:4px; cursor:pointer; font-size:12px; font-weight:800;">
+              Ablehnen
+            </button>
+            <button @click="decideConsent('accepted')" data-testid="elo-dialog-accept"
+              style="padding:8px 14px; background:#00C853; color:#0d1e10; border:none; border-radius:4px; cursor:pointer; font-size:12px; font-weight:800;">
+              Zustimmen
+            </button>
+          </template>
+        </AppModal>
 
         <!-- Eigenes Rating -->
         <div v-if="selfRating" data-testid="elo-self"
@@ -212,9 +332,13 @@ onMounted(async () => {
             </div>
           </div>
         </div>
-        <div v-else data-testid="elo-not-ranked"
+        <div v-else-if="eloConsent === 'accepted'" data-testid="elo-not-ranked"
           style="padding:10px 14px; background:#0D1B2A; border-left:3px solid #F5C842; border-radius:0 4px 4px 0; font-size:12px; color:#c8d4e0; margin-bottom:12px;">
           📊 Noch kein Match gewertet. Spiele ein Match zu Ende, damit deine ELO gestartet wird.
+        </div>
+        <div v-else data-testid="elo-consent-required"
+          style="padding:10px 14px; background:#0D1B2A; border-left:3px solid #8899aa; border-radius:0 4px 4px 0; font-size:12px; color:#c8d4e0; margin-bottom:12px;">
+          🔒 Rangliste und eigener Rang werden vom ELO-Backend geladen und sind ohne Zustimmung nicht verfügbar. Es werden keine Daten gesendet oder abgerufen.
         </div>
 
         <!-- Anzeigename -->
@@ -225,7 +349,8 @@ onMounted(async () => {
             @change="persistSection('elo')"
             @blur="saveDisplayName"
             style="flex:1; min-width:200px; background:#1e3a5f; color:#e8eaf0; border:1px solid #2a4a7f; padding:8px 12px; border-radius:4px; font-size:13px;" />
-          <button @click="loadEloState" data-testid="elo-refresh"
+          <button @click="refreshLadder" data-testid="elo-refresh" :disabled="eloConsent === 'declined'"
+            :title="eloConsent === 'declined' ? 'Ohne Zustimmung nicht verfügbar' : ''"
             style="padding:8px 14px; background:#00C853; color:#0d1e10; border:none; border-radius:4px; cursor:pointer; font-size:11px; font-weight:800; letter-spacing:1px; text-transform:uppercase;">
             🔄 Ladder
           </button>
@@ -255,7 +380,7 @@ onMounted(async () => {
             <div style="text-align:right; color:#8899aa;">{{ entry.total_180 }}</div>
           </div>
         </div>
-        <div v-else-if="!eloLoading" style="font-size:12px; color:#556677; text-align:center; padding:12px;">
+        <div v-else-if="!eloLoading && eloConsent === 'accepted'" style="font-size:12px; color:#556677; text-align:center; padding:12px;">
           Noch keine Einträge in der globalen Ladder.
         </div>
       </div>
