@@ -48,12 +48,15 @@ der Dateien und Timestamp-Metadaten (nichts Sicherheitsrelevantes).
 ## Externe Services (Opt-In)
 
 Diese werden nur kontaktiert, wenn der Nutzer das jeweilige Feature in
-den Einstellungen aktiviert:
+den Einstellungen aktiviert bzw. (ELO Ladder) ausdrücklich zustimmt.
+Ausnahme: Beim Öffnen des Toolbar-Popups und des Control Centers wird eine
+Statusabfrage (`GET /api/marathon/health`, ohne Body und Parameter) an den
+Backend-Host gesendet.
 
 | Feature | Endpoint |
 |---|---|
 | AI Commentator | `https://darts-caller-ext.emergent.host/api/coach/*` |
-| ELO Ladder | `https://darts-caller-ext.emergent.host/api/elo/*` |
+| ELO Ladder (nur nach ausdrücklicher Zustimmung in den ELO-Einstellungen; getrennt vom Marathon Leaderboard) | `https://darts-caller-ext.emergent.host/api/elo/*` |
 | Marathon Leaderboard | `https://darts-caller-ext.emergent.host/api/marathon/*` |
 | Face-to-Face WebRTC | `wss://darts-caller-ext.emergent.host/api/face/ws` |
 | Discord Webhook | vom User selbst konfigurierte URL |

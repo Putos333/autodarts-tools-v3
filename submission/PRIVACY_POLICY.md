@@ -6,8 +6,9 @@ _Stand: 23. Juli 2026 · Version 2.9.87_
 
 **Tools for Autodarts erhebt keine personenbezogenen Daten und sendet
 keine Telemetrie an Dritte.** Die Extension arbeitet ausschließlich lokal
-im Browser des Nutzers und kommuniziert nur mit ausdrücklich vom
-Nutzer aktivierten Diensten.
+im Browser des Nutzers und kommuniziert, abgesehen von einer
+Statusabfrage (siehe Abschnitt 3), nur mit ausdrücklich vom Nutzer
+aktivierten bzw. – beim ELO-Ladder – ausdrücklich zugestimmten Diensten.
 
 ## Welche Daten werden verarbeitet?
 
@@ -40,13 +41,30 @@ nach expliziter Aktivierung durch den Nutzer verwendet:
 | Dienst | Wofür | Welche Daten |
 |--------|-------|--------------|
 | AI-Kommentator | Live-Kommentar (Claude Sonnet, via Emergent-LLM-Proxy) | Spielstand + Wurf-Werte (anonym) |
-| ELO-Ladder | Optionale globale Rangliste | Ranking-Punkte + gewählter Anzeigename |
+| ELO-Ladder | Optionale globale Rangliste (nur nach ausdrücklicher Zustimmung, siehe unten) | Zufällige Kennung (UUID), Anzeigename, Ergebnis (Sieg/Niederlage), Average, Anzahl 180er, höchstes Finish |
 | Marathon-Leaderboard | Optionale Speedrun-Rangliste | Turnier-Zeit + gewählter Anzeigename |
 | Face-to-Face WebRTC | Peer-to-Peer Video-Chat mit Freunden | Video/Audio-Stream direkt zum Peer (nicht gespeichert) |
 | Discord-Webhook | Match-Ankündigungen | Nur die von *dir* konfigurierte Webhook-URL wird verwendet |
 
 **Keine dieser Verbindungen wird aufgebaut, solange die entsprechende
 Funktion nicht ausdrücklich aktiviert wurde.**
+
+**ELO-Ladder – Zustimmung:** Ohne ausdrückliche Zustimmung im ELO-Bereich
+der Einstellungen findet keine ELO-Übertragung statt: weder das Senden von
+Ergebnissen noch der Abruf von Rangliste oder eigenem Rang (bei diesem Abruf
+wird die zufällige Kennung übermittelt). Solange keine Entscheidung
+getroffen wurde – auch nach Schließen des Dialogs ohne Auswahl – und nach
+einer Ablehnung wird nichts übertragen. Ein aktivierter Schalter für das
+automatische Senden nach Match-Ende gilt allein nicht als Zustimmung. Die
+Entscheidung wird lokal im Browser gespeichert und kann im ELO-Bereich
+jederzeit geändert oder widerrufen werden. Der Marathon-Modus ist davon
+getrennt und nicht Bestandteil dieser Zustimmung.
+
+**Statusabfrage:** Beim Öffnen des Toolbar-Popups und des Control Centers
+sendet die Extension unabhängig von den oben genannten Diensten eine
+Statusabfrage (`GET /api/marathon/health`) an den konfigurierten
+Backend-Host, um dessen Erreichbarkeit anzuzeigen. Die Anfrage hat weder
+einen Body noch Parameter.
 
 ## Werden Daten mit Dritten geteilt?
 
@@ -58,8 +76,9 @@ Funktion nicht ausdrücklich aktiviert wurde.**
 - ❌ **keinen Verkauf von Nutzerdaten**
 
 Kommunikation mit den unter Punkt 3 genannten Emergent-Backend-Endpoints
-(`*.emergent.host` bzw. `*.preview.emergentagent.com`) erfolgt
-ausschließlich für die vom Nutzer aktiv genutzten Features.
+(`*.emergent.host` bzw. `*.preview.emergentagent.com`) erfolgt für die vom
+Nutzer aktivierten bzw. genutzten Features (ELO-Ladder nur nach Zustimmung,
+siehe Punkt 3) sowie für die dort beschriebene Statusabfrage.
 
 ## Rechtsgrundlagen (DSGVO Art. 6)
 

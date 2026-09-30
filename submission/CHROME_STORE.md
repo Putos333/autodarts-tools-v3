@@ -49,7 +49,9 @@ skill level and tournament.
 Live English/German commentary during matches using Claude Sonnet 4.5.
 
 📊 ELO LADDER + MARATHON LEADERBOARD
-Global rankings for players and speedrun tournaments.
+Global rankings for players and speedrun tournaments. The ELO ladder is
+opt-in and requires your explicit consent in the ELO settings; the marathon
+leaderboard is a separate feature.
 
 📱 1-CLICK SOCIAL SHARE
 Automatic post-match share cards for Twitter/Reddit/Facebook.
@@ -67,9 +69,14 @@ whistles, boos, chant packs.
 
 ━━━ ABOUT DATA ━━━
 
-Fully local by default. All settings stored in browser.storage.local.
+Local by default. All settings stored in browser.storage.local.
 No tracking, no analytics, no ads. Optional online features (AI
-commentator, ELO, WebRTC) only activate when you enable them.
+commentator, WebRTC) only activate when you enable them. The ELO ladder
+sends or retrieves data only after you explicitly consent in the ELO
+settings (no consent or a declined consent means no ELO traffic); you can
+change or withdraw that decision at any time. Opening the toolbar popup or
+the Control Center sends a status request (no body, no parameters) to the
+backend host.
 Full privacy policy: https://autodarts-tools.emergent.host/privacy
 
 ━━━ OPEN SOURCE ━━━
@@ -112,7 +119,9 @@ Live-Kommentar in Deutsch/Englisch während des Matches, powered by
 Claude Sonnet 4.5.
 
 📊 ELO-LADDER + MARATHON-LEADERBOARD
-Globale Ranglisten für Einzelspieler und Turnier-Speedruns.
+Globale Ranglisten für Einzelspieler und Turnier-Speedruns. Der ELO-Ladder
+ist Opt-In und erfordert deine ausdrückliche Zustimmung in den
+ELO-Einstellungen; das Marathon-Leaderboard ist ein separates Feature.
 
 📱 1-CLICK SOCIAL-SHARE
 Automatische Match-Share-Karten für Twitter/Reddit/Facebook.
@@ -130,10 +139,15 @@ Pfiffe, Buh-Rufe, Chant-Packs.
 
 ━━━ ZU DATENSCHUTZ ━━━
 
-Standardmäßig komplett lokal. Alle Einstellungen in browser.storage.
-local. Kein Tracking, keine Analytics, keine Werbung. Optionale
-Online-Features (KI-Kommentator, ELO, WebRTC) laufen nur nach
-ausdrücklicher Aktivierung.
+Standardmäßig lokal. Alle Einstellungen in browser.storage.local.
+Kein Tracking, keine Analytics, keine Werbung. Optionale Online-Features
+(KI-Kommentator, WebRTC) laufen nur nach ausdrücklicher Aktivierung.
+Der ELO-Ladder sendet Ergebnisse und ruft Ranglisten nur nach ausdrücklicher
+Zustimmung in den ELO-Einstellungen ab (ohne Entscheidung oder nach
+Ablehnung findet keine ELO-Übertragung statt); die Entscheidung kann
+jederzeit geändert oder widerrufen werden. Beim Öffnen des Toolbar-Popups oder des Control Centers
+wird eine Statusabfrage (ohne Body, ohne Parameter) an den Backend-Host
+gesendet.
 Vollständige Datenschutzerklärung:
 https://autodarts-tools.emergent.host/privacy
 

@@ -12,15 +12,15 @@ Copy-paste-fertige Texte für das AMO Developer Portal.
 
     Adds voice caller, real crowd sounds, career mode, ELO ladder, social
     share cards, an AI commentator, WebRTC face-to-face video, 6 authentic
-    venues and 40+ more features to play.autodarts.io. Fully local by
-    default — no tracking.
+    venues and 40+ more features to play.autodarts.io. Local by default,
+    optional online features. No tracking.
 
 ## Zusammenfassung (max 250 chars, DE)
 
     Voice-Caller, echte Crowd-Sounds, Karriere-Modus, ELO-Ladder,
     Share-Karten, KI-Kommentator, Face-to-Face WebRTC, 6 authentische
     Venues und 40+ weitere Features für play.autodarts.io. Standardmäßig
-    komplett lokal — kein Tracking.
+    lokal, Online-Features optional — kein Tracking.
 
 ---
 

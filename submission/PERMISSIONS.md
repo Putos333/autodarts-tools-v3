@@ -44,9 +44,12 @@ Chrome verlangt für jede angeforderte Permission eine Begründung im
 
     Contact our own Emergent-hosted micro-services:
     - AI Commentator LLM proxy (opt-in)
-    - ELO ladder submission (opt-in)
+    - ELO ladder submission and ranking lookup (only after explicit
+      consent in the ELO settings; separate from the marathon leaderboard)
     - Marathon leaderboard (opt-in)
     - Face-to-Face WebRTC signaling (opt-in)
+    - Backend status check (GET, no body, no parameters) when the toolbar
+      popup or the Control Center is opened
 
 ## Host Permission: `*://*.preview.emergentagent.com/*`
 
