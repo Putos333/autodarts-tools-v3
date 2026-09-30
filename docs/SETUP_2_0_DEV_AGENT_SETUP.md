@@ -1,7 +1,8 @@
 # AUTODARTS ELITE – Setup 2.0: Entwicklungs- und Agent-Setup
 
 Referenzdokument für den verifizierten Konfigurationsstand des Entwicklungs-
-und Agent-Setups (Package A, Package B / D1, Package C, Graphify). Es dient
+und Agent-Setups (Package A, Package B / D1, Package C / C3, Codex-Audit,
+Codex-Skill-Archivierung D1/D2, Graphify). Es dient
 als Recovery-, Wartungs- und Konfigurationsreferenz.
 
 - Stand der Verifikation: 2026-09-30
@@ -275,6 +276,59 @@ einem separaten Schritt (Package C3) entfernt:
   `pre:bash:block-no-verify` blieben wirksam. In einer frischen Session wurden
   die Reste nicht neu erzeugt.
 
+### 5.2 Codex-Audit (`.agents/`, `.codex/`)
+
+Namenshinweis: Die Bezeichnungen „D1“ und „D2“ der folgenden Abschnitte
+beziehen sich auf die Archivierung von **Codex-Skills** und sind nicht
+identisch mit „Package B / D1“ (ECC-Agent-Katalog, Abschnitt 3).
+
+- Codex wurde separat auditiert (read-only). Entscheidung: Codex bleibt
+  vorerst als **optionaler Harness** erhalten.
+- `.codex/config.toml` und `.codex/hooks.json` wurden **nicht verändert** und
+  in diesem Rahmen auch nicht abschließend auditiert (siehe Abschnitt 8, B).
+- `.codex/hooks.json` ist getrackt und enthält Graphify-Guard-Hooks
+  (`hook-guard search` / `hook-guard read --strict`) sowie einen
+  `SessionStart`-Hook auf `.codex/hooks/session-start.sh`.
+- Die weitere Codex-Governance ist **OPEN** (Abschnitt 8).
+
+### 5.3 Package D1 (Codex) – 29 veraltete Codex/Ruflo-Skills archiviert
+
+- **Ergebnis:** PASS. 29 nachweislich veraltete Codex-Skills (Ruflo-, Swarm-,
+  AgentDB- und claude-flow-Varianten) wurden per `git mv` von `.agents/skills/`
+  nach `.claude/scaffold-archive/skills/codex/` verschoben. Nichts wurde
+  gelöscht; die Git-Historie bleibt erhalten.
+- **Commit:** `5fafa2352c0843c8300c34be43d64cbe0f1b3d71`
+  (`AUTODARTS ELITE Setup 2.0 D1: archive stale Codex Ruflo skills`)
+- **Recovery-Tag:** `setup-2.0-pD1-pre-codex-stale-skill-archive-ca79698`
+  (Stand vor dem Verschieben). Externes Backup: `~/.claude-mem-backups/pkgD1-<Zeitstempel>/`.
+- Graphify blieb aktiv und unverändert. Kein Push.
+
+### 5.4 Package D2 (Codex) – drei generische Codex-Skills archiviert
+
+- **Ergebnis:** PASS. Nach separatem Read-only-Audit (je Skill: ARCHIVE
+  CANDIDATE) wurden `pair-programming`, `skill-builder` und
+  `v3-security-overhaul` nach `.claude/scaffold-archive/skills/codex/`
+  archiviert (`git mv`, Dateiinhalt unverändert).
+- **Commit:** `70fd00ea29dc7e492301d0a68987f8faec45f352`
+  (`AUTODARTS ELITE Setup 2.0 D2: archive final stale Codex skills`)
+- **Recovery-Tag:** `setup-2.0-pD2-pre-final-codex-skill-archive-5fafa23`
+  (zeigt auf den D1-Commit, den Stand direkt vor D2).
+- **Externes Backup:** `~/.claude-mem-backups/pkgD2-20260930-154212/`
+  (Archiv, SHA-256-Manifest, Referenzdatei). Backup-Restore und SHA-256-Prüfung
+  aller drei `SKILL.md`: PASS (externe forensische Prüfung, laut Nutzermeldung).
+- Danach enthält `.agents/skills/` nur noch `graphify`.
+- Graphify-Konfiguration und -Hooks wurden durch D1/D2 nicht verändert; kein
+  Graphify-Update in diesen Paketen. Anwendungscode, Protected Scoring Core und
+  Runtime-Autodarts-Artefakte blieben unberührt. Kein Push.
+
+### 5.5 Stand ECC und claude-mem (keine Neuprüfung in D3)
+
+Package D3 ist rein dokumentarisch und hat ECC und claude-mem weder geändert
+noch neu geprüft. Maßgeblich bleiben die in den Abschnitten 1–4 dokumentierten,
+zuvor verifizierten Ergebnisse (claude-mem als Primary Memory Owner,
+deaktivierte ECC-Duplikat-Hooks, reduzierter Agent-Katalog). Alles darüber
+hinaus ist **NEEDS RECHECK** nach jedem ECC-/claude-mem-Update.
+
 ## 6. Graphify
 
 - **Status:** KEEP. Graphify bleibt Bestandteil des Entwicklungs- und
@@ -296,7 +350,10 @@ einem separaten Schritt (Package C3) entfernt:
 - **Recovery-Tags** sind definierte Wiederherstellungspunkte im Repository,
   kein automatischer Rollback. Für Package C:
   `setup-2.0-pC-pre-ruflo-residue-cleanup-83782f8`, für Package C3:
-  `setup-2.0-pC3-pre-ruflo-ignored-cleanup-00027e0`. Weitere Tags folgen dem
+  `setup-2.0-pC3-pre-ruflo-ignored-cleanup-00027e0`, für Codex-D1:
+  `setup-2.0-pD1-pre-codex-stale-skill-archive-ca79698`, für Codex-D2:
+  `setup-2.0-pD2-pre-final-codex-skill-archive-5fafa23`, für D3:
+  `setup-2.0-pD3-pre-docs-70fd00e`. Weitere Tags folgen dem
   Schema `setup-2.0-pN-pre-<thema>-<sha>`.
 - **Externe Backups** liegen außerhalb des Repositories unter
   `~/.claude-mem-backups/` (Verzeichnis mit eingeschränkten Rechten,
@@ -308,7 +365,9 @@ einem separaten Schritt (Package C3) entfernt:
   - `pkgC3-<Zeitstempel>/`: die 14 ignorierten Ruflo-Dateien (DB-Sätze mit
     WAL und SHM), Archiv mit SHA-256-Manifest und Restore-Test,
   - `graphify-<Zeitstempel>/`: vollständige Kopie von `graphify-out/`,
-  - `pkg-b-<Zeitstempel>/`: `.claude/settings.local.json` vor D1.
+  - `pkg-b-<Zeitstempel>/`: `.claude/settings.local.json` vor D1 (ECC),
+  - `pkgD1-<Zeitstempel>/`: Archiv der 29 Codex-Skills mit SHA-256-Manifest,
+  - `pkgD2-20260930-154212/`: die drei Codex-Skills mit SHA-256-Manifest.
 - Wiederherstellung von Dateien aus einem Recovery-Tag erfolgt gezielt pro
   Pfad, nicht per Reset des Repositories.
 - `.claude/settings.local.json` und `~/.claude/settings.json` sind nicht
@@ -317,7 +376,7 @@ einem separaten Schritt (Package C3) entfernt:
 
 ## 8. OPEN DECISION GATES
 
-Nicht Bestandteil der Pakete A, B/D1, C und C3. Keine automatische Ausführung,
+Nicht Bestandteil der Pakete A, B/D1, C, C3 und Codex-D1/D2. Keine automatische Ausführung,
 jeweils separate Entscheidung erforderlich.
 
 - **A) Ignorierte Ruflo-/Claude-Flow-Reste:** Die 14 ignorierten Dateien in
@@ -325,7 +384,17 @@ jeweils separate Entscheidung erforderlich.
   (siehe Abschnitt 5.1, erledigt). Weiterhin offen: Im Projekt existieren
   ignorierte Einträge `.ruvector/` und `ruvector.db`; deren Herkunft wurde
   nicht abschließend geprüft, sie waren nicht Bestandteil von C3.
-- **B) Codex-Audit:** `.agents/` und `.codex/` benötigen ein separates Audit.
+- **B) Codex-Audit – teilweise erledigt, Rest OPEN:** Die Skill-Archivierung
+  ist abgeschlossen (Abschnitte 5.3 und 5.4). Weiterhin **OPEN/PENDING**:
+  - Read-only-Audit von `.codex/config.toml` und `.codex/hooks.json`,
+  - vollständige Klärung der Abhängigkeit der Codex-Hooks von Graphify,
+  - Klärung der Codex-Governance gegenüber `CLAUDE.md` / `AGENTS.md`.
+- **F) Push:** Die lokale Commit-Kette ist nicht gepusht und benötigt weiterhin
+  eine explizite Freigabe. Die Anzahl der lokal vorauslaufenden Commits ist
+  bei jedem Push-Vorgang neu zu ermitteln (bei D2-Abschluss: 28, danach
+  NEEDS RECHECK).
+- **G) ECC-Updates:** Nach jedem ECC-Update Agent-Katalog und Deny-Liste
+  (Abschnitt 4) erneut prüfen.
 - **C) Dokumentations-Restpunkte:** `CLAUDE.md`,
   `.claude/agents/browser/browser-agent.yaml` und `.claude/commands/github/`
   nur nach separater Prüfung ändern.
