@@ -245,8 +245,35 @@ Bewusst **nicht** entfernt (unverändert): `.claude/commands/github/`,
 6 generische Helper (`.claude/helpers/.helpers-version`, `auto-commit.sh`,
 `checkpoint-manager.sh`, `github-safe.js`, `helpers.manifest.json`,
 `standard-checkpoint-hooks.sh`), `.claude/agents/browser/browser-agent.yaml`,
-`.claude/scaffold-archive/`, `.agents/`, `.codex/` sowie 14 ignorierte
-Laufzeitdateien in `.claude-flow/`, `.swarm/` und `.ruflo/`.
+`.claude/scaffold-archive/`, `.agents/`, `.codex/`.
+
+### 5.1 Package C3 – ignorierte Ruflo-/Claude-Flow-Reste entfernt
+
+Die 14 nach Package C zurückgebliebenen, ignorierten Laufzeitdateien wurden in
+einem separaten Schritt (Package C3) entfernt:
+
+- **Ergebnis:** PASS. 14/14 Dateien wurden einzeln entfernt (`.swarm/`: zwei
+  SQLite-Sätze jeweils mit DB, WAL und SHM; `.claude-flow/`: Zeiger-, Metrik-,
+  Audit-, Policy- und Agent-Store-Dateien; `.ruflo/`: eine Browser-Session-
+  Datei), danach die leeren Verzeichnisse `.swarm/`, `.claude-flow/` und
+  `.ruflo/`. Vorab war forensisch (auf Kopien) belegt, dass die Datenbanken
+  keine Projektdaten enthielten und kein Verbraucher existierte.
+- **Recovery-Tag:** `setup-2.0-pC3-pre-ruflo-ignored-cleanup-00027e0`
+  (Stand vor C3; die Dateien waren ignoriert, der Tag markiert den
+  Repository-Stand, die Dateien selbst liegen im externen Backup).
+- **Externes Backup:** `~/.claude-mem-backups/pkgC3-<Zeitstempel>/` mit
+  Archiv, SHA-256-Manifest und Verweis auf das frühere Package-C-Backup. Der
+  Restore-Test (Entpacken und Hash-Vergleich, 14/14) war vor dem Entfernen
+  bestanden.
+- Die Entfernung ignorierter Dateien erzeugt keinen Git-Commit. Es gab keine
+  Änderung an Anwendungscode oder Protected Scoring Core.
+- `.ruvector/` und `ruvector.db` sind ausdrücklich **nicht** Bestandteil von
+  Package C oder C3 und blieben unverändert.
+- Graphify: KEEP, kein Update durchgeführt (der Graph enthielt keine Knoten
+  dieser Pfade). Package A blieb PASS: claude-mem bleibt Primary Memory Owner,
+  die 7 ECC-Duplikat-Hooks bleiben deaktiviert, GateGuard und
+  `pre:bash:block-no-verify` blieben wirksam. In einer frischen Session wurden
+  die Reste nicht neu erzeugt.
 
 ## 6. Graphify
 
@@ -268,7 +295,8 @@ Laufzeitdateien in `.claude-flow/`, `.swarm/` und `.ruflo/`.
 
 - **Recovery-Tags** sind definierte Wiederherstellungspunkte im Repository,
   kein automatischer Rollback. Für Package C:
-  `setup-2.0-pC-pre-ruflo-residue-cleanup-83782f8`. Weitere Tags folgen dem
+  `setup-2.0-pC-pre-ruflo-residue-cleanup-83782f8`, für Package C3:
+  `setup-2.0-pC3-pre-ruflo-ignored-cleanup-00027e0`. Weitere Tags folgen dem
   Schema `setup-2.0-pN-pre-<thema>-<sha>`.
 - **Externe Backups** liegen außerhalb des Repositories unter
   `~/.claude-mem-backups/` (Verzeichnis mit eingeschränkten Rechten,
@@ -277,6 +305,8 @@ Laufzeitdateien in `.claude-flow/`, `.swarm/` und `.ruflo/`.
   - Sicherung der claude-mem-Konfiguration,
   - `pkgC-<Zeitstempel>/`: die 50 entfernten Dateien, die 14 ignorierten
     Ruflo-Dateien und die globale `CLAUDE.md`,
+  - `pkgC3-<Zeitstempel>/`: die 14 ignorierten Ruflo-Dateien (DB-Sätze mit
+    WAL und SHM), Archiv mit SHA-256-Manifest und Restore-Test,
   - `graphify-<Zeitstempel>/`: vollständige Kopie von `graphify-out/`,
   - `pkg-b-<Zeitstempel>/`: `.claude/settings.local.json` vor D1.
 - Wiederherstellung von Dateien aus einem Recovery-Tag erfolgt gezielt pro
@@ -287,13 +317,14 @@ Laufzeitdateien in `.claude-flow/`, `.swarm/` und `.ruflo/`.
 
 ## 8. OPEN DECISION GATES
 
-Nicht Bestandteil der Pakete A, B/D1 und C. Keine automatische Ausführung,
+Nicht Bestandteil der Pakete A, B/D1, C und C3. Keine automatische Ausführung,
 jeweils separate Entscheidung erforderlich.
 
-- **A) 14 ignorierte Ruflo-/Claude-Flow-Dateien** in `.claude-flow/`, `.swarm/`
-  und `.ruflo/`: nicht Teil von Package C, keine automatische Löschung.
-  Beobachtung: Daneben existieren im Projekt ignorierte Einträge
-  `.ruvector/` und `ruvector.db`; deren Herkunft wurde nicht geprüft.
+- **A) Ignorierte Ruflo-/Claude-Flow-Reste:** Die 14 ignorierten Dateien in
+  `.claude-flow/`, `.swarm/` und `.ruflo/` wurden mit Package C3 entfernt
+  (siehe Abschnitt 5.1, erledigt). Weiterhin offen: Im Projekt existieren
+  ignorierte Einträge `.ruvector/` und `ruvector.db`; deren Herkunft wurde
+  nicht abschließend geprüft, sie waren nicht Bestandteil von C3.
 - **B) Codex-Audit:** `.agents/` und `.codex/` benötigen ein separates Audit.
 - **C) Dokumentations-Restpunkte:** `CLAUDE.md`,
   `.claude/agents/browser/browser-agent.yaml` und `.claude/commands/github/`
