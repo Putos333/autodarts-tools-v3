@@ -1,5 +1,19 @@
 # Scripts Documentation
 
+## Status update (Setup 2.0, checked 2026-09-30)
+
+The workflow and release descriptions below no longer match this repository:
+
+- `.github/workflows/release.yml` and the jobs `draft_release`,
+  `build_ios_app` and `update_altstore_source` do not exist here any more
+  (`release.yml` was removed in `56e9e24`; the active workflows are
+  `build-firefox.yml` and `pr-control-center.yml`).
+- `Autodarts_Tools_Source.json`, an `.ipa` and an `.xcodeproj` are not tracked
+  in this repository.
+
+The sections below are kept as written and describe the former upstream release
+flow. Whether these scripts are kept or archived is open and not decided here.
+
 ## AltStore Source Update Automation
 
 ### Overview
