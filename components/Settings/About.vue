@@ -72,8 +72,7 @@ const changelog = [
           <a href="https://github.com/creazy231/tools-for-autodarts" target="_blank"
             style="color:#E8002D; text-decoration:none; font-weight:700;">
             tools-for-autodarts von creazy231
-          </a>
-          (MIT-Lizenz).<br/>
+          </a>.<br/>
           Erweitert mit Einlauf Songs, KI-Kommentator, Liga-System, Crowd-Sounds und mehr.
         </div>
       </div>
@@ -151,7 +150,7 @@ const changelog = [
       <div style="text-align: center; font-size:11px; color:#334455; padding:8px 0;">
         Made with ❤️ and 🎯 by <strong style="color:#556677;">Arnonym2302</strong> &nbsp;·&nbsp;
         Basiert auf <a href="https://github.com/creazy231/tools-for-autodarts" target="_blank"
-          style="color:#556677; text-decoration:none;">tools-for-autodarts</a> (MIT)
+          style="color:#556677; text-decoration:none;">tools-for-autodarts</a>
       </div>
 
     </div>
