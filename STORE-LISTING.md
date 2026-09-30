@@ -252,7 +252,7 @@ Diese Dateien müssen manuell bereitgestellt werden – siehe `STORE-ASSETS-TODO
 - **Werbung**: Nein
 
 ## 📝 Firefox AMO Fields
-- **License**: MIT (empfohlen für Open-Source-Extensions)
+- **License**: Siehe `LICENSE`-Datei im Repository
 - **Version notes v2.9.70**: Siehe CHANGELOG.md
 - **Support Email**: Via GitHub Issues
 - **Categories**: Games, Entertainment
