@@ -2,12 +2,17 @@
 
 Referenzdokument für den verifizierten Konfigurationsstand des Entwicklungs-
 und Agent-Setups (Package A, Package B / D1, Package C / C3, Codex-Audit,
-Codex-Skill-Archivierung D1/D2, Graphify). Es dient
+Codex-Skill-Archivierung D1/D2, Codex-Audit D4, Codex-Config-Cleanup D5,
+Governance-Audit D6, AGENTS.md-Schutzregel D7, Graphify). Es dient
 als Recovery-, Wartungs- und Konfigurationsreferenz.
 
 - Stand der Verifikation: 2026-09-30
 - Verifizierte Versionen: ECC 2.2.1 (Claude-Code-Plugin, lokal aktiviert),
-  Claude Code 2.1.285, claude-mem 13.16.1, Graphify 0.9.43
+  Claude Code 2.1.285, claude-mem 13.16.1, Graphify 0.9.43,
+  Codex CLI 0.153.4 (in D4 read-only festgestellt)
+- Spätere Statusaktualisierung (D8): Die Abschnitte 5.2 bis 5.8 und 8
+  berücksichtigen die Pakete D4 bis D7 (Repository-Stand `e4c17ad`). Die
+  Angabe „Repository-Stand bei Erstellung“ unten bleibt der historische Stand.
 - Repository-Stand bei Erstellung: Package-C-Commit `c34ffbedbd1be19bf39a518ef1a16420fbb42ebc`
 - Dieses Dokument beschreibt Konfiguration und Entwicklungswerkzeuge, keinen
   Anwendungscode. Es enthält keine Secrets und keine vollständigen privaten
@@ -105,8 +110,9 @@ Zeichenzahlen). Für den aktuell verifizierten ECC-2.2.1-Katalog enthält die
 D1-Konfiguration 46 Deny-Einträge. Beides sind gemessene Baselines, keine
 Vertragswerte.
 
-**Nicht angewendet:** D4 (Kappe für Beschreibungslängen,
-`skillListingMaxDescChars`). Skills und Commands wurden durch D1 nicht
+**Nicht angewendet:** ECC-D4 (Kappe für Beschreibungslängen,
+`skillListingMaxDescChars`; nicht zu verwechseln mit dem späteren
+Setup-Paket D4, dem Codex-Audit, Abschnitt 5.2). Skills und Commands wurden durch D1 nicht
 reduziert. Für Plugin-Skills gibt es keinen unterstützten Filter
 (`skillOverrides` gilt laut Claude-Code-Doku nicht für Plugin-Skills, ein
 `Skill(...)`-Deny blendet den Eintrag nicht aus dem Katalog aus – gemessen).
@@ -284,12 +290,37 @@ identisch mit „Package B / D1“ (ECC-Agent-Katalog, Abschnitt 3).
 
 - Codex wurde separat auditiert (read-only). Entscheidung: Codex bleibt
   vorerst als **optionaler Harness** erhalten.
-- `.codex/config.toml` und `.codex/hooks.json` wurden **nicht verändert** und
-  in diesem Rahmen auch nicht abschließend auditiert (siehe Abschnitt 8, B).
 - `.codex/hooks.json` ist getrackt und enthält Graphify-Guard-Hooks
   (`hook-guard search` / `hook-guard read --strict`) sowie einen
   `SessionStart`-Hook auf `.codex/hooks/session-start.sh`.
-- Die weitere Codex-Governance ist **OPEN** (Abschnitt 8).
+- **Spätere Statusaktualisierung (Package D4, read-only, Repository-Stand
+  `f6cadf8`):** `.codex/config.toml`, `.codex/hooks.json`,
+  `.codex/hooks/session-start.sh` und `AGENTS.md` wurden nach D2 gezielt
+  auditiert. Der frühere Vermerk „nicht abschließend auditiert“ ist damit
+  überholt. Das Paket änderte nichts am Repository.
+  - **VERIFIED:** `hooks.json` definiert drei Hooks (PreToolUse
+    `Bash|Grep` → `graphify hook-guard search`, PreToolUse `Read|Glob` →
+    `graphify hook-guard read --strict`, SessionStart →
+    `.codex/hooks/session-start.sh`); alle Ziele existieren. JSON, TOML und
+    Shell-Syntax sind gültig. `session-start.sh` liest nur Git-Metadaten und
+    ist byte-identisch mit `.claude/hooks/session-start.sh`. `hook-guard`
+    ist laut Quelltext ein Hinweis-Guard, der bei Fehlern nicht blockiert.
+    `config.toml` enthielt `mcp_servers.vite` (URL auf `localhost:5173`) und
+    `shell_environment_policy.inherit = "core"`; `wxt.config.ts` nutzt
+    `ViteMcp()`. Das `SKILL.md` und die `references/` des Projekt-Graphify-
+    Skills sind identisch mit dem benutzerweiten Graphify-Skill (SHA-256).
+  - **UNKNOWN / NEEDS RECHECK (durch D4 nicht bewiesen):** ob Codex die
+    Projekt-Hooks tatsächlich ausführt (in `~/.codex/config.toml` existieren
+    Trust-Einträge für die beiden PreToolUse-Hooks, nicht für den
+    SessionStart-Hook; das Verhalten ohne Eintrag ist ungeklärt); ob
+    `--strict` mit den Codex-Toolnamen wirkt; Graphify-Abhängigkeit im realen
+    Codex-Laufzeitkontext (nach Quelltext optional); Vorrang zwischen
+    Projekt- und benutzerweitem Graphify-Skill; Runtime-Erreichbarkeit des
+    Vite-MCP (Port 5173 lauschte bei der Prüfung nicht; Pfad `/__mcp/sse`
+    nicht gegen die Plugin-Doku geprüft); ob die in D5 entfernten Variablen
+    außerhalb des Repositories gelesen wurden.
+- Die weitere Codex-Governance ist teilweise beantwortet (D6/D7, unten),
+  der Rest bleibt **OPEN** (Abschnitt 8).
 
 ### 5.3 Package D1 (Codex) – 29 veraltete Codex/Ruflo-Skills archiviert
 
@@ -329,6 +360,60 @@ zuvor verifizierten Ergebnisse (claude-mem als Primary Memory Owner,
 deaktivierte ECC-Duplikat-Hooks, reduzierter Agent-Katalog). Alles darüber
 hinaus ist **NEEDS RECHECK** nach jedem ECC-/claude-mem-Update.
 
+### 5.6 Package D5 (Codex) – veraltete Umgebungsvariablen entfernt
+
+- **Ergebnis:** PASS. Aus `.codex/config.toml` wurden ausschließlich die drei
+  im D4-Audit als veraltet belegten Variablen entfernt, ohne Verbraucher im
+  getrackten Repository:
+  - `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS`
+  - `CLAUDE_FLOW_V3_ENABLED`
+  - `CLAUDE_FLOW_HOOKS_ENABLED`
+  Damit war die Tabelle `[shell_environment_policy.set]` leer; ihre
+  Kopfzeile und die Leerzeile davor wurden mit entfernt (5 gelöschte Zeilen).
+- **Erhalten und unverändert:** `mcp_servers.vite` (URL) und
+  `shell_environment_policy.inherit = "core"`. Keine weitere
+  Codex-Konfigurationsänderung; `hooks.json` und `session-start.sh` blieben
+  unberührt. Die Datei ist danach gültiges TOML.
+- **Commit:** `eb761cbc11304a3285073349098b09ca8ce24230`
+  (`AUTODARTS ELITE Setup 2.0 D5: remove stale Codex environment flags`)
+- **Recovery-Tag:** `setup-2.0-pD5-pre-codex-config-cleanup-f6cadf8`.
+  Ein externes Backup war nicht nötig (Datei getrackt). Kein Push.
+- **UNKNOWN:** ob die Variablen außerhalb des Repositories gelesen wurden.
+  Rückgängig machen: `git revert eb761cb`.
+
+### 5.7 Package D6 – Governance-Audit (read-only)
+
+- Der Schutz des Protected Scoring Core war in `CLAUDE.md` vorhanden. Er
+  ist dokumentarisch; im Projekt wurde keine technische Erzwingung
+  (Deny-Regel, Hook oder CI-Prüfung) gefunden.
+- `AGENTS.md` enthielt damals nur die Graphify-Regel. Die Governance-Lücke
+  für Codex wurde festgestellt.
+- D6 war rein lesend und erzeugte **keinen Commit** und keine
+  Repository-Änderung.
+
+### 5.8 Package D7 – Schutzregel in `AGENTS.md`
+
+- **Ergebnis:** PASS. Die Governance-Lücke in `AGENTS.md` wurde durch einen
+  neuen Abschnitt „Protected scoring core“ unterhalb des Graphify-Blocks
+  geschlossen (11 hinzugefügte Zeilen). Inhalt: vor jeder Änderung an einer
+  der vier Dateien STOP, nie automatisch ändern, zuerst darauf hinweisen und
+  ausdrückliche Freigabe einholen.
+- **Geschützte Pfade:**
+  - `utils/canonical-match-result.ts`
+  - `utils/canonical-match-result-storage.ts`
+  - `utils/event-dedupe.ts`
+  - `utils/websocket-helpers.ts`
+- Die Graphify-Regel blieb unverändert; `CLAUDE.md`, Codex-Konfiguration,
+  Hooks, Anwendungscode und die vier geschützten Dateien selbst blieben
+  unberührt.
+- **Commit:** `e4c17adb9b207d5493a77455683fadd910c1e2ba`
+  (`AUTODARTS ELITE Setup 2.0 D7: protect scoring core for Codex`)
+- **Recovery-Tag:** `setup-2.0-pD7-pre-agents-protected-core-eb761cb`. Kein
+  Push.
+- **Grenze:** Die Regel ist dokumentarisch. Dass Codex `AGENTS.md` in diesem
+  Setup tatsächlich lädt, ist lokal nicht bewiesen (UNKNOWN). Eine
+  technische Erzwingung existiert weiterhin nicht (Abschnitt 8).
+
 ## 6. Graphify
 
 - **Status:** KEEP. Graphify bleibt Bestandteil des Entwicklungs- und
@@ -353,7 +438,10 @@ hinaus ist **NEEDS RECHECK** nach jedem ECC-/claude-mem-Update.
   `setup-2.0-pC3-pre-ruflo-ignored-cleanup-00027e0`, für Codex-D1:
   `setup-2.0-pD1-pre-codex-stale-skill-archive-ca79698`, für Codex-D2:
   `setup-2.0-pD2-pre-final-codex-skill-archive-5fafa23`, für D3:
-  `setup-2.0-pD3-pre-docs-70fd00e`. Weitere Tags folgen dem
+  `setup-2.0-pD3-pre-docs-70fd00e`, für D5:
+  `setup-2.0-pD5-pre-codex-config-cleanup-f6cadf8`, für D7:
+  `setup-2.0-pD7-pre-agents-protected-core-eb761cb`, für D8:
+  `setup-2.0-pD8-pre-docs-e4c17ad`. Weitere Tags folgen dem
   Schema `setup-2.0-pN-pre-<thema>-<sha>`.
 - **Externe Backups** liegen außerhalb des Repositories unter
   `~/.claude-mem-backups/` (Verzeichnis mit eingeschränkten Rechten,
@@ -376,23 +464,43 @@ hinaus ist **NEEDS RECHECK** nach jedem ECC-/claude-mem-Update.
 
 ## 8. OPEN DECISION GATES
 
-Nicht Bestandteil der Pakete A, B/D1, C, C3 und Codex-D1/D2. Keine automatische Ausführung,
-jeweils separate Entscheidung erforderlich.
+Nicht Bestandteil der Pakete A, B/D1, C, C3, Codex-D1/D2 sowie D3 bis D8.
+Keine automatische Ausführung, jeweils separate Entscheidung erforderlich.
 
 - **A) Ignorierte Ruflo-/Claude-Flow-Reste:** Die 14 ignorierten Dateien in
   `.claude-flow/`, `.swarm/` und `.ruflo/` wurden mit Package C3 entfernt
   (siehe Abschnitt 5.1, erledigt). Weiterhin offen: Im Projekt existieren
   ignorierte Einträge `.ruvector/` und `ruvector.db`; deren Herkunft wurde
   nicht abschließend geprüft, sie waren nicht Bestandteil von C3.
-- **B) Codex-Audit – teilweise erledigt, Rest OPEN:** Die Skill-Archivierung
-  ist abgeschlossen (Abschnitte 5.3 und 5.4). Weiterhin **OPEN/PENDING**:
-  - Read-only-Audit von `.codex/config.toml` und `.codex/hooks.json`,
-  - vollständige Klärung der Abhängigkeit der Codex-Hooks von Graphify,
-  - Klärung der Codex-Governance gegenüber `CLAUDE.md` / `AGENTS.md`.
+- **B) Codex – teilweise erledigt, Rest OPEN/UNKNOWN:** Die
+  Skill-Archivierung (Abschnitte 5.3 und 5.4), das read-only Audit von
+  `config.toml` und `hooks.json` (D4, Abschnitt 5.2), der Config-Cleanup (D5)
+  und die Schutzregel in `AGENTS.md` (D7) sind abgeschlossen. Weiterhin
+  **OPEN/UNKNOWN**:
+  - tatsächliche Ausführung der Codex-Hooks und deren Trust-Status (kein
+    Trust-Eintrag für den SessionStart-Hook gefunden; Verhalten ungeklärt),
+  - Wirkung von `hook-guard read --strict` mit den Codex-Toolnamen,
+  - Graphify-Abhängigkeit im realen Codex-Laufzeitkontext (nach Quelltext
+    optional, nicht im Betrieb geprüft),
+  - Vorrang zwischen Projekt- und benutzerweitem Graphify-Skill (Inhalt
+    identisch, Auswahlverhalten nicht bewiesen); der benutzerweite
+    `~/.codex/AGENTS.md` verweist außerdem auf den nicht existierenden Pfad
+    `~/.Codex/skills/graphify/SKILL.md` (außerhalb des Repositories, nicht
+    geändert),
+  - Runtime-Erreichbarkeit des Vite-MCP (EXTERNAL: laufender Dev-Server
+    nötig),
+  - ob Codex `AGENTS.md` tatsächlich lädt (lokal nicht bewiesen).
+- **H) Technische Erzwingung des Protected Scoring Core:** Der Schutz besteht
+  in `CLAUDE.md` und `AGENTS.md` nur dokumentarisch. Eine technische
+  Erzwingung (z. B. Deny-Regel oder Prüfung vor dem Commit) existiert nicht
+  und wäre eine separate Entscheidung.
+- **I) Portabilität von `.codex/hooks.json`:** Die Datei enthält absolute,
+  private Pfade. Keine Entscheidung getroffen.
 - **F) Push:** Die lokale Commit-Kette ist nicht gepusht und benötigt weiterhin
-  eine explizite Freigabe. Die Anzahl der lokal vorauslaufenden Commits ist
-  bei jedem Push-Vorgang neu zu ermitteln (bei D2-Abschluss: 28, danach
-  NEEDS RECHECK).
+  eine explizite Freigabe. Zuletzt festgestellt (D8-Audit, Stand `e4c17ad`):
+  31 Commits vor der lokal gespeicherten Referenz `origin/main`, ohne Fetch.
+  Der tatsächliche Stand des Remotes ist UNKNOWN/EXTERNAL; die Anzahl ist bei
+  jedem Push-Vorgang neu zu ermitteln.
 - **G) ECC-Updates:** Nach jedem ECC-Update Agent-Katalog und Deny-Liste
   (Abschnitt 4) erneut prüfen.
 - **C) Dokumentations-Restpunkte:** `CLAUDE.md`,
@@ -401,4 +509,5 @@ jeweils separate Entscheidung erforderlich.
 - **D) Weitere ECC-Katalogreduktion:** Skills und Commands wurden durch D1
   nicht reduziert. Eine weitere Reduktion nur über einen separat verifizierten,
   unterstützten Mechanismus, ohne ECC-Source-Patch.
-- **E) Package B D4** (Beschreibungs-Kappe): separate Entscheidung.
+- **E) ECC-D4 / Package B D4** (Beschreibungs-Kappe; nicht das Setup-Paket
+  D4 aus Abschnitt 5.2): separate Entscheidung.
