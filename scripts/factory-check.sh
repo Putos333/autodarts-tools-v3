@@ -8,8 +8,8 @@
 #
 # Exit-Code 0  = alle kritischen Checks (Diff, Tests, Build) bestanden.
 # Exit-Code 1  = mindestens ein kritischer Check fehlgeschlagen.
-# Typecheck ist bewusst NICHT kritisch (bekannte Baseline-Fehler in
-# unangetasteten Alt-Dateien) und beeinflusst den Exit-Code nicht.
+# Typecheck läuft zusätzlich als eigener Schritt; ein Typecheck-Fehler lässt
+# aber schon den Build-Schritt scheitern (build:firefox → preflight → compile).
 
 set -uo pipefail
 cd "$(dirname "$0")/.."
@@ -46,7 +46,7 @@ else
   FAIL=1
 fi
 
-# ── Typecheck (informativ, nicht kritisch) ─────────────────────────────────
+# ── Typecheck (zusätzlich; build:firefox führt compile bereits über preflight aus) ──
 if yarn compile > "$LOG_DIR/typecheck.log" 2>&1; then
   echo "Typecheck ....... PASS"
 else
