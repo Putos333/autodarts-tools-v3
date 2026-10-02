@@ -17,7 +17,7 @@ export async function discordStream() {
     if ( 
       _gameData.match?.player !== _oldGameData.match?.player
       || _gameData.match?.turns?.[0]?.throws?.length !== _oldGameData.match?.turns?.[0]?.throws?.length
-      || _gameData.match?.gameScores.length !== _oldGameData.match?.gameScores.length
+      || _gameData.match?.gameScores?.length !== _oldGameData.match?.gameScores?.length
     ) {
       console.log("Autodarts Tools: Discord Stream - Game data changed, sending webhook");
       if (_gameData.match?.variant !== "Bull-off") sendWebhook();

@@ -9,6 +9,8 @@ const iconCheck = "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"16\" height
 
 // Timer reference
 let autoStartTimer: number | null = null;
+// Reset timer of the manual Discord button (cancelled on teardown)
+let manualButtonResetTimer: number | null = null;
 // Store webhook message data for later editing
 let webhookMessageId: string | null = null;
 let webhookUrl: string | null = null;
@@ -99,7 +101,8 @@ export async function discordWebhooks() {
       discordButton.style.backgroundColor = "var(--chakra-colors-glassGreen)";
       discordButton.style.color = "var(--chakra-colors-white)";
 
-      setTimeout(() => {
+      manualButtonResetTimer = window.setTimeout(() => {
+        manualButtonResetTimer = null;
         discordButton.innerHTML = iconDiscord;
         discordButton.removeAttribute("disabled");
 
@@ -500,6 +503,11 @@ export function discordWebhooksOnRemove(): void {
   if (autoStartTimer !== null) {
     clearTimeout(autoStartTimer);
     autoStartTimer = null;
+  }
+
+  if (manualButtonResetTimer !== null) {
+    clearTimeout(manualButtonResetTimer);
+    manualButtonResetTimer = null;
   }
 
   // Remove injected Discord button(s), if still present.

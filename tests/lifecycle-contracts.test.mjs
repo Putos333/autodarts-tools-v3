@@ -919,3 +919,22 @@ test('discord-stream never indexes turns[0] unguarded and drops stale in-flight 
   assert.equal((text.match(/generation !== streamGeneration\) return;/g) || []).length, 2, 'after getValue and after response.json');
   assertContains(text, [/gameDataWatcherUnwatch\(\);\s*gameDataWatcherUnwatch = null;/], 'discordStreamOnRemove');
 });
+
+test('discord-webhooks owns the manual-button reset timer and cancels it on teardown (PKG-5 / T7)', async () => {
+  const text = await source('entrypoints/lobby.content/discord-webhooks.ts');
+  assertContains(text, [
+    /^let manualButtonResetTimer: number \| null = null;/m,
+    /manualButtonResetTimer = window\.setTimeout\(\(\) => \{[\s\S]*?\}, 5000\);/,
+  ], 'discord-webhooks.ts');
+  assert.doesNotMatch(text, /^\s*setTimeout\(\(\) => \{\s*discordButton\.innerHTML/m, 'untracked reset timer');
+  const onRemove = text.slice(text.indexOf('export function discordWebhooksOnRemove'));
+  assertContains(onRemove, [
+    /if \(manualButtonResetTimer !== null\) \{\s*clearTimeout\(manualButtonResetTimer\);\s*manualButtonResetTimer = null;\s*\}/,
+  ], 'discordWebhooksOnRemove');
+});
+
+test('discord-stream watcher never reads .length of gameScores without optional chaining (PKG-5 / T8)', async () => {
+  const text = await source('entrypoints/match.content/discord-stream.ts');
+  assert.doesNotMatch(text, /gameScores\.length/, 'unguarded gameScores.length');
+  assert.equal((text.match(/gameScores\?\.length/g) || []).length, 2, 'watcher compare reads both sides guarded');
+});
