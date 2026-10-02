@@ -60,7 +60,7 @@ Quality and reproducibility still outrank token-saving.
 
 OBSERVATION → POST_LIVE_DIAGNOSTIC_MATRIX.md → REPRODUCE → ROOT CAUSE → IMPACT/RISK → MINIMAL FIX → TARGETED TEST → RELEVANT REGRESSION → TYPECHECK → BUILD (if affected) → CODE REVIEW → RUNTIME RETEST (if useful)
 
-**Protected scoring core** (`utils/canonical-match-result.ts`, `utils/canonical-match-result-storage.ts`, `utils/event-dedupe.ts`, `utils/websocket-helpers.ts`): STOP before any change and report the finding — never modify automatically.
+**Protected scoring core** (`utils/canonical-match-result.ts`, `utils/canonical-match-result-storage.ts`, `utils/event-dedupe.ts`, `utils/websocket-helpers.ts`): STOP before any change and report the finding — never modify automatically. Enforcement: `permissions.ask` on these paths plus the git trailer guard (`Protected-Core-Approved: <concrete reason>`, see `docs/PROTECTED_CORE_ENFORCEMENT.md`). Agents must never write or propose that trailer on their own; it only documents a prior explicit user approval.
 
 Push only after explicit user approval — never automatic.
 

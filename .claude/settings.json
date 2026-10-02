@@ -1,4 +1,13 @@
 {
+  "permissions": {
+    "ask": [
+      "Edit(utils/canonical-match-result.ts)",
+      "Edit(utils/canonical-match-result-storage.ts)",
+      "Edit(utils/event-dedupe.ts)",
+      "Edit(utils/websocket-helpers.ts)"
+    ],
+    "disableBypassPermissionsMode": "disable"
+  },
   "hooks": {
     "PreToolUse": [
       {

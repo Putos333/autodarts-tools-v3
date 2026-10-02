@@ -18,3 +18,5 @@ These files are protected:
 - `utils/websocket-helpers.ts`
 
 Before any change to one of them: STOP. Never modify them automatically. First point out that the change touches the protected scoring core and obtain explicit user approval.
+
+Enforcement (PKG-7, see `docs/PROTECTED_CORE_ENFORCEMENT.md`): edits to these files prompt via `permissions.ask`, and commits/pushes that change them need the trailer `Protected-Core-Approved: <concrete reason>`. The trailer only documents an approval the user gave beforehand. Agents must NEVER write, suggest or add this trailer on their own and must never treat their own judgement as approval; commits touching the protected core are refused inside Claude Code sessions.
