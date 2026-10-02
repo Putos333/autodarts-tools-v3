@@ -17,6 +17,8 @@ interface DiscordFetchOptions {
   body?: BodyInit | null;
   /** Wenn true → gib die Response zurück, sonst void (fire-and-forget). */
   returnResponse?: boolean;
+  /** Optional: bricht Request und 429-Retry-Wartezeit ab (Ergebnis dann `null`). */
+  signal?: AbortSignal;
 }
 
 const MAX_RETRY_WAIT_MS = 30_000;  // Nie länger als 30s warten
@@ -34,7 +36,10 @@ export async function postDiscordWebhook(
     method: opts.method ?? 'POST',
     headers: { 'Content-Type': 'application/json', ...(opts.headers ?? {}) },
     body: opts.body,
+    signal: opts.signal,
   };
+
+  if (opts.signal?.aborted) return null;
 
   try {
     let res = await fetch(url, init);
@@ -42,7 +47,8 @@ export async function postDiscordWebhook(
     if (res.status === 429) {
       const waitMs = await computeRetryDelayMs(res);
       console.warn(`[Discord-Webhook] 429 rate-limited, retry nach ${waitMs}ms`);
-      await sleep(waitMs);
+      await sleep(waitMs, opts.signal);
+      if (opts.signal?.aborted) return null;
       res = await fetch(url, init);
       if (res.status === 429) {
         console.warn(`[Discord-Webhook] Auch nach Retry noch 429 — Nachricht verloren.`);
@@ -56,6 +62,7 @@ export async function postDiscordWebhook(
 
     return opts.returnResponse ? res : null;
   } catch (e) {
+    if (opts.signal?.aborted) return null;
     console.warn('[Discord-Webhook] Fetch fehlgeschlagen:', e);
     return null;
   }
@@ -85,6 +92,16 @@ function clampWait(ms: number): number {
   return Math.max(200, Math.min(MAX_RETRY_WAIT_MS, ms));
 }
 
-function sleep(ms: number): Promise<void> {
-  return new Promise((r) => setTimeout(r, ms));
+function sleep(ms: number, signal?: AbortSignal): Promise<void> {
+  return new Promise((resolve) => {
+    if (signal?.aborted) {
+      resolve();
+      return;
+    }
+    const timer = setTimeout(resolve, ms);
+    signal?.addEventListener('abort', () => {
+      clearTimeout(timer);
+      resolve();
+    }, { once: true });
+  });
 }

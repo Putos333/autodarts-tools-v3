@@ -938,3 +938,23 @@ test('discord-stream watcher never reads .length of gameScores without optional 
   assert.doesNotMatch(text, /gameScores\.length/, 'unguarded gameScores.length');
   assert.equal((text.match(/gameScores\?\.length/g) || []).length, 2, 'watcher compare reads both sides guarded');
 });
+
+test('discord-webhooks aborts in-flight Discord requests on teardown via a per-lifecycle AbortController (PKG-6 / T6)', async () => {
+  const text = await source('entrypoints/lobby.content/discord-webhooks.ts');
+  assert.match(text, /^let discordAbortController = new AbortController\(\);/m);
+  // both postDiscordWebhook call-sites hand over the signal
+  assert.equal((text.match(/postDiscordWebhook\(/g) || []).length, 2, 'only the two known call-sites');
+  assert.equal((text.match(/signal: discordAbortController\.signal/g) || []).length, 2, 'both call-sites pass the signal');
+  const onRemove = text.slice(text.indexOf('export function discordWebhooksOnRemove'));
+  assertContains(onRemove, [
+    /discordAbortController\.abort\(\);\s*discordAbortController = new AbortController\(\);/,
+  ], 'discordWebhooksOnRemove');
+  // the generation guards stay in place (T6 must not replace them)
+  assert.match(text, /^let lifecycleGeneration = 0;/m);
+});
+
+test('discord-webhook wrapper exposes an optional AbortSignal and never retries after abort (PKG-6 / T6)', async () => {
+  const text = await source('utils/discord-webhook.ts');
+  assert.match(text, /signal\?: AbortSignal;/);
+  assert.match(text, /signal: opts\.signal/);
+});

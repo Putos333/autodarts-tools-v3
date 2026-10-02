@@ -11,6 +11,8 @@ const iconCheck = "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"16\" height
 let autoStartTimer: number | null = null;
 // Reset timer of the manual Discord button (cancelled on teardown)
 let manualButtonResetTimer: number | null = null;
+// Aborts in-flight Discord requests (incl. a pending 429 retry) on teardown
+let discordAbortController = new AbortController();
 // Store webhook message data for later editing
 let webhookMessageId: string | null = null;
 let webhookUrl: string | null = null;
@@ -257,6 +259,7 @@ async function updateDiscordMessage(trigger: "timer" | "manual") {
       ],
     }),
     returnResponse: true,
+    signal: discordAbortController.signal,
   });
 
   const messageData = response ? await response.json() : { id: null };
@@ -408,6 +411,7 @@ async function sendWebhook() {
         attachments: [],
       }),
       returnResponse: true,
+      signal: discordAbortController.signal,
     });
 
     const messageData = response ? await response.json() : { id: null };
@@ -487,6 +491,10 @@ function startAutoStartTimer(minutes: number) {
 // so that a subsequent lobby-enter re-arms the feature cleanly.
 export function discordWebhooksOnRemove(): void {
   lifecycleGeneration++;
+
+  // Cancel in-flight requests and a pending 429 retry, then re-arm for the next lobby-enter.
+  discordAbortController.abort();
+  discordAbortController = new AbortController();
 
   // Remove the manual-start listener from every native button we attached it to.
   startButtonsWithListener.forEach((button) => {
