@@ -6,7 +6,8 @@ Codex-Skill-Archivierung D1/D2, Codex-Audit D4, Codex-Config-Cleanup D5,
 Governance-Audit D6, AGENTS.md-Schutzregel D7, Graphify). Es dient
 als Recovery-, Wartungs- und Konfigurationsreferenz.
 
-- Stand der Verifikation: 2026-09-30
+- Stand der Verifikation: 2026-09-30 (Abschnitte 1–8); spätere Statusaktualisierung
+  2026-10-02 (HEAD `7688352`, Gatekeeper, Lifecycle-Fixes) in Abschnitt 9
 - Verifizierte Versionen: ECC 2.2.1 (Claude-Code-Plugin, lokal aktiviert),
   Claude Code 2.1.285, claude-mem 13.16.1, Graphify 0.9.43,
   Codex CLI 0.153.4 (in D4 read-only festgestellt)
@@ -511,3 +512,83 @@ Keine automatische Ausführung, jeweils separate Entscheidung erforderlich.
   unterstützten Mechanismus, ohne ECC-Source-Patch.
 - **E) ECC-D4 / Package B D4** (Beschreibungs-Kappe; nicht das Setup-Paket
   D4 aus Abschnitt 5.2): separate Entscheidung.
+
+## 9. SETUP 2.0 / GATEKEEPER / LIFECYCLE – VERIFIZIERTER STAND (2026-10-02, HEAD `7688352`)
+
+Die Abschnitte 1–8 bleiben als Recovery-Nachweis (Stand `e4c17ad`/D8) erhalten;
+Abschnitt 8 (Push: 31 Commits voraus) ist durch diese Aktualisierung überholt
+(inzwischen 34).
+
+| Feld | Wert (verifiziert) |
+|---|---|
+| Branch / HEAD | `main` / `7688352` |
+| Commit A | `fa9b9f3` `chore(gate): add validation gate and align CI workflows` |
+| Commit B | `7688352` `fix(lifecycle): harden teardown and async cleanup` |
+| Gate | vorhanden (`scripts/gate.mjs`, `scripts/gate.config.json`, `yarn gate`); Node-22-Pflicht aus `.nvmrc` (v22.23.2) |
+| Gate-Ergebnis | 8/8 PASS unter Node v22.23.2 für den Inhalt von `fa9b9f3` + `7688352` (Paket `lifecycle-fixes-20261002b`, Baseline `ea35d57`, erneut mit `--force` ausgeführt) |
+| Push | **nicht erfolgt**; `origin/main` (lokal gespeicherte Referenz, ohne Fetch) ist 34 Commits zurück |
+| Human Live QA | **DEFERRED**; kein Release-Gate dadurch bestanden |
+
+**Lifecycle-Fixes (Commit B):**
+- Next-Player-on-Take-Out-Stuck: Countdown-Timer auf Modul-Scope, `OnRemove`
+  stoppt Timer und entfernt das Countdown-Span, Generations-Token wird vor dem
+  ersten `await` des Setups gezogen und nach den Awaits geprüft (Race-Fix).
+- Discord (`discord-webhooks.ts`, `discord-stream.ts`): Start-Game-Listener
+  werden getrackt und bei `OnRemove` samt Marker-Attribut entfernt;
+  Generations-Guards verhindern, dass späte async Rückläufer nach dem Teardown
+  Zustand oder Config ändern; `turns[0]` in `discord-stream.ts` ist abgesichert.
+  Ein bereits abgeschickter HTTP-Request wird weiterhin **nicht** abgebrochen
+  (DEFERRED).
+- Tests: `tests/lifecycle-contracts.test.mjs` (54 Tests, Quelltext-Contract)
+  und neu `tests/components/next-player-lifecycle.component.test.ts`
+  (Vitest, Fake-Timer, gemockte Storage-Module; 8 Verhaltenstests zu Timer,
+  `OnRemove`, spätem Setup-/Watcher-Rückläufer und wiederholtem Setup).
+  Component-Tests insgesamt zuletzt 90/90 PASS, `vue-tsc --noEmit` ohne Fehler.
+  Für Discord gibt es weiterhin nur Quelltext-Contract-Tests, keinen Verhaltenstest.
+
+**Gatekeeper (Commit A):** `gate run <paket-id>` klassifiziert den Changeset
+gegen die Baseline des Pakets und führt die verlangten Stufen aus (`diffcheck`,
+`syntax`, `workflow-consistency`, `compile`, `test`, `components`,
+`build-firefox`, `build-chrome`). Gate-Zustand und Audit liegen unter
+`.git/autodarts-gate/` (nicht versioniert). Ohne Changeset gegenüber der
+Baseline führt `run` keine Stufe aus (`CLASS: NONE`); der erste Lauf gegen den
+committeten Stand lieferte deshalb keinen Beleg, gültig ist der Lauf mit
+`--force` gegen die Paket-Baseline `ea35d57`. Das Gate meldet für Lifecycle-Dateien
+`human review required`; das Paket ist **nicht** per `gate close` geschlossen.
+Die CI-Workflows (`build-firefox.yml`, `pr-control-center.yml`) führen
+`yarn test` nur noch einmal aus und bauen über `wxt` direkt; ein CI-Lauf auf
+GitHub ist mangels Push **nicht** erfolgt.
+
+**Protected-Core-Erzwingung (offen, nicht final entschieden):** Das Gate
+meldet bei Änderung der vier Core-Dateien `PROTECTED_CORE_CHANGED` bzw. bei
+direkten Nutzern `APPROVAL_REQUIRED` (Exit 3) – aber nur, wenn `gate run`
+ausgeführt wird. Es existieren kein Git-Hook, keine CI-Prüfung mit dem Gate,
+kein CODEOWNERS und keine `permissions.deny`-Regel auf die Core-Pfade; der
+Schutz in `AGENTS.md`/`CLAUDE.md` ist Dokumentation. Review ist gemeldet,
+nicht technisch erzwungen. Die Core-Dateien sind durch die Commits A und B
+nicht verändert.
+
+**p345.sh / Identitäts-Rewrite (D11):** `~/AUTODARTS_D11_EXEC/p345.sh` (SHA256
+`85b4414475bff8d9bdba77e21f08a7734fe950321689359262c632235dcb9b67`, Pre-Patch-Stand) ist
+ein geplanter lokaler Identitäts-Rewrite von `origin/main..HEAD`
+(zum Planungszeitpunkt 32 Commits) und hat **nichts** mit dem Protected
+Scoring Core zu tun. Eine Ausführung ist **nicht belegt** (Bash-History enthält
+einen Aufruf, ohne Zeitstempel/Ergebnis); es gibt keinen `run-*`-Ausgabeordner,
+alle 34 lokalen Commits tragen unverändert den Platzhalter-Autor, die stichprobenartig geprüften Tags zeigen
+auf die Originalcommits. Das Script darf nicht ausgeführt werden. Vor einem Push
+ist die Autor-Identität aller dann voraus liegenden Commits (inzwischen 34,
+nicht 32) neu zu entscheiden.
+
+**Weiterhin offen (Stand 2026-10-02):**
+- TEMP-DIAG-Bereinigung: 5 Non-Core-Stellen (`utils/friends-api.ts` ×2,
+  `entrypoints/auth-cookie.ts`, `entrypoints/content/index.ts`,
+  `composables/useControlCenterFriends.ts`) und ein Core-Block in
+  `utils/websocket-helpers.ts` (L266–288, nur mit ausdrücklicher Freigabe).
+- MCP-Konsolidierung (Inventar liegt vor, Zielstack nicht festgelegt).
+- claude-mem: projekt-lokal `false`; eine saubere Messung in einer neuen
+  Projekt-Session ohne globalen Daemon steht aus (ein globaler Worker-Daemon war
+  zum Prüfzeitpunkt aktiv).
+- `.claude/settings.local.json.bak-20260930T234259` untracked im Arbeitsbaum
+  (Empfehlung: aus dem Arbeitsbaum in die externen Backups verschieben).
+- Push-Freigabe und Identitäts-Entscheidung (siehe oben).
+- Human-Live-QA und alle dort aufgeführten Hardware-Punkte (Release-Gate).

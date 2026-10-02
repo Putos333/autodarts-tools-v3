@@ -1,6 +1,12 @@
 # RELEASE READINESS — Autodarts Tools V3
 
 **Stand:** 2026-08-17, nach FINAL PRE-RUNTIME FACTORY HARDENING MISSION
+
+> **Aktualisierung 2026-10-02:** Dieses Dokument beschreibt den historischen
+> Stand vom 2026-08-17 (Branch `feature/control-center`). Die Bewertung
+> „SAFE TO PUSH: YES" galt nur für diesen Stand. Der aktuelle Stand steht am
+> Ende dieser Datei („Aktualisierung 2026-10-02"). Release-Bereitschaft ist
+> **nicht** gegeben, solange Human Live QA aussteht.
 **Branch:** `feature/control-center`
 **Basis:** FACTORY_STATUS.md, RUNTIME_TEST_PLAN.md, statischer Code-Audit
 
@@ -142,3 +148,23 @@ UNKNOWN. Kein Punkt wird beschönigt.
 Kein einziger RUNTIME-REQUIRED-Punkt ist ein bekannter, unbehobener P0-Bug —
 sie sind schlicht noch nie beobachtet worden. Die statische Vorbereitung ist
 damit abgeschlossen; alles Weitere ist echte Laufzeit-Wahrheit.
+
+---
+
+## Aktualisierung 2026-10-02 (`main`, HEAD `7688352`)
+
+| Punkt | Status | Detail |
+|---|---|---|
+| Gate (Node v22.23.2) | **PASS** | 8/8 Stufen für den Inhalt von `fa9b9f3` + `7688352` (`diffcheck`, `syntax`, `workflow-consistency`, `compile`, `test`, `components`, `build-firefox`, `build-chrome`) |
+| Typecheck | **PASS** | `vue-tsc --noEmit` ohne Fehler (zuletzt im Gate-Lauf); überholt die „61 bekannten Fehler" in TESTS oben |
+| Component-Tests | **PASS** | 90/90 (12 Dateien) |
+| Lifecycle-Fixes | **IMPLEMENTED** | Next-Player (Verhaltenstest vorhanden), Discord (nur Contract-Tests) |
+| Push | **NICHT ERFOLGT** | 34 Commits vor `origin/main` (lokale Referenz, ohne Fetch); Autor-Identität vor Push zu entscheiden |
+| CI auf GitHub | **NICHT GEPRÜFT** | Workflow-Änderungen aus `fa9b9f3` wurden noch nie in CI ausgeführt |
+| TEMP-DIAG | **OFFEN** | 5 Non-Core-Stellen und 1 Core-Block (`utils/websocket-helpers.ts`, nur mit Freigabe) |
+| Protected-Core-Erzwingung | **OFFEN** | nur Gate-Meldung und Dokumentation, keine technische Sperre |
+| Human Live QA | **DEFERRED** | kein `LIVE VERIFIED`-Punkt; Release-Gate nicht bestanden |
+
+Es gilt weiterhin: „Automatische Tests PASS" ist kein Human-Live-PASS.
+Details und Recovery-Informationen: `MASTER_AUTODARTS_ELITE.md` Abschnitt 20
+und `docs/SETUP_2_0_DEV_AGENT_SETUP.md` Abschnitt 9.

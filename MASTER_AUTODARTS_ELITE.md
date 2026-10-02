@@ -20,7 +20,11 @@
 
 ## 2. REPOSITORY / BRANCH / BASELINE
 
-| Feld | Wert |
+> **Aktualisierung 2026-10-02:** Der aktuelle Stand steht in Abschnitt 20
+> (`main`, HEAD `7688352`). Die folgende Tabelle ist der historische
+> Audit-Stand vom 2026-08-29 und bleibt als Nachweis erhalten.
+
+| Feld | Wert (historisch, 2026-08-29) |
 |---|---|
 | Repository | `~/autodarts-tools-v3` |
 | Branch | `consolidate/final-runtime-2.9.98` |
@@ -37,7 +41,7 @@
 - **Match-Ende:** CMR (`utils/canonical-match-result.ts`) als single-source-of-truth-Kandidat; 5 parallele End-Detektoren (CMR, `match-card.ts`, `ft-auto-result.ts`, `career-controller.ts`, `wled.ts`) als dokumentiertes Architekturmerkmal.
 - **Control Center:** `composables/useControlCenterStatus.ts` (zentrale `myUserId`, Liveness-Windowing, disposed-guard), Views `CcDashboard`/`CcHistory`/`CcStats`/`CcTraining`, `utils/control-center-data-state.ts`, `utils/match-history-view.ts` (reine View-Model-Schicht, kein Storage-Zugriff).
 - **Live-Board:** `CcLiveBoard.vue` (SVG, max. 3 Dart-Marker), `utils/dartboard-geometry.ts` (`resolveLiveDartPoint`: echte `coords` → deterministischer Segment-Fallback → kein Marker), eingebunden nur im Live-Throw-Zweig von `CcMatchHero.vue` (ein physischer Slot, nie im Checkout-Route-Zweig).
-- **Geschützter Kern-Hinweis:** `utils/websocket-helpers.ts` enthält einen temporären `[AD-ELITE MATCH] TEMP-DIAG`-Console-Block (L273–288, loggt jeden Snapshot), bewusst für den Human-Test; vor Release Review/Entfernung (nur mit ausdrücklicher Freigabe, Protected Core).
+- **Geschützter Kern-Hinweis:** `utils/websocket-helpers.ts` enthält einen temporären `[AD-ELITE MATCH] TEMP-DIAG`-Console-Block (zum Audit L273–288; Stand 2026-10-02 `utils/websocket-helpers.ts` L266–288, loggt jeden Snapshot), bewusst für den Human-Test; vor Release Review/Entfernung (nur mit ausdrücklicher Freigabe, Protected Core).
 
 ---
 
@@ -63,7 +67,8 @@ Im Audit verifiziert: alle fünf unverändert; Tests für den Kern grün (CMR 32
 | **Human Live Test bisher** | **NOT PERFORMED** |
 | Friends Presence | **PAUSED** |
 | CCPARTY N2 | **DEFERRED** |
-| Push ohne ausdrückliche Freigabe | **verboten** |
+| Push ohne ausdrückliche Freigabe | **verboten** (Stand 2026-10-02: kein Push erfolgt, 34 Commits voraus) |
+| Gate (Stand 2026-10-02) | 8/8 PASS unter Node v22.23.2 für `fa9b9f3` + `7688352` (Abschnitt 20) |
 
 Es wurde kein echter Board-/Runtime-Test dokumentiert. Kein Punkt trägt den Status `LIVE VERIFIED`. „Automatische Tests PASS", „technisch ready", „PRE-LIVE READY" ist **kein** Human-Live-PASS.
 
@@ -174,7 +179,9 @@ Es wurde kein echter Board-/Runtime-Test dokumentiert. Kein Punkt trägt den Sta
 | OnRemove / OnInvalidated / Monkey-Patch | IMPLEMENTED + TESTED | `websocket-capture.ts` (MAIN-World); Module-Teardowns |
 | disposed-guard (stateful CC-Komponenten) | IMPLEMENTED + TESTED | Component-Tests + Phase 5B |
 | Console-Spam entfernt (Enhanced Scoring) | IMPLEMENTED + TESTED | `enhanced-scoring-display.ts` L11/32/92; Contract |
-| Lifecycle-Contract-Suite | IMPLEMENTED + TESTED | `tests/lifecycle-contracts.test.mjs`: 49 `test()`-Blöcke |
+| Lifecycle-Contract-Suite | IMPLEMENTED + TESTED | `tests/lifecycle-contracts.test.mjs`: 49 `test()`-Blöcke (Audit-Stand; Stand 2026-10-02: 54) |
+| Next-Player-on-Take-Out-Stuck: Timer-/Race-Teardown | IMPLEMENTED + TESTED (Commit `7688352`) | Contract + Vitest-Verhaltenstest `next-player-lifecycle.component.test.ts` |
+| Discord-Webhooks/-Stream: Listener-Teardown, Stale-Async-Guards, `turns`-Guard | IMPLEMENTED + CONTRACT-TESTED (Commit `7688352`) | nur Quelltext-Contract-Tests, kein Verhaltenstest; HTTP-Abbruch DEFERRED |
 
 ### 6.9 BROWSER / BUILD
 
@@ -249,7 +256,8 @@ Diese Punkte sind implementiert, aber **nur durch einen echten Human-Live-Test**
 | Suite | Ergebnis |
 |---|---|
 | Unit/Targeted (`yarn test`, node:test) | 446/446 PASS (67 Suiten, Stand Phase-3.5-Freeze; danach nur Component-Tests ergänzt) |
-| Lifecycle-Contracts (`yarn test:lifecycle`) | 49 `test()`-Blöcke PASS (HEAD `2422705b`) |
+| Lifecycle-Contracts (`yarn test:lifecycle`) | 49 `test()`-Blöcke PASS (HEAD `2422705b`, historisch); Stand 2026-10-02: 54 PASS |
+| Stand 2026-10-02 (HEAD `7688352`) | Component-Tests 90/90 PASS (12 Dateien); `vue-tsc --noEmit` ohne Fehler; Gate 8/8 PASS unter Node v22.23.2. Die Zeilen darüber sind der historische Audit-Stand. |
 | Component-Tests (`tests/components/`, Vitest) | Phase 5A (50) + Phase 5B (cc-history-expand 3, control-center-liveness 4) + CcLiveBoard (7) + CcMatchHero (6) |
 | TypeScript (`vue-tsc --noEmit`) | 0 Fehler |
 | Firefox MV2 Build | PASS (~4,29 MB) |
@@ -391,3 +399,83 @@ Bei P0: STOP und exakt berichten, nicht beheben. Protected Core: vor jeder Ände
 - **Human Live Test hat jetzt Priorität vor neuen Features.** Kein neues Feature vor dem Minimum-Live-Gate ohne ausdrückliche Freigabe.
 - Nach bestandenem Minimum-Live-Gate: Post-Live-Backlog (Abschnitt 15) priorisieren.
 - **Vollständiger Human-Live-Test bleibt Release-Gate** (vor Release/Tagging komplett dokumentiert).
+
+## 20. SETUP 2.0 / GATEKEEPER / LIFECYCLE – VERIFIZIERTER STAND (2026-10-02, HEAD `7688352`)
+
+Historische Angaben weiter oben (Branch `consolidate/final-runtime-2.9.98`,
+HEAD `2422705b`, 446 Tests, Phase-5B-Stand) bleiben als Audit-Nachweis
+erhalten und sind **nicht** der aktuelle Stand.
+
+| Feld | Wert (verifiziert) |
+|---|---|
+| Branch / HEAD | `main` / `7688352` |
+| Commit A | `fa9b9f3` `chore(gate): add validation gate and align CI workflows` |
+| Commit B | `7688352` `fix(lifecycle): harden teardown and async cleanup` |
+| Gate | vorhanden (`scripts/gate.mjs`, `scripts/gate.config.json`, `yarn gate`); Node-22-Pflicht aus `.nvmrc` (v22.23.2) |
+| Gate-Ergebnis | 8/8 PASS unter Node v22.23.2 für den Inhalt von `fa9b9f3` + `7688352` (Paket `lifecycle-fixes-20261002b`, Baseline `ea35d57`, erneut mit `--force` ausgeführt) |
+| Push | **nicht erfolgt**; `origin/main` (lokal gespeicherte Referenz, ohne Fetch) ist 34 Commits zurück |
+| Human Live QA | **DEFERRED**; kein Release-Gate dadurch bestanden |
+
+**Lifecycle-Fixes (Commit B):**
+- Next-Player-on-Take-Out-Stuck: Countdown-Timer auf Modul-Scope, `OnRemove`
+  stoppt Timer und entfernt das Countdown-Span, Generations-Token wird vor dem
+  ersten `await` des Setups gezogen und nach den Awaits geprüft (Race-Fix).
+- Discord (`discord-webhooks.ts`, `discord-stream.ts`): Start-Game-Listener
+  werden getrackt und bei `OnRemove` samt Marker-Attribut entfernt;
+  Generations-Guards verhindern, dass späte async Rückläufer nach dem Teardown
+  Zustand oder Config ändern; `turns[0]` in `discord-stream.ts` ist abgesichert.
+  Ein bereits abgeschickter HTTP-Request wird weiterhin **nicht** abgebrochen
+  (DEFERRED).
+- Tests: `tests/lifecycle-contracts.test.mjs` (54 Tests, Quelltext-Contract)
+  und neu `tests/components/next-player-lifecycle.component.test.ts`
+  (Vitest, Fake-Timer, gemockte Storage-Module; 8 Verhaltenstests zu Timer,
+  `OnRemove`, spätem Setup-/Watcher-Rückläufer und wiederholtem Setup).
+  Component-Tests insgesamt zuletzt 90/90 PASS, `vue-tsc --noEmit` ohne Fehler.
+  Für Discord gibt es weiterhin nur Quelltext-Contract-Tests, keinen Verhaltenstest.
+
+**Gatekeeper (Commit A):** `gate run <paket-id>` klassifiziert den Changeset
+gegen die Baseline des Pakets und führt die verlangten Stufen aus (`diffcheck`,
+`syntax`, `workflow-consistency`, `compile`, `test`, `components`,
+`build-firefox`, `build-chrome`). Gate-Zustand und Audit liegen unter
+`.git/autodarts-gate/` (nicht versioniert). Ohne Changeset gegenüber der
+Baseline führt `run` keine Stufe aus (`CLASS: NONE`); der erste Lauf gegen den
+committeten Stand lieferte deshalb keinen Beleg, gültig ist der Lauf mit
+`--force` gegen die Paket-Baseline `ea35d57`. Das Gate meldet für Lifecycle-Dateien
+`human review required`; das Paket ist **nicht** per `gate close` geschlossen.
+Die CI-Workflows (`build-firefox.yml`, `pr-control-center.yml`) führen
+`yarn test` nur noch einmal aus und bauen über `wxt` direkt; ein CI-Lauf auf
+GitHub ist mangels Push **nicht** erfolgt.
+
+**Protected-Core-Erzwingung (offen, nicht final entschieden):** Das Gate
+meldet bei Änderung der vier Core-Dateien `PROTECTED_CORE_CHANGED` bzw. bei
+direkten Nutzern `APPROVAL_REQUIRED` (Exit 3) – aber nur, wenn `gate run`
+ausgeführt wird. Es existieren kein Git-Hook, keine CI-Prüfung mit dem Gate,
+kein CODEOWNERS und keine `permissions.deny`-Regel auf die Core-Pfade; der
+Schutz in `AGENTS.md`/`CLAUDE.md` ist Dokumentation. Review ist gemeldet,
+nicht technisch erzwungen. Die Core-Dateien sind durch die Commits A und B
+nicht verändert.
+
+**p345.sh / Identitäts-Rewrite (D11):** `~/AUTODARTS_D11_EXEC/p345.sh` (SHA256
+`85b4414475bff8d9bdba77e21f08a7734fe950321689359262c632235dcb9b67`, Pre-Patch-Stand) ist
+ein geplanter lokaler Identitäts-Rewrite von `origin/main..HEAD`
+(zum Planungszeitpunkt 32 Commits) und hat **nichts** mit dem Protected
+Scoring Core zu tun. Eine Ausführung ist **nicht belegt** (Bash-History enthält
+einen Aufruf, ohne Zeitstempel/Ergebnis); es gibt keinen `run-*`-Ausgabeordner,
+alle 34 lokalen Commits tragen unverändert den Platzhalter-Autor, die stichprobenartig geprüften Tags zeigen
+auf die Originalcommits. Das Script darf nicht ausgeführt werden. Vor einem Push
+ist die Autor-Identität aller dann voraus liegenden Commits (inzwischen 34,
+nicht 32) neu zu entscheiden.
+
+**Weiterhin offen (Stand 2026-10-02):**
+- TEMP-DIAG-Bereinigung: 5 Non-Core-Stellen (`utils/friends-api.ts` ×2,
+  `entrypoints/auth-cookie.ts`, `entrypoints/content/index.ts`,
+  `composables/useControlCenterFriends.ts`) und ein Core-Block in
+  `utils/websocket-helpers.ts` (L266–288, nur mit ausdrücklicher Freigabe).
+- MCP-Konsolidierung (Inventar liegt vor, Zielstack nicht festgelegt).
+- claude-mem: projekt-lokal `false`; eine saubere Messung in einer neuen
+  Projekt-Session ohne globalen Daemon steht aus (ein globaler Worker-Daemon war
+  zum Prüfzeitpunkt aktiv).
+- `.claude/settings.local.json.bak-20260930T234259` untracked im Arbeitsbaum
+  (Empfehlung: aus dem Arbeitsbaum in die externen Backups verschieben).
+- Push-Freigabe und Identitäts-Entscheidung (siehe oben).
+- Human-Live-QA und alle dort aufgeführten Hardware-Punkte (Release-Gate).

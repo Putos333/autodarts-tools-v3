@@ -50,3 +50,22 @@
 ## Migration rule
 
 A legacy watcher is disabled only after its v3 replacement has passed real-match testing.
+
+## Status 2026-10-02 (Ergänzung, historische Abschnitte oben unverändert)
+
+Die Abschnitte „Completed" und „Next" stammen vom 2026-08-08 und wurden nicht
+erneut gegen den Code geprüft. Verifizierter Projektstand auf `main`, HEAD
+`7688352`:
+
+- Setup 2.0: Entwicklungs-/Agent-Setup bis Paket D8 committet; Referenz:
+  `docs/SETUP_2_0_DEV_AGENT_SETUP.md`.
+- Gatekeeper (`yarn gate`, Commit `fa9b9f3`) vorhanden; Gate 8/8 PASS unter
+  Node v22.23.2 (Commit `7688352`).
+- Lifecycle-Härtung (Commit `7688352`): Next-Player-on-Take-Out-Stuck und
+  Discord (Webhooks/Stream), inkl. neuem Verhaltenstest für Next-Player.
+- Offen, nicht live-abhängig: TEMP-DIAG-Bereinigung, Protected-Core-Erzwingung
+  (Entscheidung), MCP-Konsolidierung, claude-mem-Neusession-Messung,
+  WebSocket-Auto-Resync, Multi-Tab-Schutz, Out-of-Order-Event-Test,
+  Dokumentations-/Push-Entscheidungen.
+- Deferred: Full Statistics / CMR v2, Solo Challenges (teilweise), Party/Lobby.
+- Human Live QA: DEFERRED; kein Release-Gate bestanden.
