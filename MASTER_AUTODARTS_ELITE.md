@@ -441,7 +441,10 @@ gegen die Baseline des Pakets und führt die verlangten Stufen aus (`diffcheck`,
 Baseline führt `run` keine Stufe aus (`CLASS: NONE`); der erste Lauf gegen den
 committeten Stand lieferte deshalb keinen Beleg, gültig ist der Lauf mit
 `--force` gegen die Paket-Baseline `ea35d57`. Das Gate meldet für Lifecycle-Dateien
-`human review required`; das Paket ist **nicht** per `gate close` geschlossen.
+`human review required`. Nach menschlichem Review der Lifecycle-Dateien wurde das Paket
+`lifecycle-fixes-20261002b` am 2026-10-02 per `gate close` geschlossen (CLOSED bei
+HEAD `e618c34`); dafür waren Node 22 und ein erneuter `gate run` nötig, weil sich der
+Fingerprint der leichten Stufen durch den Docs-Commit geändert hatte.
 Die CI-Workflows (`build-firefox.yml`, `pr-control-center.yml`) führen
 `yarn test` nur noch einmal aus und bauen über `wxt` direkt; ein CI-Lauf auf
 GitHub ist mangels Push **nicht** erfolgt.
@@ -472,9 +475,17 @@ nicht 32) neu zu entscheiden.
   `composables/useControlCenterFriends.ts`) und ein Core-Block in
   `utils/websocket-helpers.ts` (L266–288, nur mit ausdrücklicher Freigabe).
 - MCP-Konsolidierung (Inventar liegt vor, Zielstack nicht festgelegt).
-- claude-mem: projekt-lokal `false`; eine saubere Messung in einer neuen
-  Projekt-Session ohne globalen Daemon steht aus (ein globaler Worker-Daemon war
-  zum Prüfzeitpunkt aktiv).
+- (Erledigt, hier nur zur Nachvollziehbarkeit) claude-mem-Setup-Blocker: **CLOSED** (2026-10-02). Projekt-lokal `false`. Beleg: Die
+  Projekt-Session (cwd `~/autodarts-tools-v3`, Start 01:33) hat 0 claude-mem-Prozesse im
+  Prozessbaum (nur `headroom` und `chrome-devtools`); im claude-mem-Log gibt es von
+  Worker-Shutdown 01:32:46 bis 04:51 keine Aktivität. Die laufenden claude-mem-Prozesse
+  (Worker-Daemon, Chroma, Observer) gehören zu einem globalen Daemon, der um 04:51:49 von
+  einem MCP-Client gestartet wurde, und zur MCP-Instanz einer außerhalb des Projekts
+  gestarteten Session; seit 04:51 registrierte sich nur diese Session bei claude-mem.
+  Hinweis: Eine außerhalb des Projekts gestartete Session lädt das global aktivierte
+  Plugin weiterhin; die projekt-lokale Deaktivierung gilt für im Projekt gestartete Sessions.
+  Die frühere RSS-Angabe (ca. 653 MB → 0 MB) ist nur durch frühere Session-Transcripts
+  belegt, nicht durch Repo-Dokumente oder claude-mem-Logs.
 - `.claude/settings.local.json.bak-20260930T234259` untracked im Arbeitsbaum
   (Empfehlung: aus dem Arbeitsbaum in die externen Backups verschieben).
 - Push-Freigabe und Identitäts-Entscheidung (siehe oben).
