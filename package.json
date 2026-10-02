@@ -21,6 +21,7 @@
     "test": "node --import tsx --test \"tests/*.test.mjs\" \"tests/*.test.ts\"",
     "test:lifecycle": "node --test tests/lifecycle-contracts.test.mjs",
     "test:components": "vitest run",
+    "gate": "node scripts/gate.mjs",
     "postinstall": "wxt prepare"
   },
   "dependencies": {

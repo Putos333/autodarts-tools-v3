@@ -1,0 +1,111 @@
+{
+  "configVersion": 1,
+  "gateSchemaVersion": 1,
+  "logRetention": 20,
+  "nodePolicy": { "source": ".nvmrc", "onMajorMismatch": "BLOCK", "onMinorMismatch": "WARN" },
+  "allowedOperatorArtifacts": [
+    { "regex": "^\\.claude/settings\\.local\\.json\\.bak-\\d{8}T\\d{6}$", "status": "??" },
+    { "regex": "^\\.claude/settings\\.local\\.json$", "status": "??" }
+  ],
+  "runtimeArtifactDirs": ["runtime-artifacts/"],
+  "forbiddenTrackedDirs": [".output/", ".wxt/", "dist/", "build/", "coverage/"],
+  "protectedCore": {
+    "files": [
+      "utils/canonical-match-result.ts",
+      "utils/canonical-match-result-storage.ts",
+      "utils/event-dedupe.ts",
+      "utils/websocket-helpers.ts"
+    ],
+    "tests": ["tests/canonical-match-result.test.ts", "tests/event-dedupe.test.ts"],
+    "scanExtensions": [".ts", ".vue", ".js", ".mjs"],
+    "scanExcludePrefixes": [
+      "node_modules/", ".claude/", ".agents/", ".codex/", ".cursor/", "graphify-out/",
+      "submission/", "proxy/", ".output/", ".wxt/", "runtime-artifacts/"
+    ],
+    "minSymbolLength": 5,
+    "lifecycleTest": "tests/lifecycle-contracts.test.mjs"
+  },
+  "classRules": [
+    { "class": "BUILD_DEPENDENCY", "globs": [
+      "package.json", "yarn.lock", ".yarnrc.yml", "wxt.config.ts", "tsconfig*.json", "vitest.config.ts",
+      ".nvmrc", ".eslintrc.cjs", ".eslintignore", ".gitignore", "postcss.config.js", "tailwind.config.ts"
+    ] },
+    { "class": "TEST_CODE", "globs": ["tests/**"] },
+    { "class": "CI_WORKFLOW", "globs": [".github/workflows/**"] },
+    { "class": "CLAUDE_CONFIG", "globs": [
+      ".claude/**", ".agents/**", ".codex/**", ".cursor/**", "CLAUDE.md", "AGENTS.md", ".mcp.json", ".claudeignore"
+    ] },
+    { "class": "EXTERNAL_TOOLING", "globs": ["scripts/**"] },
+    { "class": "LIFECYCLE", "dynamic": "lifecycle" },
+    { "class": "UI_COMPONENT", "globs": ["components/**", "**/*.vue", "assets/**", "public/**"] },
+    { "class": "GENERAL_APP", "globs": [
+      "utils/**", "composables/**", "src/**", "entrypoints/**/*.ts", "entrypoints/**/*.js"
+    ] },
+    { "class": "UI_COMPONENT", "globs": ["entrypoints/**"] },
+    { "class": "DOCS_ONLY", "globs": ["**/*.md", "docs/**", "LICENSE", ".github/**"] }
+  ],
+  "matrix": {
+    "NONE": [],
+    "DOCS_ONLY": ["diffcheck"],
+    "CLAUDE_CONFIG": ["diffcheck", "syntax"],
+    "CI_WORKFLOW": ["diffcheck", "workflow-consistency"],
+    "TEST_CODE": ["diffcheck", "compile", "test"],
+    "UI_COMPONENT": ["diffcheck", "compile", "test", "components", "build-firefox"],
+    "LIFECYCLE": ["diffcheck", "compile", "test", "build-firefox"],
+    "GENERAL_APP": ["diffcheck", "compile", "test", "components", "build-firefox"],
+    "SCORING_RELATED": ["diffcheck", "compile", "test", "components", "build-firefox", "build-chrome"],
+    "BUILD_DEPENDENCY": ["diffcheck", "compile", "test", "components", "build-firefox", "build-chrome"],
+    "EXTERNAL_TOOLING": ["diffcheck", "syntax"]
+  },
+  "pathGates": [
+    { "glob": "tests/components/**", "add": ["components"] },
+    { "glob": "scripts/gate.*", "add": ["test"] }
+  ],
+  "gateOrder": [
+    "diffcheck", "syntax", "workflow-consistency", "compile", "test", "components", "build-firefox", "build-chrome"
+  ],
+  "inputSets": {
+    "srcAndTests": {
+      "include": [
+        "**/*.ts", "**/*.vue", "**/*.js", "**/*.mjs", "**/*.cjs", "**/*.css", "**/*.json", "**/*.html",
+        "public/**", "assets/**", "yarn.lock", ".yarnrc.yml", ".nvmrc"
+      ],
+      "exclude": [
+        ".claude/**", ".agents/**", ".codex/**", ".cursor/**", "graphify-out/**", "runtime-artifacts/**",
+        "docs/**", "node_modules/**", ".output/**", ".wxt/**", "scripts/gate.mjs", "scripts/gate.config.json"
+      ]
+    },
+    "componentsSet": {
+      "include": [
+        "**/*.ts", "**/*.vue", "**/*.js", "**/*.mjs", "**/*.cjs", "**/*.css", "**/*.json", "**/*.html",
+        "public/**", "assets/**", "yarn.lock", ".yarnrc.yml", ".nvmrc"
+      ],
+      "exclude": [
+        ".claude/**", ".agents/**", ".codex/**", ".cursor/**", "graphify-out/**", "runtime-artifacts/**",
+        "docs/**", "node_modules/**", ".output/**", ".wxt/**", "scripts/gate.mjs", "scripts/gate.config.json",
+        "tests/*.test.*"
+      ]
+    },
+    "buildSet": {
+      "include": [
+        "**/*.ts", "**/*.vue", "**/*.js", "**/*.mjs", "**/*.cjs", "**/*.css", "**/*.json", "**/*.html",
+        "public/**", "assets/**", "yarn.lock", ".yarnrc.yml", ".nvmrc"
+      ],
+      "exclude": [
+        ".claude/**", ".agents/**", ".codex/**", ".cursor/**", "graphify-out/**", "runtime-artifacts/**",
+        "docs/**", "node_modules/**", ".output/**", ".wxt/**", "scripts/gate.mjs", "scripts/gate.config.json",
+        "tests/**"
+      ]
+    }
+  },
+  "gates": {
+    "diffcheck": { "version": 1, "kind": "light", "cache": false, "command": ["git", "diff", "--check"] },
+    "syntax": { "version": 1, "kind": "light", "cache": false, "command": ["internal:syntax"] },
+    "workflow-consistency": { "version": 1, "kind": "light", "cache": false, "command": ["internal:workflow-consistency"] },
+    "compile": { "version": 1, "kind": "code", "cache": true, "inputSet": "srcAndTests", "command": ["yarn", "compile"] },
+    "test": { "version": 1, "kind": "code", "cache": true, "inputSet": "srcAndTests", "command": ["yarn", "test"] },
+    "components": { "version": 1, "kind": "code", "cache": true, "inputSet": "componentsSet", "command": ["yarn", "test:components"] },
+    "build-firefox": { "version": 1, "kind": "code", "cache": true, "inputSet": "buildSet", "command": ["yarn", "wxt", "build", "-b", "firefox"] },
+    "build-chrome": { "version": 1, "kind": "code", "cache": true, "inputSet": "buildSet", "command": ["yarn", "wxt", "build"] }
+  }
+}

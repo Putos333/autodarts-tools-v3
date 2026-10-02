@@ -3,9 +3,11 @@ name: pr-control-center
 # Gate für Pull Requests gegen main und feature/control-center sowie für
 # Pushes auf main.
 #
-# Führt die sechs bereits lokal verifizierten Checks über die bestehenden
-# package.json-Scripts aus (keine neuen Scripts, keine neuen Dependencies,
-# kein Testframework-Wechsel). Bewusst additiv und vollständig isoliert von
+# Führt die bereits lokal verifizierten Checks aus (keine neuen Dependencies,
+# kein Testframework-Wechsel); jeder Check läuft genau einmal, siehe Kommentar
+# vor den Schritten. Die CI führt immer das volle Profil in der CI-Umgebung aus
+# und vertraut keinem lokalen Gatekeeper-Cache (scripts/gate.mjs ist ein
+# lokales Werkzeug). Bewusst additiv und vollständig isoliert von
 # build-firefox.yml — kein gemeinsamer Trigger, kein gemeinsamer Job, keine
 # gemeinsame Datei. Root Cause für 0 CI-Checks auf PR #16 war ein reiner
 # Trigger-Branch-Filter-Mismatch: build-firefox.yml (pull_request nur gegen
@@ -51,11 +53,13 @@ jobs:
         env:
           PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
 
-      - name: Unit Tests
+      # `yarn test` enthält bereits die Lifecycle-Contract-Tests (tests/*.test.mjs)
+      # und die Gatekeeper-Tests (tests/gate.test.mjs): kein separater Lauf.
+      # `yarn build` / `yarn build:firefox` würden über `preflight` compile + test
+      # erneut ausführen; die Build-Schritte rufen deshalb wxt direkt auf
+      # (derselbe Befehl wie in package.json), nachdem compile/test oben liefen.
+      - name: Unit, Lifecycle and Gatekeeper Tests
         run: yarn test
-
-      - name: Lifecycle Contract Tests
-        run: yarn test:lifecycle
 
       - name: Component Tests
         run: yarn test:components
@@ -64,7 +68,7 @@ jobs:
         run: yarn compile
 
       - name: Firefox MV2 Build
-        run: yarn build:firefox
+        run: yarn wxt build -b firefox
 
       - name: Chrome MV3 Build
-        run: yarn build
+        run: yarn wxt build
