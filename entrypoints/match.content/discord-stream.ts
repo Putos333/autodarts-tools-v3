@@ -4,14 +4,19 @@ import { AutodartsToolsConfig } from "@/utils/storage";
 import { AutodartsToolsGameData } from "@/utils/game-data-storage";
 
 let gameDataWatcherUnwatch: any;
+// Bumped on start and on remove so in-flight sendWebhook() calls can detect teardown.
+let streamGeneration = 0;
 
 export async function discordStream() {
+  streamGeneration++;
+  // Re-enable without remove must not stack a second watcher.
+  gameDataWatcherUnwatch?.();
   console.log("Autodarts Tools: Discord Stream - Starting");
 
   gameDataWatcherUnwatch = AutodartsToolsGameData.watch((_gameData: IGameData, _oldGameData: IGameData) => {
     if ( 
       _gameData.match?.player !== _oldGameData.match?.player
-      || _gameData.match?.turns[0].throws.length !== _oldGameData.match?.turns[0].throws.length
+      || _gameData.match?.turns?.[0]?.throws?.length !== _oldGameData.match?.turns?.[0]?.throws?.length
       || _gameData.match?.gameScores.length !== _oldGameData.match?.gameScores.length
     ) {
       console.log("Autodarts Tools: Discord Stream - Game data changed, sending webhook");
@@ -21,6 +26,7 @@ export async function discordStream() {
 }
 
 export function discordStreamOnRemove() {
+  streamGeneration++;
   if (gameDataWatcherUnwatch) {
     gameDataWatcherUnwatch();
     gameDataWatcherUnwatch = null;
@@ -28,9 +34,11 @@ export function discordStreamOnRemove() {
 }
 
 async function sendWebhook() {
+  const generation = streamGeneration;
   try {
     const config = await AutodartsToolsConfig.getValue();
     const gameData = await AutodartsToolsGameData.getValue();
+    if (generation !== streamGeneration) return;
 
     // Create gameDataEmbedFields from match data
     const gameDataEmbedFields: Array<{ name: string; value: string; inline?: boolean }> = [];
@@ -79,19 +87,19 @@ async function sendWebhook() {
 
         gameDataEmbedFields.push({
           name: "\u200B",
-          value: `\`${gameData.match.turns[0].throws?.[0]?.segment?.name || "-"}\``,
+          value: `\`${gameData.match.turns?.[0]?.throws?.[0]?.segment?.name || "-"}\``,
           inline: true,
         });
 
         gameDataEmbedFields.push({
           name: "\u200B",
-          value: `\`${gameData.match.turns[0].throws?.[1]?.segment?.name || "-"}\``,
+          value: `\`${gameData.match.turns?.[0]?.throws?.[1]?.segment?.name || "-"}\``,
           inline: true,
         });
 
         gameDataEmbedFields.push({
           name: "\u200B",
-          value: `\`${gameData.match.turns[0].throws?.[2]?.segment?.name || "-"}\``,
+          value: `\`${gameData.match.turns?.[0]?.throws?.[2]?.segment?.name || "-"}\``,
           inline: true,
         });
       }
@@ -122,6 +130,7 @@ async function sendWebhook() {
       });
 
     const messageData = await response.json();
+    if (generation !== streamGeneration) return;
     const messageId = messageData.id;
 
     console.log("Autodarts Tools: Discord Stream - Message ID:", messageId);

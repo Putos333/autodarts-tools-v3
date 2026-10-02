@@ -19,18 +19,35 @@ let messageUpdated = false;
 // Lifecycle-bound MutationObserver reference so we can disconnect on remove
 // and never register more than one across enable → remove → enable (Issue #9 P0-2).
 let startButtonObserver: MutationObserver | null = null;
+// Native "Start game" buttons that received handleManualGameStart, so teardown can
+// remove exactly those listeners (and the marker attribute) again.
+const startButtonsWithListener = new Set<HTMLButtonElement>();
+// Bumped on every start and on remove; in-flight async work compares against it
+// and must not mutate module state or config after teardown.
+let lifecycleGeneration = 0;
+
+function attachStartButtonListener(button: HTMLButtonElement) {
+  if (button.hasAttribute("data-autodarts-tools-listener")) return;
+  button.setAttribute("data-autodarts-tools-listener", "true");
+  button.addEventListener("click", handleManualGameStart);
+  startButtonsWithListener.add(button);
+}
 
 export async function discordWebhooks() {
   console.log("Autodarts Tools: Discord Webhooks - Starting");
 
+  const generation = ++lifecycleGeneration;
+
   const config = await AutodartsToolsConfig.getValue();
   const lobbyData = await AutodartsToolsLobbyData.getValue();
+  if (generation !== lifecycleGeneration) return;
 
   // Set up listener for manual start button clicks
   setupStartButtonListener();
 
   if (config.discord.manually) {
     const lobbyBoardSelectElement = await waitForElement("#root select") as HTMLSelectElement;
+    if (generation !== lifecycleGeneration) return;
     const lobbyBoardSelectParentElement = lobbyBoardSelectElement.parentElement?.parentElement;
     if (!lobbyBoardSelectParentElement) return;
     const refreshButton = lobbyBoardSelectParentElement.querySelector("button");
@@ -135,8 +152,7 @@ function setupStartButtonListener() {
           startButtons.forEach((button) => {
             // Only add listener if it doesn't already have one
             if (!button.hasAttribute("data-autodarts-tools-listener")) {
-              button.setAttribute("data-autodarts-tools-listener", "true");
-              button.addEventListener("click", handleManualGameStart);
+              attachStartButtonListener(button);
               console.log("Autodarts Tools: Discord Webhooks - Added listener to Start Game button");
             }
           });
@@ -156,8 +172,7 @@ function setupStartButtonListener() {
   if (existingStartButtons.length > 0) {
     existingStartButtons.forEach((button) => {
       if (!button.hasAttribute("data-autodarts-tools-listener")) {
-        button.setAttribute("data-autodarts-tools-listener", "true");
-        button.addEventListener("click", handleManualGameStart);
+        attachStartButtonListener(button);
         console.log("Autodarts Tools: Discord Webhooks - Added listener to existing Start Game button");
       }
     });
@@ -181,8 +196,10 @@ async function handleManualGameStart() {
 
   // Update Discord message if we have the necessary data
   if (webhookMessageId && webhookUrl) {
+    const generation = lifecycleGeneration;
     try {
       await updateDiscordMessage("manual");
+      if (generation !== lifecycleGeneration) return;
       messageUpdated = true;
     } catch (error) {
       console.error("Autodarts Tools: Discord Webhooks - Error updating Discord message on manual start:", error);
@@ -196,8 +213,11 @@ async function updateDiscordMessage(trigger: "timer" | "manual") {
 
   console.log(`Autodarts Tools: Discord Webhooks - Updating Discord message (trigger: ${trigger})`);
 
+  const generation = lifecycleGeneration;
+
   // Get the current config
   const config = await AutodartsToolsConfig.getValue();
+  if (generation !== lifecycleGeneration) return;
 
   // Prepare fields for the updated embed
   let updatedFields: Array<{ name: string; value: string; inline: boolean }> = [];
@@ -237,6 +257,7 @@ async function updateDiscordMessage(trigger: "timer" | "manual") {
   });
 
   const messageData = response ? await response.json() : { id: null };
+  if (generation !== lifecycleGeneration) return;
   const messageId = messageData.id;
 
   // Save the messageId to config
@@ -258,11 +279,14 @@ async function updateDiscordMessage(trigger: "timer" | "manual") {
 }
 
 async function sendWebhook() {
+  const generation = lifecycleGeneration;
   try {
     const lobbyLinkElement = await waitForElement("#root input") as HTMLInputElement;
+    if (generation !== lifecycleGeneration) return null;
     const lobbyLink = lobbyLinkElement.value.split("#")[0];
 
     let config = await AutodartsToolsConfig.getValue();
+    if (generation !== lifecycleGeneration) return null;
     await AutodartsToolsConfig.setValue({
       ...config,
       discord: {
@@ -277,8 +301,10 @@ async function sendWebhook() {
       },
     });
     config = await AutodartsToolsConfig.getValue();
+    if (generation !== lifecycleGeneration) return null;
 
     const lobbyData = await AutodartsToolsLobbyData.getValue();
+    if (generation !== lifecycleGeneration) return null;
 
     if (!lobbyLink) return;
 
@@ -382,6 +408,7 @@ async function sendWebhook() {
     });
 
     const messageData = response ? await response.json() : { id: null };
+    if (generation !== lifecycleGeneration) return null;
     const messageId = messageData.id;
 
     console.log("Autodarts Tools: Discord Webhook - Message ID:", messageId);
@@ -456,6 +483,15 @@ function startAutoStartTimer(minutes: number) {
 // auto-start timer, remove the injected Discord button, and reset module state
 // so that a subsequent lobby-enter re-arms the feature cleanly.
 export function discordWebhooksOnRemove(): void {
+  lifecycleGeneration++;
+
+  // Remove the manual-start listener from every native button we attached it to.
+  startButtonsWithListener.forEach((button) => {
+    button.removeEventListener("click", handleManualGameStart);
+    button.removeAttribute("data-autodarts-tools-listener");
+  });
+  startButtonsWithListener.clear();
+
   if (startButtonObserver !== null) {
     startButtonObserver.disconnect();
     startButtonObserver = null;

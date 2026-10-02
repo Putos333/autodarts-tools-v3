@@ -12,18 +12,34 @@ let boardDataWatcherUnwatch: any;
 let clickHandlerRef: ((e: Event) => void) | null = null;
 let fullscreenHandlerRef: (() => void) | null = null;
 
+// Module-scope countdown timer + generation token, so OnRemove can stop the
+// interval and invalidate in-flight async watcher callbacks.
+let takeOutTimer: ReturnType<typeof setInterval> | null = null;
+let lifecycleGeneration = 0;
+
+function clearTakeOutTimer() {
+  if (takeOutTimer !== null) {
+    clearInterval(takeOutTimer);
+    takeOutTimer = null;
+  }
+}
+
 export async function nextPlayerOnTakeOutStuck() {
   try {
     console.warn("Autodarts Tools: Next player on take out stuck");
 
-    const config = await AutodartsToolsConfig.getValue();
+    // Claim the generation BEFORE the first await so an OnRemove during that
+    // window invalidates this setup instead of being overtaken by it.
+    const generation = ++lifecycleGeneration;
+    clearTakeOutTimer();
 
-    let takeOutTimout: NodeJS.Timeout;
+    const config = await AutodartsToolsConfig.getValue();
+    if (generation !== lifecycleGeneration) return;
 
     function remove() {
       const element = document.getElementById("ad-ext_next-text");
       element?.remove();
-      if (takeOutTimout) clearInterval(takeOutTimout);
+      clearTakeOutTimer();
     }
 
     // Register click listener once; guard by module-scope ref.
@@ -56,9 +72,10 @@ export async function nextPlayerOnTakeOutStuck() {
       const nextBtnTextEl = document.getElementById("ad-ext_next-text");
       nextBtnTextEl?.remove();
 
-      if (takeOutTimout) clearInterval(takeOutTimout);
+      clearTakeOutTimer();
 
       const gameData = await AutodartsToolsGameData.getValue();
+      if (generation !== lifecycleGeneration) return;
       if (gameData.match?.variant === "Bull-off") return;
 
       if (boardData.status === "Takeout in progress") {
@@ -67,6 +84,7 @@ export async function nextPlayerOnTakeOutStuck() {
         // Use a more robust selector that works in both normal and fullscreen modes
         // Increase timeout to allow more time for DOM to settle in fullscreen mode
         let nextBtn = await waitForElementWithTextContent("button", "Next", 2000);
+        if (generation !== lifecycleGeneration) return;
         if (!nextBtn) {
           console.warn("Autodarts Tools: Next button not found, retrying with different approach");
           // Try another approach if the button wasn't found
@@ -88,15 +106,14 @@ export async function nextPlayerOnTakeOutStuck() {
         nextBtnTextEl.textContent = ` (${startSec})`;
         nextBtn.appendChild(nextBtnTextEl);
 
-        takeOutTimout = setInterval(() => {
+        clearTakeOutTimer();
+        takeOutTimer = setInterval(() => {
           startSec--;
           nextBtnTextEl.textContent = ` (${startSec})`;
 
           if (startSec <= 0) {
-            if (takeOutTimout) {
-              nextBtnTextEl.textContent = ""; // Reset the button text
-              clearInterval(takeOutTimout);
-            }
+            nextBtnTextEl.textContent = ""; // Reset the button text
+            clearTakeOutTimer();
             if (nextBtn instanceof HTMLElement) {
               console.log("Autodarts Tools: Auto-clicking Next button");
               nextBtn.click();
@@ -106,7 +123,6 @@ export async function nextPlayerOnTakeOutStuck() {
           }
         }, 1000);
       } else {
-        if (takeOutTimout) clearInterval(takeOutTimout);
         remove();
       }
     });
@@ -116,6 +132,10 @@ export async function nextPlayerOnTakeOutStuck() {
 }
 
 export function nextPlayerOnTakeOutStuckOnRemove() {
+  lifecycleGeneration++;
+  clearTakeOutTimer();
+  document.getElementById("ad-ext_next-text")?.remove();
+
   if (boardDataWatcherUnwatch) {
     boardDataWatcherUnwatch();
     boardDataWatcherUnwatch = null;

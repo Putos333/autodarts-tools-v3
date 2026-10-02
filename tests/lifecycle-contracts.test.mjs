@@ -776,8 +776,33 @@ test('next-player-on-take-out-stuck removes the board watcher and both named doc
     /if \(boardDataWatcherUnwatch\) \{\s*boardDataWatcherUnwatch\(\);/,
     /document\.removeEventListener\("fullscreenchange", fullscreenHandlerRef\)/,
     /document\.removeEventListener\("click", clickHandlerRef\)/,
-    /if \(takeOutTimout\) clearInterval\(takeOutTimout\)/,
+    /clearTakeOutTimer\(\)/,
   ], 'next-player-on-take-out-stuck.ts');
+});
+
+test('next-player-on-take-out-stuck owns its countdown timer at module scope and invalidates async callbacks on remove', async () => {
+  const text = await source('entrypoints/match.content/next-player-on-take-out-stuck.ts');
+  assertContains(text, [
+    /^let takeOutTimer: ReturnType<typeof setInterval> \| null = null;/m,
+    /^let lifecycleGeneration = 0;/m,
+    /function clearTakeOutTimer\(\) \{\s*if \(takeOutTimer !== null\) \{\s*clearInterval\(takeOutTimer\);\s*takeOutTimer = null;/,
+    /takeOutTimer = setInterval\(/,
+    /const generation = \+\+lifecycleGeneration;/,
+  ], 'next-player-on-take-out-stuck.ts');
+  assert.doesNotMatch(text, /takeOutTimout/, 'no function-local timer handle may remain');
+  // every await in the watcher is followed by a generation check
+  assert.equal((text.match(/generation !== lifecycleGeneration\) return;/g) || []).length, 3, 'after config, gameData and waitForElement');
+  // the generation is claimed before the first await of the setup
+  assert.match(text, /const generation = \+\+lifecycleGeneration;\s*clearTakeOutTimer\(\);\s*const config = await AutodartsToolsConfig\.getValue\(\);\s*if \(generation !== lifecycleGeneration\) return;/);
+  // OnRemove: invalidate generation, stop timer, drop the countdown span
+  const onRemove = text.slice(text.indexOf('export function nextPlayerOnTakeOutStuckOnRemove'));
+  assertContains(onRemove, [
+    /lifecycleGeneration\+\+;/,
+    /clearTakeOutTimer\(\);/,
+    /getElementById\("ad-ext_next-text"\)\?\.remove\(\)/,
+  ], 'nextPlayerOnTakeOutStuckOnRemove');
+  // repeated setup must not accumulate: previous watcher and timer are dropped on re-enable
+  assertContains(text, [/boardDataWatcherUnwatch\?\.\(\);/, /if \(!clickHandlerRef\)/, /if \(!fullscreenHandlerRef\)/], 'idempotent setup');
 });
 
 test('quick-menu exposes onRemoveQuickMenu for teardown', async () => {
@@ -840,4 +865,57 @@ test('style.css: tiles keep the fixed token font size and the training split bod
     /@media \(max-width: 980px\) \{\s*\.cc-card-body--split \{ grid-template-columns: minmax\(0, 1fr\); \}/,
     'style.css: .cc-card-body--split must stack to one column up to 980px (text column measured 69px at 641px)',
   );
+});
+
+test('discord-webhooks tracks native Start-game listeners, removes them on teardown and never double-attaches', async () => {
+  const text = await source('entrypoints/lobby.content/discord-webhooks.ts');
+  assertContains(text, [
+    /const startButtonsWithListener = new Set<HTMLButtonElement>\(\);/,
+    /function attachStartButtonListener\(button: HTMLButtonElement\) \{\s*if \(button\.hasAttribute\("data-autodarts-tools-listener"\)\) return;/,
+    /button\.addEventListener\("click", handleManualGameStart\);\s*startButtonsWithListener\.add\(button\);/,
+  ], 'discord-webhooks.ts');
+  // the only addEventListener of handleManualGameStart is inside the tracked helper
+  assert.equal((text.match(/addEventListener\("click", handleManualGameStart\)/g) || []).length, 1);
+  assert.equal((text.match(/attachStartButtonListener\(button\);/g) || []).length, 2, 'observer + initial scan use the helper');
+  const onRemove = text.slice(text.indexOf('export function discordWebhooksOnRemove'));
+  assertContains(onRemove, [
+    /lifecycleGeneration\+\+;/,
+    /startButtonsWithListener\.forEach\(\(button\) => \{\s*button\.removeEventListener\("click", handleManualGameStart\);\s*button\.removeAttribute\("data-autodarts-tools-listener"\);/,
+    /startButtonsWithListener\.clear\(\);/,
+    /startButtonObserver\.disconnect\(\)/,
+  ], 'discordWebhooksOnRemove');
+});
+
+test('discord-webhooks guards in-flight async work with a lifecycle generation after every await', async () => {
+  const text = await source('entrypoints/lobby.content/discord-webhooks.ts');
+  assert.match(text, /^let lifecycleGeneration = 0;/m);
+  assert.match(text, /const generation = \+\+lifecycleGeneration;/);
+  const guards = (fn, endMarker) => {
+    const start = text.indexOf(fn);
+    assert.ok(start >= 0, `${fn} missing`);
+    const end = endMarker ? text.indexOf(endMarker, start + 1) : text.length;
+    return (text.slice(start, end).match(/generation !== lifecycleGeneration\) return/g) || []).length;
+  };
+  assert.ok(guards('export async function discordWebhooks()', '// Function to set up a mutation observer') >= 2);
+  assert.ok(guards('async function handleManualGameStart()', '// Function to update the Discord message') >= 1);
+  assert.ok(guards('async function updateDiscordMessage(', 'async function sendWebhook()') >= 2);
+  assert.ok(guards('async function sendWebhook()', '// Function to start the auto-start timer') >= 5);
+  assert.doesNotMatch(text, /return null;\s*\n\s*if \(generation !== lifecycleGeneration\) return null;/, 'no back-to-back duplicate guards');
+  // no state mutation between an await and its guard: config write precedes only after the guard
+  assert.match(text, /if \(generation !== lifecycleGeneration\) return null;\s*await AutodartsToolsConfig\.setValue/);
+  assert.match(text, /if \(generation !== lifecycleGeneration\) return;\s*const messageId = messageData\.id;|if \(generation !== lifecycleGeneration\) return null;\s*const messageId = messageData\.id;/);
+});
+
+test('discord-stream never indexes turns[0] unguarded and drops stale in-flight sends after teardown', async () => {
+  const text = await source('entrypoints/match.content/discord-stream.ts');
+  assert.doesNotMatch(text, /turns\[0\]/, 'unguarded turns[0] access');
+  assert.equal((text.match(/turns\?\.\[0\]\?\.throws/g) || []).length, 5, 'watcher compare (2) + 3 throw slots');
+  assertContains(text, [
+    /^let streamGeneration = 0;/m,
+    /export async function discordStream\(\) \{\s*streamGeneration\+\+;\s*[^\n]*\n\s*gameDataWatcherUnwatch\?\.\(\);/,
+    /export function discordStreamOnRemove\(\) \{\s*streamGeneration\+\+;/,
+    /const generation = streamGeneration;/,
+  ], 'discord-stream.ts');
+  assert.equal((text.match(/generation !== streamGeneration\) return;/g) || []).length, 2, 'after getValue and after response.json');
+  assertContains(text, [/gameDataWatcherUnwatch\(\);\s*gameDataWatcherUnwatch = null;/], 'discordStreamOnRemove');
 });
