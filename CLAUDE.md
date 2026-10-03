@@ -19,18 +19,56 @@ Verified working toolchain (2026-08-28, see PRE_LIVE_SNAPSHOT.md / POST_LIVE_DIA
 | Implementation | native Edit/Write, only the files actually required |
 | Unit/regression tests | project test runner (`yarn test`, `yarn test:lifecycle`) |
 | Firefox extension | existing `yarn build:firefox` + `web-ext` (global install) for lint/runtime when needed |
-| Chrome live debug | Chrome DevTools MCP |
-| Browser automation | Playwright — only for real automated interaction/regression, not for simple checks |
-| GitHub | official GitHub MCP (`plugin:github:github`) primary; `gh` CLI only as fallback for operations the MCP doesn't cover |
+| Chrome live debug | Chrome DevTools MCP (project-scoped, `chrome-devtools-mcp@1.8.0`; see Verified tool status) |
+| Browser automation | Playwright MCP — on demand only, for real automated interaction/regression, not for simple checks. Currently NOT enabled in this project (plugin installed, project-locally disabled); no Playwright npm package/CLI/skill exists. Enable only for a concrete need |
+| GitHub | `gh` CLI = verified main path (authenticated). GitHub MCP/plugin is installed but project-locally disabled and optional — not a prerequisite; do not demand activation or a token |
+| Library/API docs | Context7 via the claude.ai connector if available in the session (the Context7 plugin is installed but project-locally disabled); otherwise official docs. Don't use `ecc:docs-lookup` (broken tool names) |
 | Code review | `code-review` skill after relevant implementation changes |
 | Specialized review | `pr-review-toolkit:*` (code-reviewer, silent-failure-hunter) only when warranted |
-| Security | `security-guidance`/`security-review` only for security-relevant changes |
+| Security | `security-review` skill only for security-relevant changes (the `security-guidance` plugin is project-locally disabled) |
 | Parallel investigation | native `fork`/subagents only for genuinely independent sub-tasks |
 
 **Not standard tools right now:**
 - **Ruflo/Claude-Flow**: optional/deaktiviert — confirmed upstream package defect (`ERR_MODULE_NOT_FOUND` on MCP start). Do not repair/reinstall without a new upstream release. Use native `fork` for parallelization instead.
 - **OmniRoute**: not activated — no running server, no verified provider health, direct Anthropic connection works. Don't activate without explicit instruction.
 - **`.claude/agents/browser/browser-agent.yaml`**: non-functional — references a `browser/*` tool family that was never connected in this environment. Use Chrome DevTools MCP / Playwright / `web-ext` directly instead.
+
+## Verified tool status (E3.2/E3.3, 2026-10-03)
+
+Reality check of the routing table above. Evidence class: VERIFIED = read from local config/files or computed locally; "not invoked" = presence confirmed, function not called.
+
+| Tool | Status |
+|---|---|
+| `gh` CLI | INSTALLED (2.45.0), authenticated; used in practice (CI runs, repo queries) |
+| GitHub MCP/plugin (`github@claude-plugins-official`) | INSTALLED (user scope); DISABLED in `.claude/settings.local.json`. Its HTTP definition reads `GITHUB_PERSONAL_ACCESS_TOKEN`, which is not set in the shell. Optional; do not activate without explicit instruction |
+| Playwright npm package | NOT FOUND (not in `package.json`/`node_modules`, no `playwright.config`) |
+| Playwright CLI | NOT FOUND (only `web-ext` is installed globally) |
+| Playwright skills | NOT FOUND (only gstack-internal files mention `playwright-core`) |
+| Playwright MCP (`playwright@claude-plugins-official`) | INSTALLED (user scope, `npx @playwright/mcp@latest`, unpinned); DISABLED in this project. On demand/optional, not activated |
+| Context7 plugin | INSTALLED (user scope); DISABLED in this project |
+| Context7 access | claude.ai connector present in sessions (`mcp__claude_ai_Context7__*`, presence verified, not invoked); Codex has its own `context7` entry in `~/.codex/config.toml` |
+| Chrome DevTools MCP | CONFIGURED in `~/.claude.json` for this project (stdio, `chrome-devtools-mcp@1.8.0`); the ECC plugin duplicate (`@latest`) is disabled via `disabledMcpServers`. Tools present in sessions, not invoked. An uncommitted local `.codex/config.toml` entry adds the same server for Codex |
+
+### ECC hook profile (deliberate project decision)
+
+`ECC_HOOK_PROFILE=minimal` (project `.claude/settings.local.json`, not versioned) is the **deliberate current Setup 2.0 decision**, introduced in Phase 2B-1 on 2026-10-01 ("ECC hook reduction") and verified at the time. It is not a rollback candidate based on older documentation. `standard` is the stronger hook profile (ECC default when the variable is unset); `minimal` is a deliberately measured project decision, not a generally safer one.
+
+With `minimal` (verified by evaluating `hook-flags.js` for ECC 2.2.1) these ECC groups are **not active**: GateGuard (Bash and Edit/Write fact-forcing), `config-protection`, `governance-capture`, `mcp-health-check`, and the standard-only quality/convenience hooks (e.g. `post:quality-gate`). Still active: `pre:bash:block-no-verify` and the Bash dispatcher. Additionally, 7 ECC session/observe hooks are disabled user-wide via `ECC_DISABLED_HOOKS` (see `docs/SETUP_2_0_DEV_AGENT_SETUP.md` section 2).
+
+Substitute protection layers (they do not replace GateGuard's fact-forcing): `pre:bash:block-no-verify`; project-local `destructive-guard.sh` (PreToolUse/Bash); `permissions.ask` plus `disableBypassPermissionsMode` for the protected core files; the git hooks `commit-msg`/`pre-push` (`scripts/core-guard.mjs`, `core.hooksPath=scripts/githooks`); 46 `Agent(ecc:…)` deny rules; the validation gate; the Truth & Verification Contract below.
+
+### Routing principle
+
+- Local repo work -> local repo tools.
+- GitHub -> `gh` (verified main path).
+- Browser/UI QA -> the existing Playwright MCP / Chrome DevTools paths, as needed; `web-ext` for Firefox.
+- Library/API docs -> Context7 connector, depending on availability.
+- Optional MCPs only for a concrete need; no redundant permanently-active tools without proven benefit.
+
+### Known low-priority open points (intentionally not changed)
+
+- Stale `mcp__github__*` allow rules in `~/.claude/settings.local.json` (old tool-name form, no effect).
+- The graphify hook text ("MANDATORY: run graphify query") conflicts with "graphify only when structural relationships matter".
 
 ## Agent Mapping
 

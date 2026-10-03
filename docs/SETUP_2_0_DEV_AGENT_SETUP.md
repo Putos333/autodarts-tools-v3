@@ -44,6 +44,8 @@ Schlüssel `env.ECC_DISABLED_HOOKS`, kommagetrennte ECC-Hook-IDs. Das ECC-Profil
 bleibt `standard` (`pluginConfigs.ecc@ecc.options.hook_profile`), es wurde nicht
 auf `minimal` gestellt, weil `minimal` auch GateGuard und `config-protection`
 abgeschaltet hätte.
+**Überholt (Stand 2026-10-03):** Dieser Absatz beschreibt den Stand vom 2026-09-30. Seit Phase 2B-1
+(2026-10-01) gilt projektlokal bewusst `ECC_HOOK_PROFILE=minimal`; siehe Abschnitt 11.
 
 Deaktivierte ECC-Hooks (7):
 
@@ -641,3 +643,57 @@ Push wurde nicht dokumentiert. Eine Änderung bräuchte einen Rewrite und einen 
 `core-guard range origin/main..HEAD` Exit 0. Setup-Gate NOT RUN (kein Gate-Paket für DOCS_ONLY-HEAD). Die Angaben
 `HISTORICAL_VERIFIED_NOT_RERUN_ON_1b65b55` oben beschreiben den Stand vor diesem Lauf und bleiben als **HISTORICAL_VERIFIED** erhalten;
 „CURRENT-HEAD RE-VERIFICATION" unter OPEN ist erledigt.
+
+## 11. TOOL-ROUTING UND ECC-PROFIL: VERIFIZIERTER REALZUSTAND (2026-10-03, HEAD `fc6e809`)
+
+Nachtrag aus den Prüfungen E3.1–E3.3. Er beschreibt den Ist-Zustand, ändert keine Konfiguration und überholt die
+Aussagen in Abschnitt 2 (Profil `standard`) und in der früheren `CLAUDE.md`-Routing-Tabelle (GitHub-MCP primär). Die
+gleichen Angaben stehen kompakt in `CLAUDE.md` („Verified tool status"). Evidenz: lokal gelesene Konfiguration bzw. lokal
+berechnet (ECC `hook-flags.js`); „nicht aufgerufen" heißt: Vorhandensein bestätigt, Funktion nicht ausgeführt.
+
+### 11.1 ECC-Hook-Profil: bewusste Projektentscheidung
+
+- **Einstellung:** `env.ECC_HOOK_PROFILE = "minimal"` in `.claude/settings.local.json` (projektlokal, nicht versioniert).
+  Die Umgebungsvariable hat Vorrang vor der Plugin-Option `hook_profile` (User-Ebene `standard`); ohne Variable gilt `standard`.
+- **Einführung:** Phase 2B-1, 2026-10-01 („ECC HOOK REDUCTION"), laut Session-Transkripten damals geprüft und mit PASS vermerkt.
+  Die Messergebnisse dieser Phase sind nicht im Repository dokumentiert (UNKNOWN). Entscheidung des Nutzers (E3.3A, 2026-10-03):
+  `minimal` bewusst beibehalten, kein Rückbau auf Grundlage älterer Dokumentation.
+- **Einordnung:** `standard` ist das stärkere Hook-Profil. `minimal` ist eine bewusst vermessene Projektentscheidung, kein generell
+  sichereres Profil.
+- **Unter `minimal` nicht aktiv** (berechnet für ECC 2.2.1): GateGuard (`pre:bash:gateguard-fact-force`,
+  `pre:edit-write:gateguard-fact-force`), `pre:config-protection`, `pre:governance-capture`, `pre:mcp-health-check`,
+  `post:quality-gate` und die übrigen nur für `standard`/`strict` freigegebenen Komfort- und Qualitätshooks.
+  **Weiter aktiv:** `pre:bash:block-no-verify`, der Bash-Dispatcher. Zusätzlich sind die 7 Hooks aus Abschnitt 2 per
+  `ECC_DISABLED_HOOKS` (User-Ebene) abgeschaltet.
+- **Ersatzschutzschichten** (ersetzen GateGuards Faktenzwang vor Edits nicht): `block-no-verify`; projektlokaler Hook
+  `destructive-guard.sh` (PreToolUse/Bash, Exit 2 blockt); `permissions.ask` + `disableBypassPermissionsMode` für die 5 Core-Dateien
+  (`docs/PROTECTED_CORE_ENFORCEMENT.md`); Git-Hooks `commit-msg`/`pre-push` mit `scripts/core-guard.mjs`
+  (`core.hooksPath=scripts/githooks`); 46 `Agent(ecc:…)`-Deny-Regeln; Validation-Gate; Truth & Verification Contract in `CLAUDE.md`.
+- **Weitere projektlokale Einstellungen** in `.claude/settings.local.json` (bisher hier nicht beschrieben): Plugins `hookify`, `playwright`,
+  `github`, `context7`, `security-guidance`, `claude-mem` auf `false`; `ecc@ecc` aktiv. Diese Plugin-Disables beeinflussen die ECC-Hooks nicht.
+- **Hinweis:** Dieselbe Variable steht auch in der lokalen, nicht committeten `.codex/config.toml` (OPEN: Entscheidung dazu).
+
+### 11.2 Werkzeugstatus und Routing
+
+| Werkzeug | Verifizierter Status |
+|---|---|
+| `gh` CLI | INSTALLED (2.45.0), angemeldet; Hauptweg für GitHub-Aufgaben |
+| GitHub-MCP/Plugin | INSTALLED (User), projektlokal DISABLED; liest `GITHUB_PERSONAL_ACCESS_TOKEN` (in der Shell nicht gesetzt); optional, keine Voraussetzung, keine Aktivierung verlangt |
+| Playwright npm-Paket | NOT FOUND (weder `package.json` noch `node_modules`, keine Konfiguration) |
+| Playwright CLI | NOT FOUND |
+| Playwright Skills | NOT FOUND (nur gstack-interne Dateien) |
+| Playwright MCP (Plugin) | INSTALLED (User, `@playwright/mcp@latest`, ungepinnt), projektlokal DISABLED; on demand/optional, nicht aktiviert |
+| Context7 Plugin | INSTALLED (User), projektlokal DISABLED |
+| Context7 Zugang | claude.ai-Connector in Sessions vorhanden (`mcp__claude_ai_Context7__*`, nicht aufgerufen); Codex hat eigenen Eintrag |
+| Chrome DevTools MCP | konfiguriert in `~/.claude.json` (Projekt, stdio, `chrome-devtools-mcp@1.8.0`); ECC-Duplikat (`@latest`) per `disabledMcpServers` aus; nicht aufgerufen |
+
+Routing-Prinzip: lokale Repo-Arbeit mit lokalen Repo-Werkzeugen; GitHub über `gh`; Browser/UI-QA über die vorhandenen Playwright-/Chrome-DevTools-Wege
+nach Bedarf; Library/API-Doku über Context7/Connector nach Verfügbarkeit; optionale MCPs nur bei konkretem Bedarf aktivieren; keine
+redundanten dauerhaft aktiven Werkzeuge ohne belegten Nutzen.
+
+### 11.3 Bewusst nicht bereinigt (niedrige Priorität, getrennt zu behandeln)
+
+- Veraltete `mcp__github__*`-Allow-Regeln in `~/.claude/settings.local.json` (alte Namensform, wirkungslos).
+- graphify-Hook-Text („MANDATORY: run graphify query") widerspricht der Regel „graphify nur bei Beziehungsfragen".
+- Weitere E3.1-Befunde bleiben offen: Node-Default v24 vs. `.nvmrc` v22.23.2, der Codex-Sollstand „0.153.3" (nirgends belegt; dokumentiert ist 0.153.4),
+  zwei Alt-Worktrees ohne exklusive Commits, lokale `.codex/config.toml`-Änderung.
