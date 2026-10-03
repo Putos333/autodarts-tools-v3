@@ -60,3 +60,7 @@ Vollständige Tabellen und Hash-Mapping: `MASTER_AUTODARTS_ELITE.md` Abschnitt 2
 - **Tabelle VERIFICATION oben (531/531, 90/90, Firefox-/Chrome-Build, diffcheck, compile):** HISTORICAL_VERIFIED_NOT_RERUN_ON_1b65b55.
 - **OPEN_DECISION:** Autor-Identität `du@example.com` (121 Commits, gepusht); nichts geändert.
 - **Rollback-Hinweis (unverändert gültig):** `git switch -c recovery/setup-2.0 setup-2.0-frozen-20261002` (kein Reset von `main`).
+
+**Nachtrag 2 (2026-10-03, HEAD `9f859ef` = `1b65b55` + Doku-Commit):** Die Verifikationstabelle oben (531/531, 90/90, Builds) bleibt **HISTORICAL_VERIFIED**.
+Aktuell CURRENT_VERIFIED (Node v22.23.2, Exit 0): `yarn compile` PASS; `yarn test` 596/596 (82 Suiten); `yarn test:components` 97/97 (13 Dateien);
+Firefox-MV2- und Chrome-MV3-Build PASS. Setup-Gate NOT RUN (kein Paket für DOCS_ONLY-HEAD).

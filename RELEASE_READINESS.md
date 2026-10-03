@@ -193,3 +193,19 @@ und wird dadurch teilweise überholt. Details und Hash-Mapping: `MASTER_AUTODART
 | Human Live QA | **DEFERRED / BLOCKED** (Hardware) | Release-Gate nicht bestanden |
 
 Es gilt weiterhin: „Automatische Tests PASS" und „CI success" sind kein Human-Live-PASS.
+
+### Nachtrag 2026-10-03: Re-Verifikation auf HEAD `9f859ef`
+
+`9f859ef` = `1b65b55` + reiner Doku-Commit (Code/Config identisch). Unter Node v22.23.2, jeweils Exit 0:
+
+| Punkt | Status | Detail |
+|---|---|---|
+| Typecheck (`yarn compile`) | **CURRENT_VERIFIED** PASS | `vue-tsc --noEmit` |
+| Unit-Tests (`yarn test`) | **CURRENT_VERIFIED** PASS | 596/596, 82 Suiten |
+| Component-Tests (`yarn test:components`) | **CURRENT_VERIFIED** PASS | 97/97, 13 Dateien |
+| Firefox-MV2-Build | **CURRENT_VERIFIED** PASS | `yarn wxt build -b firefox` |
+| Chrome-MV3-Build | **CURRENT_VERIFIED** PASS | `yarn wxt build` |
+| Setup-Gate | **NOT RUN** | kein Paket für diesen DOCS_ONLY-HEAD |
+| 531/531, 90/90, Gate 8/8 (Alt-Stand), frühere Builds | **HISTORICAL_VERIFIED** | durch die Zeilen oben als aktueller Stand ersetzt |
+
+Human Live QA bleibt **DEFERRED / BLOCKED** (Hardware); die Re-Verifikation ersetzt sie nicht.

@@ -563,3 +563,24 @@ Die Tag-Namen sind daher keine Hash-Belege.
 Alle 121 Commits des Autors `Sergej` tragen `du@example.com` (Platzhalter; zusätzlich 21 Commits von `Putos333` und 1 von `Emergent`).
 Die Commits sind bereits gepusht; eine Änderung erfordert einen Rewrite und einen Force-Push auf eine öffentliche Remote.
 Es wurde nichts geändert, `git config` blieb unverändert. Entscheidung offen und ausdrücklich dem Nutzer vorbehalten.
+
+### 21.6 CURRENT_VERIFIED: Re-Verifikation auf HEAD `9f859ef` (2026-10-03)
+
+HEAD `9f859ef0234b5f5fa5380b2f7be0a1d4a5f21549` (`docs(setup): reconcile post-P40 verified state`) ist `1b65b55` plus ein reiner Doku-Commit
+(6 Markdown-Dateien); Produktcode und Konfiguration sind identisch zu `1b65b55`. Ausgeführt unter Node v22.23.2 (`.nvmrc`), jeweils Exit 0:
+
+| Prüfung | Befehl | Ergebnis |
+|---|---|---|
+| Typecheck | `yarn compile` (`vue-tsc --noEmit`) | CURRENT_VERIFIED: PASS |
+| Unit-Tests | `yarn test` | CURRENT_VERIFIED: PASS, 596/596, 82 Suiten, 0 fail, 0 skipped |
+| Component-Tests | `yarn test:components` | CURRENT_VERIFIED: PASS, 97/97, 13 Dateien |
+| Firefox-MV2-Build | `yarn wxt build -b firefox` | CURRENT_VERIFIED: PASS |
+| Chrome-MV3-Build | `yarn wxt build` | CURRENT_VERIFIED: PASS |
+| Core-Guard | `node scripts/core-guard.mjs range origin/main..HEAD` | CURRENT_VERIFIED: Exit 0 |
+| `git diff --check` | – | CURRENT_VERIFIED: PASS |
+| Setup-Gate (`yarn gate run`) | – | NOT RUN: für diesen DOCS_ONLY-HEAD kein Gate-Paket vorgesehen (`gate classify`: OK) |
+
+Diese Werte ersetzen die Zahlen 531/531, 90/90 und die früheren Build-/Typecheck-Aussagen als aktuellen Stand. Die früheren Ergebnisse
+(531/531, 90/90, Gate 8/8 Alt-Stand, Package-C-Zahlen) bleiben als **HISTORICAL_VERIFIED** erhalten. Die Markierung
+`HISTORICAL_VERIFIED_NOT_RERUN_ON_1b65b55` in 21.2 beschreibt den Stand vor diesem Lauf. Seit dem Lauf nicht neu ausgeführt: Setup-Gate.
+Die höheren Zahlen (596/97) entsprechen den seit dem Alt-Stand hinzugekommenen Commits (u. a. PKG-1, Discord, ELO); das ist nicht einzeln aufgeschlüsselt (INFERRED).

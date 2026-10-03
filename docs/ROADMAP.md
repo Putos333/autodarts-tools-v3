@@ -83,3 +83,8 @@ folgenden Punkten überholt. Details: `MASTER_AUTODARTS_ELITE.md` Abschnitt 21.
 - **OPEN:** CURRENT-HEAD RE-VERIFICATION; TEMP-DIAG-Bereinigung (Core-Block BLOCKED ohne Freigabe); MCP-Konsolidierung; WebSocket-Auto-Resync; Multi-Tab-Schutz; Branch-Protection; Herkunft `.ruvector/`/`ruvector.db`.
 - **OPEN_DECISION:** Autor-Identität `du@example.com` (121 Commits, gepusht).
 - **BLOCKED:** Human Live QA / Release-Gate (Hardware).
+
+**Nachtrag 2026-10-03 (Re-Verifikation, HEAD `9f859ef` = `1b65b55` + Doku-Commit):** CURRENT_VERIFIED unter Node v22.23.2:
+`yarn compile` PASS; `yarn test` 596/596 (82 Suiten); `yarn test:components` 97/97 (13 Dateien); Firefox-MV2- und Chrome-MV3-Build PASS.
+Setup-Gate NOT RUN (kein Paket für DOCS_ONLY-HEAD). Die Zahlen 531/531 und 90/90 sowie „Gate 8/8" oben sind **HISTORICAL_VERIFIED**. Der Punkt
+„CURRENT-HEAD RE-VERIFICATION" unter OPEN ist damit erledigt.

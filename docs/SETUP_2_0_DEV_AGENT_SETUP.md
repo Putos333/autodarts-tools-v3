@@ -635,3 +635,9 @@ Recovery-Tags behalten den Alt-Hash im Namen, zeigen aber auf Commits der neuen 
 
 **OPEN_DECISION – Autor-Identität:** 121 Commits tragen `du@example.com` und sind gepusht. Die in Abschnitt 9 verlangte Entscheidung vor dem
 Push wurde nicht dokumentiert. Eine Änderung bräuchte einen Rewrite und einen Force-Push; nichts geändert, `git config` unverändert.
+
+**Nachtrag 2026-10-03 (Re-Verifikation, HEAD `9f859ef` = `1b65b55` + Doku-Commit):** CURRENT_VERIFIED unter Node v22.23.2, jeweils Exit 0:
+`yarn compile` PASS; `yarn test` 596/596 (82 Suiten); `yarn test:components` 97/97 (13 Dateien); `yarn wxt build -b firefox` PASS; `yarn wxt build` PASS;
+`core-guard range origin/main..HEAD` Exit 0. Setup-Gate NOT RUN (kein Gate-Paket für DOCS_ONLY-HEAD). Die Angaben
+`HISTORICAL_VERIFIED_NOT_RERUN_ON_1b65b55` oben beschreiben den Stand vor diesem Lauf und bleiben als **HISTORICAL_VERIFIED** erhalten;
+„CURRENT-HEAD RE-VERIFICATION" unter OPEN ist erledigt.
