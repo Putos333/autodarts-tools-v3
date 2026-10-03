@@ -8,6 +8,7 @@ import path from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 
+import { classifyPath, computeTiers, evaluate, loadConfig } from '../scripts/gate.mjs';
 import { loadCoreFiles, parseTrailer, validateReason } from '../scripts/core-guard.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -18,6 +19,7 @@ const CORE = [
   'utils/canonical-match-result-storage.ts',
   'utils/event-dedupe.ts',
   'utils/websocket-helpers.ts',
+  'components/Settings/PrecisionMap.vue',
 ];
 const GOOD = 'Protected-Core-Approved: Dedupe-Regel fuer Reconnect-Snapshots, vom Nutzer am 2026-10-03 freigegeben';
 
@@ -60,17 +62,87 @@ const guard = (dir, args, opts) => sh('node', [SCRIPT, ...args], dir, opts);
 
 // ── Konfiguration / D1 ─────────────────────────────────────────────────────────
 
-test('core list is exactly the 4 verified protected files and comes from gate.config.json', () => {
+test('core list is exactly the 5 protected files (incl. PrecisionMap.vue) and comes from gate.config.json', () => {
   assert.deepEqual(loadCoreFiles(), CORE);
 });
 
-test('D1: .claude/settings.json asks for exactly the 4 core files via Edit(...) rules and disables bypass mode', () => {
+test('D1: .claude/settings.json asks for exactly the 5 core files via Edit(...) rules and disables bypass mode', () => {
   const s = JSON.parse(fs.readFileSync(path.join(ROOT, '.claude/settings.json'), 'utf8'));
   assert.deepEqual([...s.permissions.ask].sort(), CORE.map((f) => `Edit(${f})`).sort());
   assert.equal(s.permissions.disableBypassPermissionsMode, 'disable');
   // Claude Code only consults Edit(path) rules, Write(...) path rules would be dead config
   assert.ok(!s.permissions.ask.some((r) => /^(Write|NotebookEdit|MultiEdit)\(/.test(r)));
   assert.ok(!(s.permissions.deny || []).some((r) => CORE.some((f) => r.includes(f))), 'no blanket deny on core paths');
+});
+
+// ── 5. Core-Datei PrecisionMap.vue (Wiederherstellung) ───────────────────────
+
+test('all authoritative documents list exactly the same 5 core files', () => {
+  const read = (f) => fs.readFileSync(path.join(ROOT, f), 'utf8');
+  const master = read('MASTER_AUTODARTS_ELITE.md');
+  const section = master.slice(master.indexOf('## 4. PROTECTED CORE'), master.indexOf('## 5.'));
+  assert.equal((section.match(/^\d+\. `[^`]+`/gm) || []).length, 5, 'MASTER §4 lists 5 files');
+  for (const f of CORE) {
+    for (const doc of ['AGENTS.md', 'CLAUDE.md', 'docs/PROTECTED_CORE_ENFORCEMENT.md']) assert.ok(read(doc).includes(f), `${doc} must list ${f}`);
+    assert.ok(section.includes(f), `MASTER §4 must list ${f}`);
+  }
+  // AGENTS.md lists the files as bullet items: exactly the 5, no others
+  const agents = read('AGENTS.md');
+  const listed = (agents.slice(agents.indexOf('## Protected scoring core'), agents.indexOf('Before any change')).match(/^- `([^`]+)`/gm) || []).map((l) => l.slice(3, -1));
+  assert.deepEqual([...listed].sort(), [...CORE].sort());
+});
+
+test('PrecisionMap.vue is explicitly recognised as protected core by the guard (negative without trailer, positive with trailer)', () => {
+  const f = 'components/Settings/PrecisionMap.vue';
+  assert.ok(loadCoreFiles().includes(f));
+  const dir = makeRepo();
+  write(dir, f, '<template/>');
+  const refused = guard(dir, ['commit-msg', msgFile(dir, 'feat: settings\n')]);
+  assert.equal(refused.status, 1);
+  assert.match(refused.stderr, /components\/Settings\/PrecisionMap\.vue/);
+  assert.equal(guard(dir, ['commit-msg', msgFile(dir, `feat: settings\n\n${GOOD}\n`)]).status, 0);
+  assert.equal(guard(dir, ['commit-msg', msgFile(dir, `feat: settings\n\n${GOOD}\n`)], { env: cleanEnv({ CLAUDECODE: '1' }) }).status, 1, 'agent session refused');
+  assert.equal(guard(dir, ['commit-msg', msgFile(dir, 'feat\n\nProtected-Core-Approved: yes\n')]).status, 1, 'generic trailer refused');
+});
+
+test('non-core files do not produce a false core hit (similar names, nested paths, tests, other components)', () => {
+  const dir = makeRepo();
+  for (const f of ['components/Settings/PrecisionMapExtra.vue', 'components/Settings/PrecisionMap.vue.orig', 'components/Settings/Caller.vue', 'components/PageConfig.vue',
+    'other/components/Settings/PrecisionMap.vue', 'other/utils/event-dedupe.ts', 'utils/event-dedupe.test.ts', 'utils/elo-client.ts', 'utils/dartboard-geometry.ts',
+    'tests/components/elo-consent-panel.component.test.ts']) {
+    write(dir, f, 'x');
+  }
+  const r = guard(dir, ['commit-msg', msgFile(dir, 'feat: unrelated\n')]);
+  assert.equal(r.status, 0, r.stderr);
+  assert.doesNotMatch(r.stderr, /protected core/);
+});
+
+test('integration pre-push hook: an unapproved PrecisionMap.vue commit is stopped at push, with trailer it passes', () => {
+  const dir = makeRepo({ hooks: true });
+  const bare = makeRemote();
+  g(dir, ['remote', 'add', 'origin', bare]);
+  assert.equal(g(dir, ['push', '-q', 'origin', 'main']).status, 0);
+  write(dir, 'components/Settings/PrecisionMap.vue', '<template/>');
+  assert.equal(g(dir, ['commit', '-q', '--no-verify', '-m', 'settings change']).status, 0);
+  const blocked = g(dir, ['push', 'origin', 'main']);
+  assert.notEqual(blocked.status, 0);
+  assert.match(blocked.stderr, /PrecisionMap\.vue/);
+  g(dir, ['commit', '-q', '--amend', '--no-verify', '-m', 'settings change', '-m', GOOD]);
+  assert.equal(g(dir, ['push', '-q', 'origin', 'main']).status, 0);
+});
+
+test('gate classifies PrecisionMap.vue as protected core and its direct user PageConfig.vue as approval-required; unrelated components stay unflagged', () => {
+  const cfg = loadConfig();
+  assert.ok(cfg.protectedCore.files.includes('components/Settings/PrecisionMap.vue'));
+  const head = sh('git', ['rev-parse', 'HEAD'], ROOT).stdout.trim();
+  const snap = evaluate(cfg, head);
+  const tiers = computeTiers(cfg, snap.files);
+  const cls = (p) => classifyPath(cfg, p, tiers, new Set());
+  assert.deepEqual(cls('components/Settings/PrecisionMap.vue'), { cls: 'SCORING_RELATED', flags: ['protected'] });
+  assert.ok(cls('components/PageConfig.vue').flags.includes('approval'), 'direct user of the new core file');
+  for (const p of ['components/Settings/Caller.vue', 'utils/elo-client.ts', 'utils/dartboard-geometry.ts']) {
+    assert.ok(!cls(p).flags.includes('protected') && !cls(p).flags.includes('approval'), `${p} must not be flagged`);
+  }
 });
 
 // ── Trailer-Parser und Grundvalidierung ────────────────────────────────────────
@@ -113,7 +185,7 @@ test('commit-msg: core file staged without trailer is refused (negative)', () =>
   assert.match(r.stderr, /missing trailer/);
 });
 
-test('commit-msg: every one of the 4 core files triggers the guard (negative)', () => {
+test('commit-msg: every one of the 5 core files triggers the guard (negative)', () => {
   for (const f of CORE) {
     const dir = makeRepo();
     write(dir, f, 'x');

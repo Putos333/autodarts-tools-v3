@@ -16,6 +16,7 @@ These files are protected:
 - `utils/canonical-match-result-storage.ts`
 - `utils/event-dedupe.ts`
 - `utils/websocket-helpers.ts`
+- `components/Settings/PrecisionMap.vue`
 
 Before any change to one of them: STOP. Never modify them automatically. First point out that the change touches the protected scoring core and obtain explicit user approval.
 

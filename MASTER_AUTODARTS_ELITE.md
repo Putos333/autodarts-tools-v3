@@ -198,7 +198,7 @@ Es wurde kein echter Board-/Runtime-Test dokumentiert. Kein Punkt trägt den Sta
 |---|---|---|
 | Settings-Surface (48 Komponenten) | IMPLEMENTED | `components/Settings/` (Caller, SoundFx, Wled, Liga, Career, QuickCorrection, PrecisionMap, TrainingExercises, …) |
 | CC-Navigation / Sections | IMPLEMENTED + TESTED | `components/ControlCenter/sections.ts`; Lifecycle-Contracts |
-| PrecisionMap (geschützt) | IMPLEMENTED (unverändert) | Persistenz via canonical contract (`8e2f2e3`) |
+| PrecisionMap (geschützt) | IMPLEMENTED (zuletzt geändert in `3a8979c`, P40 ELO-Consent-UI; keine Freigabe dokumentiert) | Persistenz via canonical contract (`8e2f2e3`) |
 | Shuffle-Players-Hang-Fix | IMPLEMENTED + TESTED | `lobby.content/index.ts` L18/75–77; `shuffle-players.test.ts` |
 | Automatic Fullscreen + Fullscreenchange-Cleanup | IMPLEMENTED + TESTED | `automatic-fullscreen.ts` L114/123–125; Contract |
 | TtsProvider Security-Tabelle (tbody) | IMPLEMENTED | `TtsProvider.vue` L306/323 |
@@ -450,13 +450,16 @@ Die CI-Workflows (`build-firefox.yml`, `pr-control-center.yml`) führen
 GitHub ist mangels Push **nicht** erfolgt.
 
 **Protected-Core-Erzwingung (offen, nicht final entschieden):** Das Gate
-meldet bei Änderung der vier Core-Dateien `PROTECTED_CORE_CHANGED` bzw. bei
+meldet bei Änderung der fünf Core-Dateien `PROTECTED_CORE_CHANGED` bzw. bei
 direkten Nutzern `APPROVAL_REQUIRED` (Exit 3) – aber nur, wenn `gate run`
 ausgeführt wird. Es existieren kein Git-Hook, keine CI-Prüfung mit dem Gate,
 kein CODEOWNERS und keine `permissions.deny`-Regel auf die Core-Pfade; der
 Schutz in `AGENTS.md`/`CLAUDE.md` ist Dokumentation. Review ist gemeldet,
 nicht technisch erzwungen. Die Core-Dateien sind durch die Commits A und B
 nicht verändert.
+*Nachtrag (Bauphase 2.0, PKG-7 und Core-5-Wiederherstellung):* Der Absatz beschreibt den Stand vor PKG-7. Seitdem gibt es
+`permissions.ask` und einen Git-Trailer-Guard, und die Core-Liste umfasst wieder 5 Dateien (inkl. `components/Settings/PrecisionMap.vue`);
+siehe `docs/PROTECTED_CORE_ENFORCEMENT.md`.
 
 **p345.sh / Identitäts-Rewrite (D11):** `~/AUTODARTS_D11_EXEC/p345.sh` (SHA256
 `85b4414475bff8d9bdba77e21f08a7734fe950321689359262c632235dcb9b67`, Pre-Patch-Stand) ist

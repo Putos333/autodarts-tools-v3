@@ -1,6 +1,6 @@
 # Protected Core Enforcement (PKG-7)
 
-Schützt die 4 Protected-Core-Dateien vor unbeabsichtigten Änderungen. Ergänzt das Gate
+Schützt die 5 Protected-Core-Dateien vor unbeabsichtigten Änderungen. Ergänzt das Gate
 (`scripts/gate.mjs`), ersetzt es nicht: Das Gate klassifiziert und prüft, diese Schichten sperren früh.
 
 ## Geschützte Dateien (Quelle: `scripts/gate.config.json` → `protectedCore.files`)
@@ -9,13 +9,23 @@ Schützt die 4 Protected-Core-Dateien vor unbeabsichtigten Änderungen. Ergänzt
 - `utils/canonical-match-result-storage.ts`
 - `utils/event-dedupe.ts`
 - `utils/websocket-helpers.ts`
+- `components/Settings/PrecisionMap.vue`
 
 Eine Erweiterung der Liste braucht ein eigenes Review und die ausdrückliche Freigabe des Nutzers.
 `tests/core-guard.test.mjs` prüft, dass die D1-Regeln exakt dieser Liste entsprechen.
 
+Herkunft der 5. Datei: `MASTER_AUTODARTS_ELITE.md` §4 führt `PrecisionMap.vue` ausdrücklich als Protected Core
+(angelegt 2026-08-29), `PRE_LIVE_FREEZE.md` nennt sie als unveränderte Geometrie-Baseline. Ein Beschluss, sie aus dem Schutz zu nehmen,
+ist im Repo nicht dokumentiert. Die vorübergehende 4er-Liste (CLAUDE.md, AGENTS.md, Gate, Stand 2026-10-02 bis zu dieser Änderung)
+wurde deshalb auf Nutzerentscheidung wieder auf 5 Dateien erweitert.
+
+Bekannte Folge: Der bereits vorhandene Commit `3a8979c` (P40, ELO-Consent-UI) ändert `PrecisionMap.vue` vor dieser Regel und trägt keinen
+Trailer; für ihn ist im Repo keine Freigabe dokumentiert. `node scripts/core-guard.mjs range origin/main..HEAD` meldet ihn daher, und der
+`pre-push`-Hook würde einen Push dieses Bereichs ablehnen, bis darüber entschieden ist.
+
 ## D1 – Claude Code (`.claude/settings.json`)
 
-- `permissions.ask`: `Edit(<pfad>)` für jede der 4 Dateien. Jede Änderung durch einen Agenten verlangt eine Bestätigung.
+- `permissions.ask`: `Edit(<pfad>)` für jede der 5 Dateien. Jede Änderung durch einen Agenten verlangt eine Bestätigung.
   Nur `Edit(...)`-Regeln werden von Claude Code ausgewertet; `Write(...)`-Pfadregeln würden ignoriert.
 - `permissions.disableBypassPermissionsMode: "disable"`: neutralisiert `bypassPermissions` und `--dangerously-skip-permissions`
   im Projekt (in beiden Fällen sonst keine ask-Prompts).
@@ -25,7 +35,7 @@ Eine Erweiterung der Liste braucht ein eigenes Review und die ausdrückliche Fre
 
 ## D2 – Git-Trailer-Guard (`scripts/core-guard.mjs`, `scripts/githooks/`)
 
-Ein Commit, der eine der 4 Dateien ändert (inkl. Löschen/Umbenennen), braucht in der Commit-Message:
+Ein Commit, der eine der 5 Dateien ändert (inkl. Löschen/Umbenennen), braucht in der Commit-Message:
 
 ```
 Protected-Core-Approved: <konkreter Grund>
