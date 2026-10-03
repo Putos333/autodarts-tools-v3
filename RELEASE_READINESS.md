@@ -168,3 +168,28 @@ damit abgeschlossen; alles Weitere ist echte Laufzeit-Wahrheit.
 Es gilt weiterhin: „Automatische Tests PASS" ist kein Human-Live-PASS.
 Details und Recovery-Informationen: `MASTER_AUTODARTS_ELITE.md` Abschnitt 20
 und `docs/SETUP_2_0_DEV_AGENT_SETUP.md` Abschnitt 9.
+
+---
+
+## Aktualisierung 2026-10-03 (`main`, HEAD `1b65b55`)
+
+Nachtrag; der Block „Aktualisierung 2026-10-02" oben ist historisch (Alt-Hash `7688352`, heute `12279ff`)
+und wird dadurch teilweise überholt. Details und Hash-Mapping: `MASTER_AUTODARTS_ELITE.md` Abschnitt 21.
+
+| Punkt | Status | Detail |
+|---|---|---|
+| HEAD / `origin/main` | **CURRENT_VERIFIED** | beide `1b65b554717361e8c7901bf11cbcf89e24a8a5a7`, 0/0 |
+| Push | **CURRENT_VERIFIED** | erfolgt; überholt „NICHT ERFOLGT" oben |
+| P40 (ELO-Consent) | **IMPLEMENTED · PUSHED · POST_PUSH_VERIFIED · ORIGIN_MAIN_SYNCHRONIZED** | `79a5034`, Doku `8d79d04`, Consent-Host-Bindung `1b65b55` (Post-Push-Verifikation: Operator-Angabe) |
+| CI auf GitHub | **CURRENT_VERIFIED** | `pr-control-center` Run 37133647668 auf `main`, `headSha` `1b65b55`: `success`; überholt „NICHT GEPRÜFT" oben |
+| Protected-Core-Audit | **CURRENT_VERIFIED** | `core-guard range origin/main..HEAD` Exit 0 |
+| Tests 531/531, Components 90/90 | **HISTORICAL_VERIFIED_NOT_RERUN_ON_1b65b55** | früherer Stand (`9158b35`, heute `9826231`) |
+| Firefox-/Chrome-Build, `vue-tsc` | **HISTORICAL_VERIFIED_NOT_RERUN_ON_1b65b55** | früherer Stand |
+| Gate 8/8 | **HISTORICAL_VERIFIED_NOT_RERUN_ON_1b65b55** | Alt-Stand `fa9b9f3` + `7688352` |
+| CURRENT-HEAD RE-VERIFICATION | **OPEN** | eigener Gate vorgesehen |
+| Autor-Identität (`du@example.com`) | **OPEN_DECISION** | 121 Commits, gepusht; nichts geändert |
+| TEMP-DIAG | **OPEN** / Core-Block **BLOCKED** | 5 Non-Core-Stellen offen; Core nur mit ausdrücklicher Freigabe |
+| Branch-Protection `main` | **OPEN** | keine (HTTP 404) |
+| Human Live QA | **DEFERRED / BLOCKED** (Hardware) | Release-Gate nicht bestanden |
+
+Es gilt weiterhin: „Automatische Tests PASS" und „CI success" sind kein Human-Live-PASS.

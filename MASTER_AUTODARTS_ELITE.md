@@ -20,8 +20,9 @@
 
 ## 2. REPOSITORY / BRANCH / BASELINE
 
-> **Aktualisierung 2026-10-02:** Der aktuelle Stand steht in Abschnitt 20
-> (`main`, HEAD `7688352`). Die folgende Tabelle ist der historische
+> **Aktualisierung 2026-10-03:** Der aktuelle Stand steht in Abschnitt 21
+> (`main`, HEAD `1b65b55`). Abschnitt 20 (HEAD `7688352`, Alt-Hash) ist
+> historisch. Die folgende Tabelle ist der historische
 > Audit-Stand vom 2026-08-29 und bleibt als Nachweis erhalten.
 
 | Feld | Wert (historisch, 2026-08-29) |
@@ -67,8 +68,8 @@ Im Audit verifiziert: alle fünf unverändert; Tests für den Kern grün (CMR 32
 | **Human Live Test bisher** | **NOT PERFORMED** |
 | Friends Presence | **PAUSED** |
 | CCPARTY N2 | **DEFERRED** |
-| Push ohne ausdrückliche Freigabe | **verboten** (Stand 2026-10-02: kein Push erfolgt, 34 Commits voraus) |
-| Gate (Stand 2026-10-02) | 8/8 PASS unter Node v22.23.2 für `fa9b9f3` + `7688352` (Abschnitt 20) |
+| Push ohne ausdrückliche Freigabe | **verboten** (HISTORICAL, Stand 2026-10-02: kein Push erfolgt, 34 Commits voraus; überholt, siehe Abschnitt 21: gepusht, 0/0) |
+| Gate (Stand 2026-10-02) | HISTORICAL_VERIFIED_NOT_RERUN_ON_1b65b55: 8/8 PASS unter Node v22.23.2 für `fa9b9f3` + `7688352` (Alt-Hashes, heute `a7ceb2e` + `12279ff`; Abschnitt 20, Mapping in Abschnitt 21) |
 
 Es wurde kein echter Board-/Runtime-Test dokumentiert. Kein Punkt trägt den Status `LIVE VERIFIED`. „Automatische Tests PASS", „technisch ready", „PRE-LIVE READY" ist **kein** Human-Live-PASS.
 
@@ -198,7 +199,7 @@ Es wurde kein echter Board-/Runtime-Test dokumentiert. Kein Punkt trägt den Sta
 |---|---|---|
 | Settings-Surface (48 Komponenten) | IMPLEMENTED | `components/Settings/` (Caller, SoundFx, Wled, Liga, Career, QuickCorrection, PrecisionMap, TrainingExercises, …) |
 | CC-Navigation / Sections | IMPLEMENTED + TESTED | `components/ControlCenter/sections.ts`; Lifecycle-Contracts |
-| PrecisionMap (geschützt) | IMPLEMENTED (zuletzt geändert in `3a8979c`, P40 ELO-Consent-UI; keine Freigabe dokumentiert) | Persistenz via canonical contract (`8e2f2e3`) |
+| PrecisionMap (geschützt) | IMPLEMENTED (zuletzt geändert in `79a5034` (Alt-Hash `3a8979c`), P40 ELO-Consent-UI; der Commit trägt jetzt den Trailer `Protected-Core-Approved`, siehe Abschnitt 21) | Persistenz via canonical contract (`8e2f2e3`) |
 | Shuffle-Players-Hang-Fix | IMPLEMENTED + TESTED | `lobby.content/index.ts` L18/75–77; `shuffle-players.test.ts` |
 | Automatic Fullscreen + Fullscreenchange-Cleanup | IMPLEMENTED + TESTED | `automatic-fullscreen.ts` L114/123–125; Contract |
 | TtsProvider Security-Tabelle (tbody) | IMPLEMENTED | `TtsProvider.vue` L306/323 |
@@ -257,7 +258,7 @@ Diese Punkte sind implementiert, aber **nur durch einen echten Human-Live-Test**
 |---|---|
 | Unit/Targeted (`yarn test`, node:test) | 446/446 PASS (67 Suiten, Stand Phase-3.5-Freeze; danach nur Component-Tests ergänzt) |
 | Lifecycle-Contracts (`yarn test:lifecycle`) | 49 `test()`-Blöcke PASS (HEAD `2422705b`, historisch); Stand 2026-10-02: 54 PASS |
-| Stand 2026-10-02 (HEAD `7688352`) | Component-Tests 90/90 PASS (12 Dateien); `vue-tsc --noEmit` ohne Fehler; Gate 8/8 PASS unter Node v22.23.2. Die Zeilen darüber sind der historische Audit-Stand. |
+| Stand 2026-10-02 (HEAD `7688352`, Alt-Hash; HISTORICAL_VERIFIED_NOT_RERUN_ON_1b65b55) | Component-Tests 90/90 PASS (12 Dateien); `vue-tsc --noEmit` ohne Fehler; Gate 8/8 PASS unter Node v22.23.2. Die Zeilen darüber sind der historische Audit-Stand. |
 | Component-Tests (`tests/components/`, Vitest) | Phase 5A (50) + Phase 5B (cc-history-expand 3, control-center-liveness 4) + CcLiveBoard (7) + CcMatchHero (6) |
 | TypeScript (`vue-tsc --noEmit`) | 0 Fehler |
 | Firefox MV2 Build | PASS (~4,29 MB) |
@@ -493,3 +494,72 @@ nicht 32) neu zu entscheiden.
   (Empfehlung: aus dem Arbeitsbaum in die externen Backups verschieben).
 - Push-Freigabe und Identitäts-Entscheidung (siehe oben).
 - Human-Live-QA und alle dort aufgeführten Hardware-Punkte (Release-Gate).
+
+## 21. POST-P40 STATUS-RECONCILIATION (2026-10-03, HEAD `1b65b55`)
+
+Dokumentarischer Nachtrag. Die Abschnitte 1–20 bleiben als historischer Nachweis erhalten; wo sie
+„kein Push", „34 Commits voraus", „CI nicht geprüft" oder Alt-Hashes nennen, gilt dieser Abschnitt.
+Es wurde kein Code und keine Konfiguration geändert.
+
+### 21.1 CURRENT_VERIFIED (HEAD `1b65b55`, 2026-10-03)
+
+| Fakt | Wert | Evidenz |
+|---|---|---|
+| HEAD | `1b65b554717361e8c7901bf11cbcf89e24a8a5a7` (`fix(elo): bind consent to backend host`) | `git rev-parse HEAD` |
+| `origin/main` | identisch (0/0, gepusht) | `git rev-parse origin/main`; `git ls-remote origin refs/heads/main` |
+| P40 | IMPLEMENTED · PUSHED · POST_PUSH_VERIFIED · ORIGIN_MAIN_SYNCHRONIZED | P40 = `79a5034`, P41-Doku = `8d79d04`, Consent-Host-Bindung = HEAD `1b65b55`; Sync und CI siehe unten. Die Post-Push-Verifikation selbst ist eine Operator-Angabe. |
+| GitHub-CI | `pr-control-center` (push, `main`) Run 37133647668 = `success`, `headSha` = `1b65b55` | `gh run view 37133647668` |
+| Protected-Core-Audit | `node scripts/core-guard.mjs range origin/main..HEAD` = Exit 0 (leerer Bereich) | direkt ausgeführt |
+| P40-Commit | `79a5034` trägt `Protected-Core-Approved: …` | `git log -1 79a5034` |
+| Git-Hooks | `core.hooksPath = scripts/githooks` (`commit-msg`, `pre-push`) | `git config` |
+| Remote-Tags | 0 (die 42 Recovery-Tags existieren nur lokal) | `git ls-remote --tags origin` |
+| Branch-Protection `main` | keine (HTTP 404) | `gh api …/branches/main/protection` |
+
+### 21.2 HISTORICAL_VERIFIED_NOT_RERUN_ON_1b65b55
+
+Diese Ergebnisse wurden auf früheren Ständen verifiziert und auf HEAD `1b65b55` **nicht** neu ausgeführt.
+Sie sind keine aktuellen Ergebnisse (Re-Verifikation: eigener CURRENT-HEAD RE-VERIFICATION GATE, offen):
+
+- `yarn test` 531/531, `yarn test:components` 90/90 (Stand `9158b35`, heute `9826231`)
+- Firefox-Build PASS, Chrome-Build PASS, `vue-tsc --noEmit` ohne Fehler
+- Gate 8/8 PASS unter Node v22.23.2 (Alt-Stand `fa9b9f3` + `7688352`, Paket `lifecycle-fixes-20261002b`)
+- Package-C-Teststände (501/501, Lifecycle 50/50, Components 82/82)
+- Die CI auf GitHub führte für `1b65b55` `yarn test`, `yarn test:components`, `yarn compile` und beide Builds aus (Workflow-Definition in `.github/workflows/pr-control-center.yml`) und war erfolgreich. Das ist CI-Evidenz, kein lokaler Lauf.
+
+### 21.3 Hash-Mapping (History-Rewrite)
+
+Die Historie wurde umgeschrieben (u. a. Trailer an P40, Backup-Branch `backup/pre-p40-trailer-rewrite-20261003`).
+Die in älteren Abschnitten genannten Hashes sind **keine Vorfahren** von `1b65b55` (die Objekte existieren noch lokal).
+Zuordnung über den Commit-Betreff (INFERRED, kein Rewrite-Protokoll im Repo):
+
+| Alt (in älteren Abschnitten) | Neu (in HEAD-Historie) | Betreff |
+|---|---|---|
+| `fa9b9f3` | `a7ceb2e` | chore(gate): add validation gate and align CI workflows |
+| `7688352` | `12279ff` | fix(lifecycle): harden teardown and async cleanup |
+| `e618c34` | `1090aba` | docs(setup): sync Setup 2.0 verified state |
+| `9158b35` | `9826231` | docs(setup): close out Setup 2.0 gate package and claude-mem verification |
+| `3a8979c` | `79a5034` | Setup 2.0 P40: require explicit consent before ELO network traffic |
+| `c34ffbe` | `9979bda` | Setup 2.0 Package C: remove inactive Ruflo residue |
+| `5fafa23` | `fb835fa` | Setup 2.0 D1: archive stale Codex Ruflo skills |
+| `70fd00e` | `638f3a5` | Setup 2.0 D2: archive final stale Codex skills |
+| `eb761cb` | `018c216` | Setup 2.0 D5: remove stale Codex environment flags |
+| `e4c17ad` | `ca5f597` | Setup 2.0 D7: protect scoring core for Codex |
+| `ea35d57` | `4fca81a` | Setup 2.0 D8: document D4-D7 verified state |
+
+Recovery-Tags tragen weiterhin den Alt-Hash im Namen, zeigen aber auf Commits der neuen Historie
+(Beispiele: `setup-2.0-frozen-20261002` → `9826231`, `setup-2.0-pD8-pre-docs-e4c17ad` → `5df6b0e`).
+Die Tag-Namen sind daher keine Hash-Belege.
+
+### 21.4 Status-Klassen
+
+- **IMPLEMENTED_NOT_VERIFIED:** Codex-Hook-Ausführung, Trust-Status und Laden von `AGENTS.md`; Vite-MCP-Erreichbarkeit; Verhaltenstests für Discord (nur Contract-Tests); Wirkung des `pre-push`-Guards im realen Push.
+- **OPEN:** TEMP-DIAG-Bereinigung (5 Non-Core-Stellen); MCP-Konsolidierung; WebSocket-Auto-Resync; Multi-Tab-Schutz; Branch-Protection/CODEOWNERS/CI-Core-Guard; Herkunft von `.ruvector/` und `ruvector.db`; lokale Änderung `.codex/config.toml` (Entscheidung); untracked `.claude/settings.local.json.bak-20260930T234259`; Human Live QA (alle Punkte der `HUMAN_LIVE_TEST_CHECKLIST.md`); CURRENT-HEAD RE-VERIFICATION GATE.
+- **OPEN_DECISION:** Autor-Identität, siehe 21.5.
+- **BLOCKED:** TEMP-DIAG-Core-Block (`utils/websocket-helpers.ts`, nur mit ausdrücklicher Freigabe); Release-Gate (Hardware/Human Live QA); `p345.sh` (darf nicht ausgeführt werden).
+- **OPTIONAL:** Remote-Tags; ECC-Katalogreduktion (ECC-D4); weitere Codex-Governance; `.codex/hooks.json`-Portabilität.
+
+### 21.5 OPEN_DECISION: Autor-Identität
+
+Alle 121 Commits des Autors `Sergej` tragen `du@example.com` (Platzhalter; zusätzlich 21 Commits von `Putos333` und 1 von `Emergent`).
+Die Commits sind bereits gepusht; eine Änderung erfordert einen Rewrite und einen Force-Push auf eine öffentliche Remote.
+Es wurde nichts geändert, `git config` blieb unverändert. Entscheidung offen und ausdrücklich dem Nutzer vorbehalten.

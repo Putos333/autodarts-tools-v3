@@ -7,7 +7,8 @@ Governance-Audit D6, AGENTS.md-Schutzregel D7, Graphify). Es dient
 als Recovery-, Wartungs- und Konfigurationsreferenz.
 
 - Stand der Verifikation: 2026-09-30 (Abschnitte 1–8); spätere Statusaktualisierung
-  2026-10-02 (HEAD `7688352`, Gatekeeper, Lifecycle-Fixes) in Abschnitt 9
+  2026-10-02 (HEAD `7688352`, Alt-Hash, Gatekeeper, Lifecycle-Fixes) in Abschnitt 9;
+  Post-P40-Stand (HEAD `1b65b55`, 2026-10-03) in Abschnitt 10
 - Verifizierte Versionen: ECC 2.2.1 (Claude-Code-Plugin, lokal aktiviert),
   Claude Code 2.1.285, claude-mem 13.16.1, Graphify 0.9.43,
   Codex CLI 0.153.4 (in D4 read-only festgestellt)
@@ -243,7 +244,7 @@ Deny-Liste gegen die dann registrierten ECC-Agents abgleichen.
   (zeigt auf den Stand unmittelbar vor Package C).
 - Anwendungscode und Protected Scoring Core blieben unberührt. Nach dem
   Commit liefen `yarn compile`, `yarn test` (501/501), `yarn test:lifecycle`
-  (50/50) und `yarn test:components` (82/82) erfolgreich; ECC und claude-mem
+  (50/50) und `yarn test:components` (82/82) erfolgreich (HISTORICAL_VERIFIED_NOT_RERUN_ON_1b65b55); ECC und claude-mem
   blieben funktional.
 - Außerhalb des Repositories wurde in `~/.claude/CLAUDE.md` nur der Satz zur
   Reaktivierbarkeit von Ruflo entfernt (Backup vorhanden).
@@ -497,7 +498,7 @@ Keine automatische Ausführung, jeweils separate Entscheidung erforderlich.
   und wäre eine separate Entscheidung.
 - **I) Portabilität von `.codex/hooks.json`:** Die Datei enthält absolute,
   private Pfade. Keine Entscheidung getroffen.
-- **F) Push:** Die lokale Commit-Kette ist nicht gepusht und benötigt weiterhin
+- **F) Push:** (HISTORICAL; erledigt, siehe Abschnitt 10: gepusht, `origin/main` = `1b65b55`.) Die lokale Commit-Kette war nicht gepusht und benötigte
   eine explizite Freigabe. Zuletzt festgestellt (D8-Audit, Stand `e4c17ad`):
   31 Commits vor der lokal gespeicherten Referenz `origin/main`, ohne Fetch.
   Der tatsächliche Stand des Remotes ist UNKNOWN/EXTERNAL; die Anzahl ist bei
@@ -606,3 +607,31 @@ nicht 32) neu zu entscheiden.
   (Empfehlung: aus dem Arbeitsbaum in die externen Backups verschieben).
 - Push-Freigabe und Identitäts-Entscheidung (siehe oben).
 - Human-Live-QA und alle dort aufgeführten Hardware-Punkte (Release-Gate).
+
+## 10. POST-P40 STATUS-RECONCILIATION (2026-10-03, HEAD `1b65b55`)
+
+Nachtrag; die Abschnitte 1–9 bleiben als historischer Nachweis erhalten. Wo sie „Push nicht erfolgt",
+„31/34 Commits voraus", „CI nicht erfolgt" oder Alt-Hashes nennen, gilt dieser Abschnitt. Vollständige
+Tabellen und Hash-Mapping: `MASTER_AUTODARTS_ELITE.md` Abschnitt 21. Keine Code- oder Konfigurationsänderung.
+
+**CURRENT_VERIFIED (HEAD `1b65b554717361e8c7901bf11cbcf89e24a8a5a7`):**
+- HEAD = `origin/main`, 0/0 (gepusht); P40 IMPLEMENTED · PUSHED · POST_PUSH_VERIFIED · ORIGIN_MAIN_SYNCHRONIZED
+  (P40 `79a5034`, P41-Doku `8d79d04`, Consent-Host-Bindung `1b65b55`; Post-Push-Verifikation: Operator-Angabe).
+- GitHub-CI `pr-control-center` auf `main`, Run 37133647668, `headSha` = `1b65b55`: `success`.
+- `node scripts/core-guard.mjs range origin/main..HEAD`: Exit 0; `core.hooksPath = scripts/githooks`.
+- Remote-Tags: 0 (die Recovery-Tags aus Abschnitt 7 existieren nur lokal); `main` ohne Branch-Protection (HTTP 404).
+
+**HISTORICAL_VERIFIED_NOT_RERUN_ON_1b65b55:** Gate 8/8 (Alt-Stand `fa9b9f3` + `7688352`), `yarn test` 531/531, Components 90/90,
+Firefox-/Chrome-Build, `vue-tsc`, Package-C-Teststände (501/501, 50/50, 82/82).
+
+**History-Rewrite:** Die in den Abschnitten 5–9 genannten Hashes (u. a. `c34ffbe`, `5fafa23`, `70fd00e`, `eb761cb`, `e4c17ad`, `ea35d57`,
+`fa9b9f3`, `7688352`, `e618c34`, `9158b35`) sind keine Vorfahren von `1b65b55`. Neue Hashes: `9979bda`, `fb835fa`, `638f3a5`, `018c216`,
+`ca5f597`, `4fca81a`, `a7ceb2e`, `12279ff`, `1090aba`, `9826231` (Zuordnung über den Commit-Betreff, INFERRED).
+Recovery-Tags behalten den Alt-Hash im Namen, zeigen aber auf Commits der neuen Historie; Tag-Namen sind keine Hash-Belege.
+
+**OPEN:** CURRENT-HEAD RE-VERIFICATION; TEMP-DIAG (5 Non-Core-Stellen); MCP-Konsolidierung; Branch-Protection; Codex-Laufzeitverhalten
+(Abschnitt 8-B, weiter UNKNOWN); lokale Änderung `.codex/config.toml`; untracked `.claude/settings.local.json.bak-20260930T234259`.
+**BLOCKED:** TEMP-DIAG-Core-Block (nur mit ausdrücklicher Freigabe); Release-Gate (Human Live QA, Hardware); `p345.sh` (darf nicht ausgeführt werden).
+
+**OPEN_DECISION – Autor-Identität:** 121 Commits tragen `du@example.com` und sind gepusht. Die in Abschnitt 9 verlangte Entscheidung vor dem
+Push wurde nicht dokumentiert. Eine Änderung bräuchte einen Rewrite und einen Force-Push; nichts geändert, `git config` unverändert.

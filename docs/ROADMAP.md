@@ -70,3 +70,16 @@ erneut gegen den Code geprüft. Verifizierter Projektstand auf `main`, HEAD
   Setup-Blocker CLOSED (Belege: `MASTER_AUTODARTS_ELITE.md` Abschnitt 20).
 - Deferred: Full Statistics / CMR v2, Solo Challenges (teilweise), Party/Lobby.
 - Human Live QA: DEFERRED; kein Release-Gate bestanden.
+
+## Status 2026-10-03 (Ergänzung, HEAD `1b65b55`)
+
+Der Block „Status 2026-10-02" oben (HEAD `7688352`, Alt-Hash, heute `12279ff`) ist historisch und in
+folgenden Punkten überholt. Details: `MASTER_AUTODARTS_ELITE.md` Abschnitt 21.
+
+- **CURRENT_VERIFIED:** HEAD = `origin/main` = `1b65b55`, 0/0 (gepusht). GitHub-CI `pr-control-center` auf `main` für `1b65b55`: `success`. `core-guard range origin/main..HEAD`: Exit 0. Remote-Tags: 0.
+- **P40 (ELO-Consent):** IMPLEMENTED, PUSHED, POST_PUSH_VERIFIED, ORIGIN_MAIN_SYNCHRONIZED (`79a5034`, Doku `8d79d04`, Consent-Host-Bindung `1b65b55`).
+- **Erledigt seit 2026-10-02:** PKG-1 (WebSocket-Characterization-Tests, `a9d6a3a`), PKG-7 (Protected-Core-Erzwingung, siehe `docs/PROTECTED_CORE_ENFORCEMENT.md`), Discord-Teardown-Härtung (`5fc8cde`, `524a74d`).
+- **HISTORICAL_VERIFIED_NOT_RERUN_ON_1b65b55:** Gate 8/8, Tests 531/531, Components 90/90, Firefox-/Chrome-Build, `vue-tsc`.
+- **OPEN:** CURRENT-HEAD RE-VERIFICATION; TEMP-DIAG-Bereinigung (Core-Block BLOCKED ohne Freigabe); MCP-Konsolidierung; WebSocket-Auto-Resync; Multi-Tab-Schutz; Branch-Protection; Herkunft `.ruvector/`/`ruvector.db`.
+- **OPEN_DECISION:** Autor-Identität `du@example.com` (121 Commits, gepusht).
+- **BLOCKED:** Human Live QA / Release-Gate (Hardware).

@@ -16,7 +16,7 @@ noch Tooling. Ergänzt `docs/SETUP_2_0_DEV_AGENT_SETUP.md` (Abschnitt 9) und
 | KNOWN STATUS | Setup 2.0 **READY**, keine Hard Blocker |
 | Protected Core | gegenüber `origin/main` unverändert |
 
-## VERIFICATION (frisch, 2026-10-02, direkt ausgeführte Gate-Kommandos aus `scripts/gate.config.json`)
+## VERIFICATION (HISTORICAL_VERIFIED_NOT_RERUN_ON_1b65b55; 2026-10-02, direkt ausgeführte Gate-Kommandos aus `scripts/gate.config.json`)
 
 | Stufe | Kommando | Ergebnis |
 |---|---|---|
@@ -45,3 +45,18 @@ Eine Gate-Paketverifikation von `9158b35` existiert deshalb nicht; die Stufen `s
 `setup-2.0-frozen-20261002` (lokal, auf `9158b35`). Anlage nur nach ausdrücklicher Zustimmung:
 `git tag setup-2.0-frozen-20261002 9158b35`. Rollback auf den Stand: `git switch -c recovery/setup-2.0 setup-2.0-frozen-20261002`
 (kein Reset von `main`).
+
+## NACHTRAG 2026-10-03 (HEAD `1b65b55`, Post-P40)
+
+Dieser Nachtrag überholt die Aussagen oben, wo sie vom heutigen Stand abweichen; die Tabellen oben bleiben als historischer Nachweis erhalten.
+Vollständige Tabellen und Hash-Mapping: `MASTER_AUTODARTS_ELITE.md` Abschnitt 21.
+
+- **Hash-Mapping:** Der RECOVERY BASELINE-Hash `9158b35` ist durch einen History-Rewrite keine Vorfahre von `1b65b55` mehr; derselbe Commit
+  (`docs(setup): close out Setup 2.0 gate package and claude-mem verification`) heißt jetzt `9826231` (Zuordnung über den Betreff, INFERRED).
+- **Recovery-Tag:** `setup-2.0-frozen-20261002` existiert inzwischen lokal und zeigt auf `9826231` (VERIFIED, `git rev-parse`). Er ist nicht auf
+  der Remote (Remote-Tags: 0). Die Aussage „nicht angelegt" oben ist überholt.
+- **Push:** erfolgt. HEAD = `origin/main` = `1b65b554717361e8c7901bf11cbcf89e24a8a5a7`, 0/0; „36 Commits ahead" und „Kein Push" oben sind überholt.
+- **CI:** `pr-control-center` auf `main`, Run 37133647668, `headSha` `1b65b55`: `success` (CURRENT_VERIFIED).
+- **Tabelle VERIFICATION oben (531/531, 90/90, Firefox-/Chrome-Build, diffcheck, compile):** HISTORICAL_VERIFIED_NOT_RERUN_ON_1b65b55.
+- **OPEN_DECISION:** Autor-Identität `du@example.com` (121 Commits, gepusht); nichts geändert.
+- **Rollback-Hinweis (unverändert gültig):** `git switch -c recovery/setup-2.0 setup-2.0-frozen-20261002` (kein Reset von `main`).

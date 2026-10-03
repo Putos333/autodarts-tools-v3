@@ -19,9 +19,13 @@ Herkunft der 5. Datei: `MASTER_AUTODARTS_ELITE.md` §4 führt `PrecisionMap.vue`
 ist im Repo nicht dokumentiert. Die vorübergehende 4er-Liste (CLAUDE.md, AGENTS.md, Gate, Stand 2026-10-02 bis zu dieser Änderung)
 wurde deshalb auf Nutzerentscheidung wieder auf 5 Dateien erweitert.
 
-Bekannte Folge: Der bereits vorhandene Commit `3a8979c` (P40, ELO-Consent-UI) ändert `PrecisionMap.vue` vor dieser Regel und trägt keinen
-Trailer; für ihn ist im Repo keine Freigabe dokumentiert. `node scripts/core-guard.mjs range origin/main..HEAD` meldet ihn daher, und der
-`pre-push`-Hook würde einen Push dieses Bereichs ablehnen, bis darüber entschieden ist.
+Historische Folge (AUFGELÖST, Stand 2026-10-03): Der ursprüngliche P40-Commit `3a8979c` (ELO-Consent-UI) änderte `PrecisionMap.vue`
+ohne Trailer; `core-guard range origin/main..HEAD` hätte ihn gemeldet und `pre-push` den Push abgelehnt. Die Historie wurde seitdem umgeschrieben
+(Backup-Branch `backup/pre-p40-trailer-rewrite-20261003`): P40 ist jetzt `79a5034` und trägt `Protected-Core-Approved: …`. Auf HEAD `1b65b55`
+(gepusht, `origin/main` identisch) liefert `node scripts/core-guard.mjs range origin/main..HEAD` Exit 0 (CURRENT_VERIFIED, 2026-10-03).
+Ein Audit der gesamten Historie (`range origin/main`) meldet weiterhin 6 Vor-Guard-Commits (`27d65ab`, `fb00b08`, `691e9c3`, `8e2f2e3`, `80970ec`, `74f9adf`)
+ohne Trailer; sie liegen vor PKG-7 und sind keine Push-Blocker. Ob der `pre-push`-Hook beim realen P40-Push ausgeführt wurde, ist nicht belegt
+(IMPLEMENTED_NOT_VERIFIED).
 
 ## D1 – Claude Code (`.claude/settings.json`)
 
