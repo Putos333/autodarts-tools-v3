@@ -21,7 +21,9 @@ const handle: MockStorageHandle = installWxtGlobals();
 
 const CONSENT_KEY = "adt-elo-consent";
 const IDENTITY_KEY = "adt-elo-identity";
+const CONFIG_KEY = "config-2-0-0";
 const BACKEND = "https://backend.example.test";
+const OTHER_BACKEND = "https://other.example.test";
 
 interface Sent { type: string; payload: { url: string; method: string; body?: string } }
 let sent: Sent[] = [];
@@ -62,6 +64,8 @@ async function useAllNetworkFunctions() {
 beforeEach(() => {
   handle.reset();
   installRuntime();
+  // Aktuell konfiguriertes ELO-Backend (Consent gilt nur für diesen Host).
+  handle.seed(CONFIG_KEY, { elo: { backendUrl: BACKEND } });
 });
 
 describe("ELO-Consent: Zustandsmodell", () => {
@@ -77,7 +81,7 @@ describe("ELO-Consent: Zustandsmodell", () => {
     assert.equal(raw.state, "accepted");
     assert.equal(raw.v, c.ELO_CONSENT_VERSION);
     assert.equal(typeof raw.at, "number");
-    assert.equal(handle.raw("config-2-0-0"), undefined, "Consent darf nicht in der Config landen");
+    assert.deepEqual(handle.raw(CONFIG_KEY), { elo: { backendUrl: BACKEND } }, "Consent darf nicht in der Config landen");
   });
 
   it("ungültiger Zustand wird an der Schnittstelle abgelehnt und nichts geschrieben", async () => {
@@ -274,6 +278,105 @@ describe("ELO-Consent: Zustimmung erlaubt Übertragung nur zusätzlich zu den bi
     await c.setEloConsent("accepted");
     (globalThis as any).browser.runtime.sendMessage = async () => { throw new Error("offline"); };
     assert.equal(await c.submitMatch(BACKEND, match), null);
+  });
+});
+
+describe("ELO-Consent: Zustimmung gilt nur für den Host, für den sie erteilt wurde", () => {
+  const count = () => sent.length;
+
+  it("A. Zustimmung für Host A: Host A bleibt erlaubt, der Eintrag enthält den Host", async () => {
+    const c = await elo();
+    assert.equal(await c.setEloConsent("accepted"), true);
+    assert.equal((handle.raw(CONSENT_KEY) as { host: string }).host, BACKEND);
+    assert.equal(await c.getEloConsent(), "accepted");
+    assert.equal(await c.getEloConsent(BACKEND), "accepted");
+    const r = await useAllNetworkFunctions();
+    assert.notEqual(r.submit, null);
+    assert.ok(count() > 0);
+  });
+
+  it("B. Wechsel der konfigurierten backendUrl A -> B: Zustimmung von A gilt nicht für B", async () => {
+    const c = await elo();
+    await c.setEloConsent("accepted");
+    handle.seed(CONFIG_KEY, { elo: { backendUrl: OTHER_BACKEND } });
+    assert.equal(await c.getEloConsent(), "unknown");
+    sent = [];
+    assert.equal(await c.submitMatch(OTHER_BACKEND, match), null);
+    assert.deepEqual(await c.fetchLeaderboard(OTHER_BACKEND, 10), []);
+    assert.equal(await c.fetchSelf(OTHER_BACKEND), null);
+    assert.equal(count(), 0, "kein Netzwerkzugriff auf Host B");
+  });
+
+  it("B2. Anfrage an einen anderen Host als den zugestimmten wird auch bei unveränderter Config blockiert", async () => {
+    const c = await elo();
+    await c.setEloConsent("accepted");
+    sent = [];
+    assert.equal(await c.submitMatch(OTHER_BACKEND, match), null);
+    assert.equal(count(), 0);
+  });
+
+  it("C. Wechsel zurück zu Host A: der Eintrag ist unverändert und gilt wieder für A", async () => {
+    const c = await elo();
+    await c.setEloConsent("accepted");
+    handle.seed(CONFIG_KEY, { elo: { backendUrl: OTHER_BACKEND } });
+    assert.equal(await c.getEloConsent(), "unknown");
+    handle.seed(CONFIG_KEY, { elo: { backendUrl: BACKEND } });
+    assert.equal(await c.getEloConsent(), "accepted");
+  });
+
+  it("C2. Neue Entscheidung für Host B ersetzt den Eintrag von A (A danach wieder unknown)", async () => {
+    const c = await elo();
+    await c.setEloConsent("accepted");
+    handle.seed(CONFIG_KEY, { elo: { backendUrl: OTHER_BACKEND } });
+    assert.equal(await c.setEloConsent("accepted"), true);
+    assert.equal(await c.getEloConsent(), "accepted");
+    assert.equal(await c.getEloConsent(BACKEND), "unknown");
+  });
+
+  it("D. gleiche backendUrl (auch mit Slash, Host-Großschreibung, ohne Schema): Zustimmung bleibt gültig", async () => {
+    const c = await elo();
+    await c.setEloConsent("accepted");
+    assert.equal(await c.getEloConsent(`${BACKEND}/`), "accepted");
+    assert.equal(await c.getEloConsent("https://Backend.Example.Test"), "accepted");
+    assert.equal(await c.getEloConsent("backend.example.test"), "accepted");
+    assert.equal(await c.getEloConsent(`${BACKEND}/api/elo/submit`), "accepted");
+  });
+
+  it("D2. declined ist ebenfalls an den Host gebunden", async () => {
+    const c = await elo();
+    await c.setEloConsent("declined");
+    assert.equal(await c.getEloConsent(), "declined");
+    assert.equal(await c.getEloConsent(OTHER_BACKEND), "unknown");
+  });
+
+  it("E. leere oder ungültige backendUrl: unknown, setEloConsent schreibt nichts und meldet false", async () => {
+    const c = await elo();
+    for (const bad of ["", "   ", "http://exa mple.test", "https://["]) {
+      assert.equal(await c.getEloConsent(bad), "unknown", `getEloConsent(${JSON.stringify(bad)})`);
+      assert.equal(await c.setEloConsent("accepted", bad), false, `setEloConsent(${JSON.stringify(bad)})`);
+      assert.equal(handle.raw(CONSENT_KEY), undefined);
+    }
+    handle.seed(CONFIG_KEY, { elo: { backendUrl: "" } });
+    assert.equal(await c.setEloConsent("accepted"), false);
+    assert.equal(handle.raw(CONSENT_KEY), undefined);
+  });
+
+  it("E2. Eintrag ohne Host (Altbestand oder importierte Datei) zählt als unknown und sendet nichts", async () => {
+    const c = await elo();
+    handle.seed(CONSENT_KEY, { state: "accepted", at: 1, v: 1 });
+    assert.equal(await c.getEloConsent(), "unknown");
+    const r = await useAllNetworkFunctions();
+    assert.equal(r.submit, null);
+    assert.equal(count(), 0);
+  });
+
+  it("E3. Eintrag mit fremdem Host (z. B. aus importierter Datei) gilt nicht für die konfigurierte backendUrl", async () => {
+    const c = await elo();
+    handle.seed(CONSENT_KEY, { state: "accepted", at: 1, v: 1, host: "https://attacker.example.test" });
+    assert.equal(await c.getEloConsent(), "unknown");
+    const r = await useAllNetworkFunctions();
+    assert.equal(r.submit, null);
+    assert.equal(count(), 0);
   });
 });
 

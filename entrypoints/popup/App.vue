@@ -245,6 +245,8 @@ async function importSettings(ev: Event) {
     }
     await browser.storage.local.clear();
     await browser.storage.local.set(data);
+    // ELO-Zustimmung nie aus einer Datei übernehmen (sie gilt nur für den Host, dem der Nutzer zugestimmt hat).
+    await browser.storage.local.remove('adt-elo-consent');
     alert('Import erfolgreich! autodarts.io-Tabs werden nach Reload aktualisiert.');
     // Reload alle Tabs auf autodarts.io
     try {

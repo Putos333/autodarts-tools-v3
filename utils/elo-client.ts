@@ -7,6 +7,8 @@
  * Sämtliche Kommunikation erfolgt anonym.
  */
 
+import { AutodartsToolsConfig } from "@/utils/storage";
+
 const STORAGE_KEY = "adt-elo-identity";
 
 export interface EloIdentity {
@@ -94,40 +96,75 @@ function normalizeBackend(url: string): string {
 // Jede Netzwerkkommunikation dieses Clients (Upload, Ranglisten-Abruf,
 // eigener Rang) läuft über bgFetch() und ist nur im Zustand "accepted"
 // erlaubt. Fehlender, ungültiger oder nicht lesbarer Zustand zählt als
-// "unknown" und sperrt (fail closed). Die Zustimmung liegt bewusst NICHT in
-// der Config (IConfig): Einstellungs-Import und -Reset ändern sie nicht, und
-// eine importierte Datei kann keine fremde Zustimmung mitbringen. Die
-// bisherigen Gates (elo.enabled, elo.submitEnabled, identity.submitEnabled)
-// bleiben unverändert und gelten zusätzlich.
+// "unknown" und sperrt (fail closed). Die Zustimmung gilt nur für den Host
+// (Origin), für den sie erteilt wurde: Ein Wechsel der backendUrl, etwa durch
+// einen Config-Import, macht sie ungültig ("unknown"). Sie liegt bewusst
+// NICHT in der Config (IConfig): Einstellungs-Reset ändert sie nicht. Das
+// Voll-Backup im Popup entfernt sie beim Import (entrypoints/popup/App.vue),
+// weil eine importierte Datei sonst Zustimmung und Host gemeinsam mitbringen
+// könnte. Die bisherigen Gates (elo.enabled, elo.submitEnabled,
+// identity.submitEnabled) bleiben unverändert und gelten zusätzlich.
 
 const CONSENT_KEY = "adt-elo-consent";
 export const ELO_CONSENT_VERSION = 1;
 export type EloConsentState = "unknown" | "accepted" | "declined";
 
-export async function getEloConsent(): Promise<EloConsentState> {
+/** Origin einer Backend-URL; leer bei leerer oder ungültiger URL (dann gilt "unknown"). */
+function consentHost(url: string): string {
+  const u = normalizeBackend(url);
+  if (!u) return "";
   try {
+    const origin = new URL(u).origin.toLowerCase();
+    return origin === "null" ? "" : origin;
+  } catch {
+    return "";
+  }
+}
+
+/** Host der aktuell konfigurierten ELO-Backend-URL. */
+async function configuredHost(): Promise<string> {
+  try {
+    return consentHost((await AutodartsToolsConfig.getValue()).elo?.backendUrl ?? "");
+  } catch {
+    return "";
+  }
+}
+
+/**
+ * Zustimmungszustand für einen Host. Ohne `backendUrl` gilt die aktuell
+ * konfigurierte Backend-URL. Ein Eintrag ohne oder mit abweichendem Host zählt als "unknown".
+ */
+export async function getEloConsent(backendUrl?: string): Promise<EloConsentState> {
+  try {
+    const host = backendUrl === undefined ? await configuredHost() : consentHost(backendUrl);
+    if (!host) return "unknown";
     const raw = await browser.storage.local.get(CONSENT_KEY);
-    const rec = raw?.[CONSENT_KEY] as { state?: unknown; v?: unknown } | undefined;
-    if (!rec || typeof rec !== "object" || rec.v !== ELO_CONSENT_VERSION) return "unknown";
+    const rec = raw?.[CONSENT_KEY] as { state?: unknown; v?: unknown; host?: unknown } | undefined;
+    if (!rec || typeof rec !== "object" || rec.v !== ELO_CONSENT_VERSION || rec.host !== host) return "unknown";
     return rec.state === "accepted" || rec.state === "declined" ? rec.state : "unknown";
   } catch {
     return "unknown";
   }
 }
 
-/** Speichert die Entscheidung und prüft sie durch Zurücklesen. Gibt nur bei bestätigtem Schreiben `true` zurück. */
-export async function setEloConsent(state: "accepted" | "declined"): Promise<boolean> {
+/**
+ * Speichert die Entscheidung für einen Host (ohne `backendUrl`: die aktuell konfigurierte)
+ * und prüft sie durch Zurücklesen. Gibt nur bei bestätigtem Schreiben `true` zurück.
+ */
+export async function setEloConsent(state: "accepted" | "declined", backendUrl?: string): Promise<boolean> {
   if (state !== "accepted" && state !== "declined") return false;
   try {
-    await browser.storage.local.set({ [CONSENT_KEY]: { state, at: Date.now(), v: ELO_CONSENT_VERSION } });
-    return (await getEloConsent()) === state;
+    const host = backendUrl === undefined ? await configuredHost() : consentHost(backendUrl);
+    if (!host) return false;
+    await browser.storage.local.set({ [CONSENT_KEY]: { state, at: Date.now(), v: ELO_CONSENT_VERSION, host } });
+    return (await getEloConsent(host)) === state;
   } catch {
     return false;
   }
 }
 
 async function bgFetch(url: string, options: RequestInit): Promise<any> {
-  if ((await getEloConsent()) !== "accepted") {
+  if ((await getEloConsent(url)) !== "accepted") {
     return { ok: false, error: "consent-required" };
   }
   try {

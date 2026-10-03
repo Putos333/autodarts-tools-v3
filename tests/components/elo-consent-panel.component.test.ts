@@ -15,6 +15,7 @@ import { flushPromises, mount, type VueWrapper } from "@vue/test-utils";
 import { defineComponent, h, Suspense } from "vue";
 
 import { installWxtGlobals, type MockStorageHandle } from "../support/wxt-globals-mock";
+import { FALLBACK_BACKEND_URL } from "@/utils/backend-url";
 
 // Muss VOR jedem Import von @/utils/storage / der Komponente laufen.
 const handle: MockStorageHandle = installWxtGlobals();
@@ -30,6 +31,8 @@ vi.mock("@/utils/heatmap-storage", async (importOriginal) => {
 });
 
 const CONSENT_KEY = "adt-elo-consent";
+// Host der Standard-Backend-URL (defaultConfig.elo.backendUrl), an den der Consent gebunden wird.
+const DEFAULT_HOST = new URL(FALLBACK_BACKEND_URL).origin;
 
 interface Sent { type: string; payload: { url: string; method: string } }
 let sendMessage: ReturnType<typeof vi.fn>;
@@ -177,7 +180,7 @@ describe("ELO-Consent-UI: Entscheidung später ändern (Einstellungen)", () => {
   });
 
   it("4. Widerruf: accepted -> declined, danach entsteht keine weitere Anfrage", async () => {
-    handle.seed(CONSENT_KEY, { state: "accepted", at: 1, v: 1 });
+    handle.seed(CONSENT_KEY, { state: "accepted", at: 1, v: 1, host: DEFAULT_HOST });
     await mountPanel();
     expect(byId("elo-consent-status").text()).toBe("Zugestimmt");
     expect(calledUrls().length).toBeGreaterThan(0);
@@ -194,7 +197,7 @@ describe("ELO-Consent-UI: Entscheidung später ändern (Einstellungen)", () => {
   });
 
   it("5. declined -> accepted im Panel: Übertragung wieder möglich", async () => {
-    handle.seed(CONSENT_KEY, { state: "declined", at: 1, v: 1 });
+    handle.seed(CONSENT_KEY, { state: "declined", at: 1, v: 1, host: DEFAULT_HOST });
     await mountPanel();
     expect(sendMessage).not.toHaveBeenCalled();
 
