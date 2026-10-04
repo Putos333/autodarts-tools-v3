@@ -21,6 +21,8 @@
     "test": "node --import tsx --test \"tests/*.test.mjs\" \"tests/*.test.ts\"",
     "test:lifecycle": "node --test tests/lifecycle-contracts.test.mjs",
     "test:components": "vitest run",
+    "test:e2e": "playwright test",
+    "test:e2e:update": "playwright test --update-snapshots=all",
     "gate": "node scripts/gate.mjs",
     "postinstall": "wxt prepare"
   },
@@ -45,6 +47,7 @@
     "@creazy231/eslint-config": "^1.0.15",
     "@iconify-json/material-symbols": "^1.2.15",
     "@iconify/tailwind": "^1.2.0",
+    "@playwright/test": "1.62.1",
     "@types/eslint": "^8.56.10",
     "@types/lodash": "^4.17.6",
     "@types/sortablejs": "^1.15.8",

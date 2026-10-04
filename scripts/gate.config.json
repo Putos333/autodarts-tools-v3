@@ -28,7 +28,7 @@
   },
   "classRules": [
     { "class": "BUILD_DEPENDENCY", "globs": [
-      "package.json", "yarn.lock", ".yarnrc.yml", "wxt.config.ts", "tsconfig*.json", "vitest.config.ts",
+      "package.json", "yarn.lock", ".yarnrc.yml", "wxt.config.ts", "tsconfig*.json", "vitest.config.ts", "playwright.config.ts",
       ".nvmrc", ".eslintrc.cjs", ".eslintignore", ".gitignore", "postcss.config.js", "tailwind.config.ts"
     ] },
     { "class": "TEST_CODE", "globs": ["tests/**"] },

@@ -12,6 +12,8 @@ node_modules
 stats.html
 .wxt
 web-ext.config.ts
+test-results
+playwright-report
 
 # WXT auto-generated type definitions (regenerated on `yarn postinstall` -> `wxt prepare`)
 auto-imports.d.ts
