@@ -15,6 +15,10 @@ name: pr-control-center
 #
 # Kein Gate hier nutzt continue-on-error — jeder Fehler lässt den Workflow
 # tatsächlich fehlschlagen.
+#
+# Die Datei enthält zwei voneinander unabhängige Jobs: `checks` (unverändert)
+# und `e2e` (Playwright-Browser-E2E der gebauten Chrome-MV3-Extension, siehe
+# Kommentar am Job). Beide Jobs laufen parallel.
 
 on:
   pull_request:
@@ -72,3 +76,73 @@ jobs:
 
       - name: Chrome MV3 Build
         run: yarn wxt build
+
+  # Browser-E2E der gebauten Chrome-MV3-Extension (tests/e2e, Playwright).
+  # Separater Job, parallel zu `checks`: Browser- oder apt-Probleme maskieren
+  # die bestehenden Gates nicht (und umgekehrt). Der Runner ist bewusst fest auf
+  # ubuntu-24.04 gepinnt: `ubuntu-latest` wechselt ab 2026-10-19 auf Ubuntu 26,
+  # Schriften und Systempakete bestimmen aber die Screenshot-Baseline. Chromium
+  # läuft headed unter Xvfb (lokal verifizierte Variante; der Playwright-
+  # Standard-Headless-Modus lädt die Extension nicht). Kein continue-on-error,
+  # keine Retries.
+  e2e:
+    name: Playwright E2E
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'yarn'
+
+      - name: Install dependencies (frozen lockfile)
+        run: yarn install --frozen-lockfile
+        env:
+          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
+
+      # Die E2E-Tests laden .output/chrome-mv3 (derselbe Build-Befehl wie im
+      # Job `checks` und in package.json).
+      - name: Chrome MV3 Build
+        run: yarn wxt build
+
+      # Cache-Key an die Playwright-Version binden (nicht an yarn.lock), damit
+      # der Browser nur bei einem Playwright-Update neu geladen wird.
+      - name: Playwright version
+        id: playwright
+        run: echo "version=$(node -p "require('playwright/package.json').version")" >> "$GITHUB_OUTPUT"
+
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.playwright.outputs.version }}
+
+      # Bei Cache-Treffer lädt der Befehl keinen Browser neu, installiert aber
+      # weiterhin die apt-Pakete (xvfb, Chromium-Bibliotheken, Standard-Schriften).
+      - name: Install Playwright Chromium and system dependencies
+        run: yarn playwright install --with-deps --no-shell chromium
+
+      # Baseline-Parität: Der Screenshot-Test wurde mit Noto Sans als Auflösung
+      # des Schriftstapels (-apple-system, "Segoe UI", Roboto, sans-serif) erzeugt.
+      - name: Install Noto fonts (visual baseline)
+        run: sudo apt-get install -y --no-install-recommends fonts-noto-core
+
+      - name: Playwright E2E
+        run: xvfb-run -a yarn test:e2e
+
+      - name: Upload E2E results on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-test-results
+          path: test-results/
+          if-no-files-found: ignore
+          retention-days: 7
