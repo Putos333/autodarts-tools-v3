@@ -17,10 +17,11 @@ Verified working toolchain (2026-08-28, see PRE_LIVE_SNAPSHOT.md / POST_LIVE_DIA
 | Codebase/symbol search | Read/Grep/Glob + TypeScript LSP (`.ts` only — no `.vue` support) |
 | Architecture/relationships | graphify — only when structural relationships actually matter, not for simple lookups |
 | Implementation | native Edit/Write, only the files actually required |
-| Unit/regression tests | project test runner (`yarn test`, `yarn test:lifecycle`) |
+| Unit/regression tests | project test runner (`yarn test`, `yarn test:lifecycle`, `yarn test:components`); browser E2E see next row |
+| Browser E2E (extension) | Playwright test suite (`@playwright/test` 1.62.1, `tests/e2e`, 13 tests incl. 1 visual-regression test). After `yarn wxt build`: `yarn test:e2e` (without `$DISPLAY`: `xvfb-run -a yarn test:e2e`). Runs in CI as job "Playwright E2E". Not a `yarn gate` stage |
 | Firefox extension | existing `yarn build:firefox` + `web-ext` (global install) for lint/runtime when needed |
 | Chrome live debug | Chrome DevTools MCP (project-scoped, `chrome-devtools-mcp@1.8.0`; see Verified tool status) |
-| Browser automation | Playwright MCP — on demand only, for real automated interaction/regression, not for simple checks. Currently NOT enabled in this project (plugin installed, project-locally disabled); no Playwright npm package/CLI/skill exists. Enable only for a concrete need |
+| Browser automation (interactive/agentic) | Playwright MCP — on demand only, not for simple checks. Currently NOT enabled in this project (plugin installed, project-locally disabled). It is separate from the Playwright test suite above (npm package, no MCP needed). Enable only for a concrete need |
 | GitHub | `gh` CLI = verified main path (authenticated). GitHub MCP/plugin is installed but project-locally disabled and optional — not a prerequisite; do not demand activation or a token |
 | Library/API docs | Context7 via the claude.ai connector if available in the session (the Context7 plugin is installed but project-locally disabled); otherwise official docs. Don't use `ecc:docs-lookup` (broken tool names) |
 | Code review | `code-review` skill after relevant implementation changes |
@@ -35,15 +36,17 @@ Verified working toolchain (2026-08-28, see PRE_LIVE_SNAPSHOT.md / POST_LIVE_DIA
 
 ## Verified tool status (E3.2/E3.3, 2026-10-03)
 
-Reality check of the routing table above. Evidence class: VERIFIED = read from local config/files or computed locally; "not invoked" = presence confirmed, function not called.
+Reality check of the routing table above (Playwright rows and the E2E-CI row updated 2026-10-04). Evidence class: VERIFIED = read from local config/files or computed locally; "not invoked" = presence confirmed, function not called.
 
 | Tool | Status |
 |---|---|
 | `gh` CLI | INSTALLED (2.45.0), authenticated; used in practice (CI runs, repo queries) |
 | GitHub MCP/plugin (`github@claude-plugins-official`) | INSTALLED (user scope); DISABLED in `.claude/settings.local.json`. Its HTTP definition reads `GITHUB_PERSONAL_ACCESS_TOKEN`, which is not set in the shell. Optional; do not activate without explicit instruction |
-| Playwright npm package | NOT FOUND (not in `package.json`/`node_modules`, no `playwright.config`) |
-| Playwright CLI | NOT FOUND (only `web-ext` is installed globally) |
+| Playwright npm package | INSTALLED: `@playwright/test` 1.62.1 (exact devDependency; transitive `playwright` and `playwright-core` 1.62.1), `playwright.config.ts`, suite in `tests/e2e` (commit `5389f1a`, 2026-10-04) |
+| Playwright CLI | AVAILABLE via the project (`yarn playwright`, `node_modules/.bin/playwright`); still no global install (only `web-ext` is installed globally) |
 | Playwright skills | NOT FOUND (only gstack-internal files mention `playwright-core`) |
+| Playwright browser | Playwright-managed Chromium (Chrome for Testing 151.0.7922.34, revision 1234), run headed under Xvfb. The default headless shell does not load the extension; Google Chrome 154 does not load it either (verified). The new headless mode (`channel: "chromium"`) loaded it in a probe but is not adopted |
+| E2E in CI | Job "Playwright E2E" in `.github/workflows/pr-control-center.yml` (ubuntu-24.04, Xvfb-headed, `fonts-noto-core`, browser cache), merged via PR #17 (merge commit `92b723e`). Run 37220303579 on main: success, 13 passed. Browser cache was a MISS in the observed runs (PR and main); a cache hit has not been observed. The failure-artifact upload has not been exercised |
 | Playwright MCP (`playwright@claude-plugins-official`) | INSTALLED (user scope, `npx @playwright/mcp@latest`, unpinned); DISABLED in this project. On demand/optional, not activated |
 | Context7 plugin | INSTALLED (user scope); DISABLED in this project |
 | Context7 access | claude.ai connector present in sessions (`mcp__claude_ai_Context7__*`, presence verified, not invoked); Codex has its own `context7` entry in `~/.codex/config.toml` |
@@ -61,7 +64,7 @@ Substitute protection layers (they do not replace GateGuard's fact-forcing): `pr
 
 - Local repo work -> local repo tools.
 - GitHub -> `gh` (verified main path).
-- Browser/UI QA -> the existing Playwright MCP / Chrome DevTools paths, as needed; `web-ext` for Firefox.
+- Browser/UI QA -> automated regression: the Playwright suite (`yarn test:e2e`); debugging: Chrome DevTools MCP; Playwright MCP only as an optional extra; `web-ext` for Firefox.
 - Library/API docs -> Context7 connector, depending on availability.
 - Optional MCPs only for a concrete need; no redundant permanently-active tools without proven benefit.
 
@@ -78,7 +81,7 @@ Substitute protection layers (they do not replace GateGuard's fact-forcing): `pr
 | BUG-TRIAGE | native `fork` (reproduce/root-cause) or `Explore` (read-only search) |
 | CODE-REVIEW | `pr-review-toolkit:code-reviewer` + `pr-review-toolkit:silent-failure-hunter` (regressions, lifecycle, race conditions, side effects) |
 | TEST/VALIDATION | `.claude/agents/testing/production-validator.md` |
-| BROWSER/RUNTIME | no dedicated agent — call Chrome DevTools MCP / Playwright / `web-ext` directly from MAIN |
+| BROWSER/RUNTIME | no dedicated agent — call Chrome DevTools MCP / `web-ext` directly from MAIN; automated E2E via `yarn test:e2e` (Playwright suite) |
 
 Don't create new agents for roles already covered above.
 

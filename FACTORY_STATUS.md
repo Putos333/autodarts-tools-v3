@@ -202,6 +202,8 @@
 | E2E: Extension reload/restart recovery | ❌ NOT RUN | Known gap (no `onInstalled` handler) |
 | Visual regression | ❌ NOT RUN | No tooling configured |
 
+> **HISTORISCH (Stand 2026-08-17), teilweise überholt seit 2026-10-04:** Playwright 1.62.1 ist integriert (`tests/e2e`, 13/13 PASS lokal, davon 1 Visual-Regression-Test; CI-Job „Playwright E2E“ auf `main` SUCCESS). Die Suite deckt Extension-Load, WebSocket-Lifecycle und Toast ab; die oben genannten Control-Center-/Training-/Friends-/Multi-Tab-/Restart-Szenarien sind dadurch **nicht** als ausgeführt belegt. Details: `docs/SETUP_2_0_DEV_AGENT_SETUP.md` Abschnitt 12.
+
 ---
 
 ## 9. MVP READINESS SUMMARY
@@ -242,7 +244,7 @@
 
 5. **Enable Automated Test Suite**
    - Add Vitest + `@vue/test-utils` + `happy-dom` for component tests
-   - Add Playwright E2E config (headless Firefox) for critical flows
+   - Add Playwright E2E config (headless Firefox) for critical flows _(historische Empfehlung; umgesetzt seit 2026-10-04 als Playwright-Suite mit headed Chromium unter Xvfb, nicht Firefox)_
    - Add GitHub Actions job: `test` (unit + integration) on PR
 
 ---

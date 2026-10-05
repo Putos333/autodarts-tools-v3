@@ -41,7 +41,7 @@ UNKNOWN. Kein Punkt wird beschönigt.
 | Unit-Test-Baseline | **PASS** | 73/73 (65 bestehend + 8 neu für `normalizeOrigin`) |
 | Typecheck (unsere Dateien) | **PASS** | 0 neue Typfehler in Control Center/Training/History/Friends-Diagnostic-Dateien (8 gezielt behoben) |
 | Typecheck (Gesamt-Baseline) | **PARTIAL** | 61 bekannte, vorbestehende Fehler in unangetasteten Alt-Dateien (nicht heute verursacht, nicht massenhaft repariert) |
-| Integration/E2E-Tests | **FAIL** | 0 vorhanden — reine Unit-Test-Ebene |
+| Integration/E2E-Tests | **FAIL** | 0 vorhanden — reine Unit-Test-Ebene — HISTORISCH (Stand 2026-08-17), überholt seit 2026-10-04: Playwright-E2E vorhanden, siehe „Aktualisierung 2026-10-04“ unten |
 
 ## RUNTIME
 
@@ -209,3 +209,17 @@ Es gilt weiterhin: „Automatische Tests PASS" und „CI success" sind kein Huma
 | 531/531, 90/90, Gate 8/8 (Alt-Stand), frühere Builds | **HISTORICAL_VERIFIED** | durch die Zeilen oben als aktueller Stand ersetzt |
 
 Human Live QA bleibt **DEFERRED / BLOCKED** (Hardware); die Re-Verifikation ersetzt sie nicht.
+
+---
+
+## Aktualisierung 2026-10-04 (`main`, HEAD `92b723e`)
+
+Nachtrag; die Zeile „Integration/E2E-Tests: 0 vorhanden" im historischen Stand vom 2026-08-17 oben ist überholt.
+
+| Punkt | Status | Detail |
+|---|---|---|
+| Browser-E2E | **CURRENT_VERIFIED** PASS | `tests/e2e`, 13/13 (Playwright 1.62.1, Chromium headed unter Xvfb), inkl. 1 Visual-Regression-Test |
+| E2E in CI | **CURRENT_VERIFIED** SUCCESS | Job „Playwright E2E" (PR #17, Merge `92b723e`); Run 37220303579 auf `main`: SUCCESS, 13 passed |
+| Control Center CI auf `main` | **CURRENT_VERIFIED** SUCCESS | Run 37220303579 |
+| Playwright-Browser-Cache | MISS beobachtet | Cache-Treffer nicht beobachtet; Fehler-Upload unerprobt |
+| Human Live QA | **DEFERRED / BLOCKED** (Hardware) | kein Release-Gate bestanden; nicht der nächste Setup-Gate |

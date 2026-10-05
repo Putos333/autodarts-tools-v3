@@ -64,3 +64,13 @@ Vollständige Tabellen und Hash-Mapping: `MASTER_AUTODARTS_ELITE.md` Abschnitt 2
 **Nachtrag 2 (2026-10-03, HEAD `9f859ef` = `1b65b55` + Doku-Commit):** Die Verifikationstabelle oben (531/531, 90/90, Builds) bleibt **HISTORICAL_VERIFIED**.
 Aktuell CURRENT_VERIFIED (Node v22.23.2, Exit 0): `yarn compile` PASS; `yarn test` 596/596 (82 Suiten); `yarn test:components` 97/97 (13 Dateien);
 Firefox-MV2- und Chrome-MV3-Build PASS. Setup-Gate NOT RUN (kein Paket für DOCS_ONLY-HEAD).
+
+## NACHTRAG 2026-10-04 (HEAD `92b723e`, Playwright / E2E-CI)
+
+Ergänzt den Nachtrag vom 2026-10-03; die Tabellen und Aussagen oben bleiben als historischer Nachweis erhalten und wurden nicht neu ausgeführt.
+Vollständige Details: `docs/SETUP_2_0_DEV_AGENT_SETUP.md` Abschnitt 12 und `MASTER_AUTODARTS_ELITE.md` Abschnitt 22.
+
+- **Playwright:** `@playwright/test` 1.62.1 integriert (Commit `5389f1a`); E2E-Suite `tests/e2e` 13/13 PASS lokal, inkl. 1 Visual-Regression-Test.
+- **E2E-CI:** Job „Playwright E2E“ in `pr-control-center.yml`; PR #17 gemergt (Merge-Commit `92b723e`). Run 37220303579 auf `main`: „Control Center PR Gates“ SUCCESS, „Playwright E2E“ SUCCESS (13 passed).
+- **Browser-Cache:** in den beobachteten Läufen MISS; ein Cache-Treffer wurde nicht beobachtet.
+- **Human Live QA:** weiterhin DEFERRED/BLOCKED (Hardware); nicht der nächste Setup-Gate. Für den Setup-Abschluss ist keine Hardware erforderlich.

@@ -679,8 +679,8 @@ berechnet (ECC `hook-flags.js`); „nicht aufgerufen" heißt: Vorhandensein best
 |---|---|
 | `gh` CLI | INSTALLED (2.45.0), angemeldet; Hauptweg für GitHub-Aufgaben |
 | GitHub-MCP/Plugin | INSTALLED (User), projektlokal DISABLED; liest `GITHUB_PERSONAL_ACCESS_TOKEN` (in der Shell nicht gesetzt); optional, keine Voraussetzung, keine Aktivierung verlangt |
-| Playwright npm-Paket | NOT FOUND (weder `package.json` noch `node_modules`, keine Konfiguration) |
-| Playwright CLI | NOT FOUND |
+| Playwright npm-Paket | NOT FOUND (weder `package.json` noch `node_modules`, keine Konfiguration) — HISTORISCH, überholt seit 2026-10-04 (siehe Abschnitt 12) |
+| Playwright CLI | NOT FOUND — HISTORISCH, überholt seit 2026-10-04 (`yarn playwright` im Projekt, siehe Abschnitt 12) |
 | Playwright Skills | NOT FOUND (nur gstack-interne Dateien) |
 | Playwright MCP (Plugin) | INSTALLED (User, `@playwright/mcp@latest`, ungepinnt), projektlokal DISABLED; on demand/optional, nicht aktiviert |
 | Context7 Plugin | INSTALLED (User), projektlokal DISABLED |
@@ -690,6 +690,7 @@ berechnet (ECC `hook-flags.js`); „nicht aufgerufen" heißt: Vorhandensein best
 Routing-Prinzip: lokale Repo-Arbeit mit lokalen Repo-Werkzeugen; GitHub über `gh`; Browser/UI-QA über die vorhandenen Playwright-/Chrome-DevTools-Wege
 nach Bedarf; Library/API-Doku über Context7/Connector nach Verfügbarkeit; optionale MCPs nur bei konkretem Bedarf aktivieren; keine
 redundanten dauerhaft aktiven Werkzeuge ohne belegten Nutzen.
+(Stand 2026-10-03, historisch. Seit 2026-10-04 gilt für automatisierte Browser-Regression die Playwright-Suite (`yarn test:e2e`), für Debugging Chrome DevTools MCP; Playwright MCP bleibt optional. Siehe Abschnitt 12 und `CLAUDE.md`.)
 
 ### 11.3 Bewusst nicht bereinigt (niedrige Priorität, getrennt zu behandeln)
 
@@ -697,3 +698,53 @@ redundanten dauerhaft aktiven Werkzeuge ohne belegten Nutzen.
 - graphify-Hook-Text („MANDATORY: run graphify query") widerspricht der Regel „graphify nur bei Beziehungsfragen".
 - Weitere E3.1-Befunde bleiben offen: Node-Default v24 vs. `.nvmrc` v22.23.2, der Codex-Sollstand „0.153.3" (nirgends belegt; dokumentiert ist 0.153.4),
   zwei Alt-Worktrees ohne exklusive Commits, lokale `.codex/config.toml`-Änderung.
+
+## 12. PLAYWRIGHT / E2E-CI: VERIFIZIERTER STAND (2026-10-04, HEAD `92b723e`)
+
+Nachtrag; Abschnitt 11 bleibt als historischer Stand vom 2026-10-03 erhalten. Wo er „Playwright npm-Paket/CLI NOT FOUND" oder
+„keine Konfiguration" nennt, gilt dieser Abschnitt. Es wurde kein Produktcode und keine Protected-Core-Datei geändert.
+
+### 12.1 Playwright-Integration (Commit `5389f1a`, 2026-10-04)
+
+- **Paket:** `@playwright/test` **1.62.1**, exakt gepinnt (devDependency). Transitiv: `playwright` und `playwright-core` 1.62.1; `fsevents` 2.3.2 nur als
+  optionaler Lock-Eintrag (unter Linux nicht installiert). Scripts: `yarn test:e2e`, `yarn test:e2e:update` (`--update-snapshots=all`).
+- **Browser:** Playwright-verwaltetes Chromium (Chrome for Testing 151.0.7922.34, Revision 1234, ohne Headless-Shell). Die Suite läuft **headed unter Xvfb**
+  (`xvfb-run -a yarn test:e2e`, wenn `$DISPLAY` fehlt). Der Playwright-Standard-Headless-Modus (Headless-Shell) lädt die Extension nicht; Google Chrome 154
+  lädt sie ebenfalls nicht (jeweils getestet). Der neue Headless-Modus (`channel: "chromium"`) lud die Extension in einer Probe, ist aber nicht übernommen.
+- **Voraussetzung:** Build `.output/chrome-mv3` (`yarn wxt build`); ohne Build bricht die Fixture mit klarer Meldung ab (getestet).
+- **Suite `tests/e2e`:** 13 Tests, alle PASS: `extension-load` (2), `websocket-disconnect-toast` (1), `ws-lifecycle` (9), `toast-visual` (1, **Visual-Regression**
+  über `toHaveScreenshot`, Linux-Baseline). Lokale Läufe: 13/13, mehrfach reproduziert, Laufzeit etwa 21–24 s. Playwright-Konfiguration: 1 Worker, keine
+  Retries. Baseline-Referenzumgebung steht im Kopf von `tests/e2e/toast-visual.spec.ts`.
+- **Gate:** `playwright.config.ts` ist in `scripts/gate.config.json` als `BUILD_DEPENDENCY` klassifiziert (vorher `UNKNOWN_CLASS`, Gate blockierte). `yarn gate run`
+  für den Playwright-Änderungssatz: PASS (diffcheck, syntax, compile, test, components, build-firefox, build-chrome). **E2E ist keine Gate-Stufe**; sie wurde separat
+  ausgeführt.
+- **Nicht getestet / UNKNOWN:** echter Headless-Betrieb der Suite, Firefox-MV2 im E2E.
+
+### 12.2 E2E-CI (PR #17, Merge-Commit `92b723e`, 2026-10-04)
+
+- Neuer Job **„Playwright E2E"** in `.github/workflows/pr-control-center.yml` (separater Job, parallel zu `checks`; `runs-on: ubuntu-24.04`; Node aus `.nvmrc`;
+  `yarn wxt build`; `yarn playwright install --with-deps --no-shell chromium`; `fonts-noto-core`; `xvfb-run -a yarn test:e2e`; Browser-Cache über
+  `actions/cache@v4`; Upload von `test-results/` nur bei Fehler). Der Job `checks` ist unverändert. Trigger: PR gegen `main`/`feature/control-center` und Push auf `main`.
+- **PR-Lauf 37219493247:** beide Jobs SUCCESS (E2E 94 s, 13 passed in 22,8 s).
+- **Lauf auf `main` 37220303579 (HEAD `92b723e`):** „Control Center PR Gates" SUCCESS (95 s), „Playwright E2E" SUCCESS (84 s), **13 passed** (14,7 s), 0 failed, 0 flaky.
+- **Playwright-Browser-Cache:** in beiden beobachteten Läufen **MISS** (`Cache not found for input keys: playwright-Linux-1.62.1`); der Cache wurde danach gespeichert. Ein
+  Cache-TREFFER wurde **nicht beobachtet** (ein PR-Cache ist für `main` nicht nutzbar). Der Upload der Fehler-Artefakte wurde nicht ausgelöst (kein Fehler) und ist unerprobt.
+- Die Visual-Regression bestand in CI mit `fonts-noto-core 20201225-2` (dieselbe Paketversion wie in der lokalen Baseline-Umgebung).
+
+### 12.3 Agent und weitere Korrekturen
+
+- `.claude/agents/testing/production-validator.md`: Der Nachlauf-Schritt `npm run test:e2e --if-present` ist durch einen Kommentar ersetzt. Seit Einführung des Scripts würde er
+  die Playwright-Suite (headed Chromium) starten. Ob Claude Code diesen Frontmatter-Block überhaupt ausführt, ist UNKNOWN; die Änderung vermeidet das Risiko.
+- `CLAUDE.md` (Tool-Routing, Status-Tabelle): Playwright-Zeilen und E2E-CI-Zeile auf den verifizierten Stand gebracht.
+- Die Dokumentation erwähnte bisher einen temporären Core-Log-Block; es sind **zwei** in `utils/websocket-helpers.ts` (`[AD-ELITE MATCH]` Z. 266–288 und der Rohlog
+  `[AD-ELITE PRESENCE]` ca. Z. 381), dazu das temporäre Human-Test-Panel (`CcMatchHumanTestPanel.vue`). Beide Logs sind durch Tests festgeschrieben
+  (`tests/match-center-phase5.test.ts`, `tests/friends-party-v4.test.ts`). Unverändert gelassen.
+
+### 12.4 Offene Punkte (ohne Hardware, nicht Teil dieses Nachtrags)
+
+- Branch-Protection auf `main`: keine (404), keine Rulesets; CODEOWNERS: keiner. Dependabot-Sicherheitsupdates: aus (API-Status `disabled`); Vulnerability-Alerts: Endpunkt liefert 404 (vermutlich aus, INFERRED).
+- `yarn audit --groups dependencies` (2026-10-04): 0 critical, 16 high, 5 moderate (u. a. `socket.io-parser`, `lodash`, `ws`); Triage offen.
+- TEMP-DIAG-Bereinigung (5 Non-Core-Stellen, davon `utils/friends-api.ts` mit Gate-Freigabepflicht), MCP-Konsolidierung, Autor-Identität `du@example.com` (127 Commits).
+- Potenzielles Produktrisiko (nicht geändert): Das Capture-Skript hat keinen Idempotenz-Mechanismus; bei zweimaliger Injektion entstehen pro Nachricht zwei
+  `websocket-incoming`-Events (Probe, im normalen Ablauf wird nur einmal injiziert).
+- **Human Live QA ist nicht der nächste Gate** und bleibt DEFERRED/BLOCKED (Hardware). Für den Setup-Abschluss ist keine Hardware erforderlich.

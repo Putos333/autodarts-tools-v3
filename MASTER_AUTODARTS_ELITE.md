@@ -584,3 +584,21 @@ Diese Werte ersetzen die Zahlen 531/531, 90/90 und die früheren Build-/Typechec
 (531/531, 90/90, Gate 8/8 Alt-Stand, Package-C-Zahlen) bleiben als **HISTORICAL_VERIFIED** erhalten. Die Markierung
 `HISTORICAL_VERIFIED_NOT_RERUN_ON_1b65b55` in 21.2 beschreibt den Stand vor diesem Lauf. Seit dem Lauf nicht neu ausgeführt: Setup-Gate.
 Die höheren Zahlen (596/97) entsprechen den seit dem Alt-Stand hinzugekommenen Commits (u. a. PKG-1, Discord, ELO); das ist nicht einzeln aufgeschlüsselt (INFERRED).
+
+## 22. PLAYWRIGHT / E2E-CI (2026-10-04, HEAD `92b723e`)
+
+Nachtrag zu Abschnitt 21; dieser bleibt als Stand vom 2026-10-03 erhalten. Details: `docs/SETUP_2_0_DEV_AGENT_SETUP.md` Abschnitt 12.
+
+| Fakt | Stand (2026-10-04) | Evidenz |
+|---|---|---|
+| Playwright | `@playwright/test` 1.62.1 exakt, integriert (Commit `5389f1a`) | `package.json`, `yarn.lock` |
+| E2E-Suite | 13/13 PASS lokal (Chromium 151.0.7922.34, headed unter Xvfb), inkl. 1 Visual-Regression-Test | `yarn test:e2e` |
+| E2E-CI | Job „Playwright E2E" in `pr-control-center.yml`, PR #17 gemergt (Merge-Commit `92b723e`) | `gh pr view 17` |
+| CI auf `main` (Run 37220303579) | „Control Center PR Gates" SUCCESS, „Playwright E2E" SUCCESS (13 passed) | `gh run view` |
+| Playwright-Browser-Cache | MISS in den beobachteten Läufen (PR und `main`); Cache-Treffer nicht beobachtet | Job-Log |
+| Gate | `playwright.config.ts` = `BUILD_DEPENDENCY`; `yarn gate run` PASS; E2E ist keine Gate-Stufe | `scripts/gate.config.json` |
+| Fehler-Artefakt-Upload | nicht ausgelöst, unerprobt | Job-Log |
+
+**Weiterhin offen (ohne Hardware):** TEMP-DIAG (5 Non-Core-Stellen; zwei Core-Logs und das Human-Test-Panel bleiben bis nach Human Live QA unverändert), MCP-Konsolidierung,
+Branch-Protection (keine; keine Rulesets), CODEOWNERS (keiner), Autor-Identität (`du@example.com`, 127 Commits), Dependency-Triage (`yarn audit --groups dependencies`: 0 critical,
+16 high, 5 moderate), Dependabot aus. **Human Live QA ist nicht der nächste Gate** (DEFERRED/BLOCKED, Hardware); Hardware ist für den Setup-Abschluss nicht erforderlich.

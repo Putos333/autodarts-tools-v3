@@ -88,3 +88,7 @@ folgenden Punkten überholt. Details: `MASTER_AUTODARTS_ELITE.md` Abschnitt 21.
 `yarn compile` PASS; `yarn test` 596/596 (82 Suiten); `yarn test:components` 97/97 (13 Dateien); Firefox-MV2- und Chrome-MV3-Build PASS.
 Setup-Gate NOT RUN (kein Paket für DOCS_ONLY-HEAD). Die Zahlen 531/531 und 90/90 sowie „Gate 8/8" oben sind **HISTORICAL_VERIFIED**. Der Punkt
 „CURRENT-HEAD RE-VERIFICATION" unter OPEN ist damit erledigt.
+
+**Nachtrag 2026-10-04 (HEAD `92b723e`):** Playwright 1.62.1 ist integriert (`tests/e2e`, 13/13 PASS lokal, Visual-Regression-Test enthalten) und läuft als Job „Playwright E2E"
+in `pr-control-center.yml` (PR #17 gemergt; Run 37220303579 auf `main`: SUCCESS, 13 passed). Browser-Cache in den beobachteten Läufen MISS (Treffer nicht beobachtet). Offen ohne Hardware:
+TEMP-DIAG-Bereinigung, MCP-Konsolidierung, Branch-Protection (keine), CODEOWNERS (keiner), Autor-Identität, Dependency-Triage. Human Live QA bleibt DEFERRED/BLOCKED und ist nicht der nächste Gate.

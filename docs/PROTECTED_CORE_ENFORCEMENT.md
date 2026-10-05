@@ -75,3 +75,4 @@ Fehlt `node` im PATH, brechen die Hooks ab (fail closed).
 - Das Gate vergleicht gegen die Paket-Baseline: Eine bereits committete Core-Änderung bleibt für ein später angelegtes Paket
   unsichtbar. `core-guard.mjs range` ist dafür das Audit-Werkzeug.
 - GitHub-Branch-Protection, CODEOWNERS und eine CI-Prüfung sind nicht Teil dieses Pakets (Branch-Protection: UNVERIFIED).
+  Nachtrag 2026-10-04: Branch-Protection ist jetzt geprüft: `main` ungeschützt (HTTP 404), keine Rulesets, kein CODEOWNERS; die CI führt den Core-Guard nicht aus (OPEN).

@@ -21,7 +21,8 @@ hooks:
     # Run full test suite against real implementations
     if [ -f "package.json" ]; then
       npm run test:production --if-present
-      npm run test:e2e --if-present
+      # test:e2e (Playwright, headed Chromium) wird hier bewusst nicht automatisch gestartet:
+      # es braucht einen frischen Build (yarn wxt build) und ein Display (xvfb-run -a yarn test:e2e).
     fi
 ---
 
