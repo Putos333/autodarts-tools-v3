@@ -76,3 +76,21 @@ Fehlt `node` im PATH, brechen die Hooks ab (fail closed).
   unsichtbar. `core-guard.mjs range` ist dafür das Audit-Werkzeug.
 - GitHub-Branch-Protection, CODEOWNERS und eine CI-Prüfung sind nicht Teil dieses Pakets (Branch-Protection: UNVERIFIED).
   Nachtrag 2026-10-04: Branch-Protection ist jetzt geprüft: `main` ungeschützt (HTTP 404), keine Rulesets, kein CODEOWNERS; die CI führt den Core-Guard nicht aus (OPEN).
+  Nachtrag 2026-10-05: überholt, siehe Abschnitt „GitHub-Schutz von `main` (Ruleset)" unten. Die CI führt den Core-Guard weiterhin nicht aus (OPEN).
+
+## GitHub-Schutz von `main` (Ruleset)
+
+Stand 2026-10-05, per GitHub-API gelesen (`gh api repos/Putos333/autodarts-tools-v3/rulesets/24533689`):
+
+- Ruleset-ID 24533689, Name „AUTODARTS ELITE - main protection", `target=branch`, `enforcement=active`, Ref-Bedingung ausschließlich `refs/heads/main`.
+- Regeln: `deletion` (Löschen blockiert), `non_fast_forward` (Force-Push blockiert), `pull_request`, `required_status_checks`. Kein `required_linear_history`, Merge-Commits bleiben möglich.
+- `pull_request`: `required_approving_review_count=0`, `required_review_thread_resolution=true`, `require_code_owner_review=false`, `dismiss_stale_reviews_on_push=false`, `require_last_push_approval=false`, erlaubte Merge-Methoden merge/squash/rebase. GitHub hat zusätzlich den Standardwert `require_extra_approval_for_unattributed_changes=true` gesetzt (nicht von uns gewählt); seine Wirkung auf diesen Ablauf ist nicht getestet.
+- Required Status Checks (beide `integration_id` 15368 = GitHub Actions, `strict_required_status_checks_policy=false`): `Control Center PR Gates` (Job `checks`) und `Playwright E2E` (Job `e2e`), beide aus `.github/workflows/pr-control-center.yml`.
+- Bypass: `actor_type=RepositoryRole`, `actor_id=5`, `bypass_mode=pull_request`; die API meldet für den Admin-Account `current_user_can_bypass=pull_requests_only`.
+
+Nicht getestet (Stand dieses Eintrags):
+
+- Direkte Pushes auf `main` sollen durch das Ruleset blockiert werden. Das wurde nach der Aktivierung nicht praktisch geprüft.
+- Der Admin-Bypass per Pull Request wurde nicht in einem echten Notfall-Merge erprobt. Laut `cli/cli#13388` (Status: offen) kann `gh pr merge` im reinen `pull_request`-Bypass-Fall vorzeitig abbrechen (Alternativen: `--admin` oder der REST-Merge); das ist hier nicht verifiziert.
+
+Normaler Ablauf: Branch anlegen, Änderung committen, Branch pushen, Pull Request gegen `main` öffnen, beide Required Checks abwarten, per Merge-Commit mergen, lokales `main` zurücksynchronisieren. Direkte Commits auf `main` entfallen.
