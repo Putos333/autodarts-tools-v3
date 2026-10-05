@@ -121,9 +121,6 @@ export function useControlCenterFriends() {
   /** true, wenn ein Abruf überhaupt Sinn hat. */
   async function hasUsableToken(): Promise<boolean> {
     const age = await readTokenAge();
-    // TEMP-DIAG (Realtest 2): macht sichtbar, ob der lokale Freshness-Check
-    // vor dem eigentlichen API-Call greift — nie den Token-Inhalt loggen.
-    console.log(`[ADT-DIAG] TOKEN_STORAGE: ${age === null ? "NO" : "YES"}  TOKEN_AGE: ${age === null ? "n/a" : `${Math.round(age / 1000)}s`}  MAX_AGE: ${Math.round(TOKEN_MAX_AGE_MS / 1000)}s`);
     return age !== null && age < TOKEN_MAX_AGE_MS;
   }
 

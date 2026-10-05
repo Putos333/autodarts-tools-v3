@@ -141,11 +141,7 @@ export async function getFriends(): Promise<IFriend[]> {
     // Token an und liefert 401, selbst mit einem frischen, gültigen Token. Per
     // curl gegen die echte API verifiziert: nur die Trailing-Slash-Form
     // antwortet direkt (ohne Redirect).
-    // TEMP-DIAG (Realtest 2): sichtbar machen, welche URL wirklich raus geht
-    // und was zurückkommt — ohne je den Token-Inhalt zu loggen.
-    console.log(`[ADT-DIAG] FRIENDS_REQUEST_URL: ${API_BASE}/as/v0/friends/`);
     const response = await fetchWithAuth(`${API_BASE}/as/v0/friends/`);
-    console.log(`[ADT-DIAG] FRIENDS_REQUEST_STATUS: ${response.status}  RESPONSE_STATUS: ${response.ok ? "OK" : "ERROR"}`);
     if (!response.ok) {
       console.error('[Friends] Freundesliste konnte nicht abgerufen werden — HTTP', response.status);
       return [];
@@ -693,11 +689,7 @@ export async function getFriendsDiagnostic(): Promise<IFriendsDiagnostic> {
 
     // RUNTIME-FIX: siehe getFriends() oben — Trailing-Slash zwingend, sonst
     // 301-Redirect ohne Authorization-Header → falsches 401/"no-auth".
-    // TEMP-DIAG (Realtest 2): dies ist der Pfad, den Friends & Party V4
-    // tatsächlich nutzt (useControlCenterFriends.load() ruft diese Funktion).
-    console.log(`[ADT-DIAG] FRIENDS_REQUEST_URL: ${API_BASE}/as/v0/friends/`);
     const response = await fetchWithAuth(`${API_BASE}/as/v0/friends/`);
-    console.log(`[ADT-DIAG] FRIENDS_REQUEST_STATUS: ${response.status}  RESPONSE_STATUS: ${response.ok ? "OK" : "ERROR"}`);
     if (!response.ok) {
       return { ...empty, httpStatus: response.status, error: `HTTP ${response.status}` };
     }
