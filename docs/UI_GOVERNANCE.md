@@ -190,3 +190,23 @@ Verifizierte Befunde, absichtlich nicht in UI-1 behoben (kein visueller Diff am 
 7. **Externer Request:** die Control-Center-Seite ruft `…/api/marathon/health` (KI-Backend). Die Visual-Spec stubbt ihn; im Betrieb bleibt er unverändert.
 8. **Accessibility-Gate:** siehe Abschnitt 9 (kein axe).
 9. **Nicht gemessen:** CLS, INP, Bundle-Größen-Baseline, Lighthouse auf Extension-Seiten (UNKNOWN).
+
+## 15. Shell-Muster (seit UI-2A)
+
+Verbindliche Muster für App-Shell und Header (`CcShell`, `CcTopBar`); Navigation selbst folgt in UI-2B/2C.
+
+1. **Skip-Link:** erstes fokussierbares Element der Seite (`.cc-skip-link`), außerhalb des Grid-Flusses, bis zum Fokus per `transform` aus dem Viewport
+   geschoben, ohne Transition. Er fokussiert `<main id="cc-content" tabindex="-1">` programmatisch — **kein** Hash-Sprung, weil der Hash der Router ist.
+2. **Fokus-Management:** Nach einem Bereichswechsel wandert der Fokus auf die `<h1>` (`tabindex="-1"`, kein eigener Fokusring). **Nicht** beim Erstladen oder
+   Deep-Link (der Hash-Wechsel in `ControlCenter.vue` ist keine Nutzeraktion). `main` und `h1` sind programmatische Ziele, nicht Teil der Tab-Reihenfolge.
+3. **Header-Aktionen:** eigener Cluster (`.cc-topbar-actions`), Zielgröße mindestens `--cc-hit-min` (44px), sichtbarer Tastaturfokus über die Fokus-Tokens
+   (`--cc-focus-*`). Der **Wert** der Fokusfarbe wird zentral im Token-File entschieden (offene Entscheidung, Abschnitt 14), nicht in Komponenten.
+4. **Phone (≤ 640px):** Header nicht sticky (ein dauerhafter Header von rund einem Viertel der Viewport-Höhe verdeckt sonst Inhalt); Nebenaktionen werden
+   quadratische Icon-Buttons (`.cc-btn-compact`). Das Label bleibt im DOM und wird nur **visuell** versteckt, kein `aria-label` — sichtbarer und zugänglicher
+   Name sind identisch (WCAG 2.5.3, Test in `tests/components/CcTopBar.component.test.ts`).
+5. **Layout-stabile Status-Pills:** Auf Phones stehen die Pills untereinander. Nebeneinander umbrach die zweite Pill während der Backend-Prüfung
+   („nicht geprüft“ → „wird geprüft …“ → Ergebnis) erst später und ließ den Header um ≈ 56px wachsen (gemessen, Layout-Shift ≈ 0,15–0,4). Regel: Layout darf
+   nicht von der Länge dynamischer Texte abhängen.
+6. **Reduced Motion:** Header-Aktionen und Navigationseinträge ohne Übergänge, kein Hover-Versatz, Reload-Icon dreht nicht.
+7. **Prüfung:** `tests/e2e/cc-navigation.spec.ts` (je Viewport: Header-Anteil ≤ ⅓ der Höhe, Zielgrößen, Landmarks, Layout-Shift ≤ 0,1, Skip-Link, Fokusringe,
+   Fokus nach Bereichswechsel, Deep-Link) und `tests/components/CcShell|CcTopBar.component.test.ts`; Pixelvergleich in `tests/e2e/cc-shell-visual.spec.ts`.

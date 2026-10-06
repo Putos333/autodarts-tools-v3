@@ -1,7 +1,7 @@
 <template>
   <aside class="cc-sidebar" data-testid="cc-sidebar">
     <div class="cc-brand">
-      <span class="cc-brand-mark">🎯</span>
+      <span class="cc-brand-mark"><span class="icon-[pixelarticons--bullseye]" aria-hidden="true" /></span>
       <div class="cc-brand-text">
         <div class="cc-brand-title">Control Center</div>
         <div class="cc-brand-sub">Autodarts Tools v{{ version }}</div>

@@ -1,4 +1,5 @@
 import { expect, test } from "./fixtures/extension";
+import { openControlCenter } from "./helpers/control-center";
 import { VIEWPORTS } from "./helpers/viewports";
 
 /**
@@ -7,9 +8,7 @@ import { VIEWPORTS } from "./helpers/viewports";
  * sondern Regressionsschutz für das Design-System (Tokens, Shell, Navigation, Responsive).
  *
  * Determinismus (vorab im Spike belegt: identische Hashes über Frames und Sessions):
- *  - Die Seite ruft extern `…/api/marathon/health` (KI-Backend) auf. Der Request wird auf 404 gestubbt
- *    (entspricht dem bisher beobachteten Zustand „KI-Backend nicht erreichbar“) und der Test wartet auf
- *    genau diesen Endzustand, bevor er den Screenshot macht.
+ *  - Stub des externen KI-Backend-Requests und Warten auf den Endzustand: tests/e2e/helpers/control-center.ts.
  *  - Das Versions-Badge wird maskiert, damit ein Versions-Bump keine Baselines bricht.
  *  - Animationen sind per Konfiguration deaktiviert (playwright.config.ts).
  *
@@ -23,15 +22,7 @@ import { VIEWPORTS } from "./helpers/viewports";
 test.describe("cc-shell-visual", () => {
   for (const viewport of VIEWPORTS) {
     test(`Dashboard ${viewport.name} ${viewport.width}x${viewport.height}`, async ({ context, extensionId }) => {
-      await context.route("**/api/marathon/health", route => route.fulfill({ status: 404, body: "" }));
-
-      const page = await context.newPage();
-      await page.setViewportSize({ width: viewport.width, height: viewport.height });
-      await page.goto(`chrome-extension://${extensionId}/controlcenter.html`);
-
-      // Endzustand abwarten, statt zu raten.
-      await expect(page.getByText("KI-Backend nicht erreichbar")).toBeVisible();
-      await expect(page.getByRole("main")).toBeVisible();
+      const page = await openControlCenter(context, extensionId, { viewport });
 
       // Responsive-Grundregel: kein horizontales Scrollen der Seite.
       const overflowsHorizontally = await page.evaluate(
