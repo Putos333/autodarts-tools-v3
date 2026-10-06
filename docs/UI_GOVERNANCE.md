@@ -1,0 +1,192 @@
+# UI-Governance — AUTODARTS ELITE UI MASTER 1.0
+
+Verbindliche Regeln für alle Oberflächen von AUTODARTS ELITE. Sie verhindern Design-Drift: Dashboard, Menü,
+Match Center, Training, Settings und spätere Module müssen erkennbar aus **demselben** System stammen.
+
+Stand: UI-1 (Design-System-Fundament). Diese Datei beschreibt den **verifizierten Ist-Zustand** und die
+verbindlichen Regeln; Abschnitt 14 listet bekannte Abweichungen und offene Entscheidungen offen auf.
+
+## 0. Geltungsbereich und Quellen der Wahrheit
+
+| Was | Wo |
+|---|---|
+| Design-Tokens (`--cc-*`) | `assets/design-tokens.css` — **einzige** Definition |
+| Chakra-Kompatibilitäts-/Host-Shim | `entrypoints/controlcenter/style.css` (bewusst getrennt) |
+| `cc-*`-Designklassen der Control-Center-Seite | `entrypoints/controlcenter/style.css` |
+| Drift-Schutz | `tests/design-governance.test.ts` (läuft in `yarn test`, damit im Required Check „Control Center PR Gates“) |
+| Visual-QA-Viewports | `tests/e2e/helpers/viewports.ts` |
+| Visual-Baselines Control Center | `tests/e2e/cc-shell-visual.spec.ts` |
+
+**Zwei Stilwelten, nicht vermischen:**
+
+1. **Control-Center-Seite** (`entrypoints/controlcenter`, eigene Extension-Seite): hat die `--cc-*`-Tokens und kein Fremd-CSS.
+2. **Content-Script-Overlays auf play.autodarts.io:** dort existiert `--cc-*` **nicht**; es gelten die Chakra-Variablen des Hosts.
+   Tailwind läuft mit `preflight: false`, damit die Host-Seite nicht zerstört wird.
+
+Folge: Tailwind-Klassen dürfen **nicht** auf `--cc-*` zeigen, solange sie auch in Host-Overlays genutzt werden
+(`tailwind.config.ts` bleibt in UI-1 unverändert). Gemeinsam genutzte `App*`-Komponenten bleiben auf den Chakra-Variablen (Shim).
+`--cc-*` wird in `cc-*`-Klassen und in `components/ControlCenter/**` genutzt.
+
+## 1. Designsprache (unveränderlich, außer per bewusster Entscheidung)
+
+- **Near-black Basis** (`--cc-bg`), Glass-Surfaces (`--cc-surface*`), kein generisches Admin-Dashboard-Layout.
+- **Rot** (`--cc-accent`) = lokaler Spieler · **Blau** (`--cc-blue`) = Gegner — **nie vertauschen**.
+- **Gold** (`--cc-gold`) ausschließlich Pokale / Rang / Achievements / Sieger (Ausnahme Fokus: siehe Abschnitt 14).
+- **Grün** (`--cc-ok`) ausschließlich Erfolg / Online / Checkout-Erfolg.
+- **Glow** zurückhaltend: nur auf Live-Indikatoren, aktiven Zuständen, Badges — nie auf Fließtext.
+- **Schriften:** Barlow Condensed (Display), Open Sans (Body). Hinweis: im Ist-Zustand nicht gebündelt (Abschnitt 14).
+- Premium-Charakter: wenige, klare Ebenen; Zahlen (Scores) sind die Hauptakteure; Dekoration folgt der Information.
+
+Die Anker (Farbwerte, Schriftnamen, Dark-Schema, Hit-Target) sind im Test festgenagelt. Eine Änderung ist eine
+**Design-Entscheidung** und braucht Freigabe, nicht nur einen angepassten Test.
+
+## 2. Token-Regeln
+
+1. Jede Farbe, Größe, Dauer, Ebene und jeder Radius kommt aus einem Token. Neue Werte werden **zuerst** als Token im Token-File angelegt.
+2. `--cc-*` wird nur in `assets/design-tokens.css` definiert (Test). Komponenten dürfen es nur **verwenden**, nicht neu definieren.
+3. `entrypoints/controlcenter/main.ts` lädt `design-tokens.css` **vor** `style.css` (Test).
+4. Teil 1 der Datei sind Bestandstokens (Werte nie ohne Design-Entscheidung ändern). Teil 2 sind additive Tokens, abgeleitet aus Bestandswerten.
+5. Keine Hardcode-Farben in neuem Code. Bestand wird kontrolliert abgebaut: Ratchets in `tests/design-governance.test.ts`
+   (`BASELINE`: Farb-Literale in `style.css`, in `components/ControlCenter`, Text unter 12px). Werte dürfen **nur sinken**.
+6. Token-Gruppen: Farben/Surfaces/Status · Typografie (`--cc-fs-*`, `--cc-fw-*`, `--cc-lh-*`, Fonts) · Spacing (`--cc-space-1…5`) ·
+   Radius · Borders · Schatten/Glow/Elevation · Motion (`--cc-dur-*`, `--cc-ease-*`) · Ebenen (`--cc-z-*`) · Fokus · Hit-Target.
+
+## 3. Komponentenregeln
+
+- Neue UI wird aus vorhandenen Bausteinen gebaut: `App*` (Button, Input, Modal, Tabs, …) und `Cc*` (Shell, Card, HeroBand, EmptyState,
+  PlayerBadge, MatchCenterShell, …). Neue Basiskomponenten nur nach Review, wenn kein Baustein passt.
+- Die Navigation stammt aus **einer** Quelle: `components/ControlCenter/sections.ts` (Sidebar, Top-Bar-Titel, Hash-Routing, mobile Bottom-Nav).
+- Views sind Seiten-Zusammenstellungen, keine Stil-Quellen: Stil kommt aus Tokens/`cc-*`-Klassen.
+- Struktur nach `.eslintrc.cjs` (Reihenfolge template → script → style).
+- **Protected Core:** `components/Settings/PrecisionMap.vue` ist geschützt (zusammen mit vier `utils/`-Dateien). Kein UI-Paket ändert sie ohne
+  ausdrückliche Freigabe (`permissions.ask`, Git-Trailer-Guard, `docs/PROTECTED_CORE_ENFORCEMENT.md`). UI-Arbeit dort: stoppen und berichten.
+
+## 4. Layout-/Grid-Regeln
+
+- Seiten-Shell: Sidebar (`--cc-sidebar-w` 244px, Rail `--cc-sidebar-w-rail` 76px) + Content; Top-Bar; auf Mobil Bottom-Navigation.
+- Inhaltsraster: 12-Spalten-Grid (`.cc-grid`), Abstand `--cc-space-4`.
+- Abstände ausschließlich aus der Skala `--cc-space-1…5` (4/8/12/18/24px).
+- **Match-Fokus:** Score und Hauptaktion stehen oben und sind bei 390×844 ohne Scrollen sichtbar; Kernaktionen sind höchstens 2 Interaktionen tief.
+- **Layout-Shifts vermeiden:** Platz für asynchron geladene Inhalte reservieren (Skeleton/Empty-State mit fester Höhe), Zielwert CLS ≤ 0,1.
+- Z-Ebenen nur über `--cc-z-*`.
+
+## 5. Responsive-Regeln
+
+Mobile-First gedacht, Desktop-Premium-Erlebnis. **Verbindliche Visual-QA-Viewports:**
+
+| Name | Größe | Rolle |
+|---|---|---|
+| `mobile` | 390×844 | Phone, Bottom-Navigation |
+| `tablet` | 768×1024 | Tablet, Sidebar als Rail |
+| `desktop` | 1280×720 | Laptop, volle Sidebar |
+| `wide` | 1920×1080 | Großbild/TV |
+
+**Breakpoints** (Dokumentation; CSS-Variablen sind in `@media` nicht nutzbar):
+dokumentiert `640`, `1280`, `1800`. **Legacy** (Bestand, nicht neu verwenden, werden bildschirmweise auf die dokumentierten migriert):
+`480`, `720`, `780`, `860`, `980`, `1080`, `1440`. Der Test lässt keine **neuen** Werte zu.
+
+Regeln: kein horizontales Scrollen der Seite in allen vier Viewports (E2E-geprüft); Touch-Ziele ≥ `--cc-hit-min` (44px);
+Inhalte brechen um statt abzuschneiden; Tabellen/Listen haben eine mobile Darstellung.
+
+## 6. Motion-Regeln
+
+- Nur `transform` und `opacity` animieren (keine Layout-Eigenschaften).
+- Dauern aus `--cc-dur-*` (instant 120 · fast 150 · base 200 · slow 300 · emphasis 400 ms); Mikro-Interaktionen ≤ 300 ms.
+- Easing `--cc-ease-standard`; Spring (`--cc-ease-spring`) sparsam für Bestätigungen.
+- `prefers-reduced-motion: reduce` ist zu respektieren (im Bestand 2 Blöcke; jede neue Animation bringt ihren Reduced-Motion-Fall mit).
+- Bewegung transportiert Information (Zustandswechsel, Live-Ereignis), nie reine Dekoration. Playwright deaktiviert Animationen für Baselines.
+
+## 7. Icon-Regeln
+
+- Quelle: Iconify-Klassen über `addDynamicIconSelectors()` (`tailwind.config.ts`), Set `pixelarticons`
+  (Schreibweise im Bestand: `icon-[pixelarticons--dashboard]`). `material-symbols` ist nur Dev-Abhängigkeit vorhanden.
+- Ein Set pro Oberfläche (Pixelarticons für Control Center); keine Emoji als UI-Icons (Ausnahme: bestehende Inhalte).
+- Icons tragen `currentColor`; rein dekorative Icons sind für Screenreader zu verbergen, bedeutungstragende haben einen Text-Namen.
+- Icon-Buttons haben einen zugänglichen Namen und Hit-Target ≥ 44px.
+
+## 8. Chart-/Grafik-Regeln
+
+- Im Projekt ist **keine** Chart-Bibliothek vorhanden (`package.json`); Grafiken sind SVG/CSS (z. B. Live-Board). Keine neue Bibliothek ohne Analyse und Freigabe.
+- Farben ausschließlich aus Tokens und mit fester Bedeutung: Rot = lokal, Blau = Gegner, Gold nur Rang/Sieger, Grün nur Erfolg.
+- Information nie nur über Farbe: zusätzlich Form, Beschriftung oder Wert.
+- Jede Grafik hat eine Textalternative (Zusammenfassung des Werts) und lesbare Beschriftungen (≥ `--cc-fs-xs`).
+- Leere/fehlende Daten nutzen den vorhandenen Empty-State, keine leere Fläche.
+
+## 9. Accessibility-Regeln
+
+Ziel: WCAG 2.2 Level AA.
+
+- **Kontrast:** Text ≥ 4,5:1, große Texte und UI-Elemente ≥ 3:1. Der Token-Kontrast ist im Test geprüft; bekannte Ausnahmen in Abschnitt 14.
+- **Tastatur:** alle Funktionen per Tastatur erreichbar; sichtbarer Fokus (`--cc-focus-*`); logische Tab-Reihenfolge; kein Fokusfang.
+- **Semantik:** native Elemente zuerst (`button`, `nav`, `main`); ARIA nur, wo nötig. Das sichtbare Label ist Teil des Accessible Name (WCAG 2.5.3,
+  im Bestand in `sections.ts` dokumentiert). Dialoge/Tabs über die vorhandenen Bausteine (`AppModal`, `AppTabs`); `radix-vue` ist als Abhängigkeit vorhanden, im Bestand aber nur in `StreamingMode.vue` genutzt — Tastatur- und ARIA-Verhalten dieser Bausteine ist vor Wiederverwendung zu prüfen.
+- **Text:** neuer Text mindestens 12px (`--cc-fs-xs`); Bestand unter 12px wird per Ratchet abgebaut.
+- **Zielgröße:** ≥ 44px (Projektziel, strenger als WCAG 2.2 AA mit 24px).
+- **Bewegung:** siehe Abschnitt 6. **Zoom/Reflow:** Layout bleibt bei 390px Breite ohne horizontales Scrollen bedienbar.
+- **Automatisierte Prüfung:** *Bekannte, nicht blockierende Lücke.* Es gibt kein axe-Gate (`@axe-core/playwright` ist **nicht** installiert).
+  Bis zu einer separaten Analyse und Freigabe gilt: Review mit dem Skill `ecc:accessibility`, Token-Kontrast-Test, Playwright-eigene Mittel
+  (Rollen-/Namens-Locator, `toMatchAriaSnapshot`, Tastatur-Tests). Eine Dependency wird nur nach ausdrücklicher Freigabe installiert.
+
+## 10. Visual-Baseline-Regeln
+
+- Playwright `toHaveScreenshot`, Konfiguration in `playwright.config.ts` (`animations: disabled`, `maxDiffPixelRatio: 0.01`). **Keine Toleranz erhöhen** —
+  bei Abweichung Umgebung prüfen.
+- Vier Viewports aus `tests/e2e/helpers/viewports.ts`, **keine** globale Projektmatrix (bestehende Tests laufen nicht ×4).
+- Baselines nur **bewusst** erneuern: nach Sichtprüfung `yarn test:e2e:update <spec>`, Diff im PR sichtbar machen. Nie „blind“ aktualisieren.
+- Determinismus: externe Requests stubben, dynamische Bereiche maskieren (z. B. Versions-Badge), auf Endzustand warten statt raten.
+- Referenzumgebung: Linux, Playwright-Chromium (Chrome for Testing 151, Playwright 1.62.1), headed unter Xvfb, `fonts-noto-core` — Schriften siehe Abschnitt 14.
+- Eine UI-Änderung ohne Baseline gilt nicht als fertig.
+
+## 11. Review-Regeln
+
+- `code-review`-Skill vor jedem Merge (Primary Owner); `security-review` nur bei sicherheitsrelevanten Änderungen.
+- Required Checks bleiben: „Control Center PR Gates“ und „Playwright E2E“.
+- Jeder UI-PR nennt: berührte Screens, Token-Änderungen, Baseline-Änderungen (mit Bildvergleich), Accessibility-Befunde.
+- Schreibende Änderungen laufen über die Hauptsitzung (Single-Owner-Regel), Subagents analysieren/reviewen.
+
+## 12. Design-Drift-Schutz (technisch)
+
+`tests/design-governance.test.ts` prüft robust, ohne Kosmetik festzunageln:
+
+1. `--cc-*` nur im Token-File definiert; `main.ts` lädt Tokens vor `style.css`.
+2. Jedes benutzte `var(--cc-*)` ist definiert; alle Pflicht-Token-Gruppen sind vorhanden.
+3. Designsprache-Anker (Akzentfarben, Basis, Schriften, Hit-Target).
+4. Ratchets: Farb-Literale, Text unter 12px — dürfen nur sinken; nur dokumentierte oder bestehende Breakpoints.
+5. Kontrast der Text-/Status-Tokens gegen `--cc-bg` und `--cc-bg-elev`, bekannte Ausnahmen explizit benannt.
+
+## 13. Definition of Done
+
+Ein Screen/eine Komponente ist **fertig**, wenn **alle** acht Punkte erfüllt sind:
+
+**DESIGN + UX + RESPONSIVE + ACCESSIBILITY + FUNCTION + TEST + VISUAL BASELINE + REVIEW**
+
+| Stufe | Nachweis |
+|---|---|
+| DESIGN | nur Tokens/vorhandene Bausteine, Designsprache (Abschnitt 1) eingehalten |
+| UX | Match-Fokus, Informationshierarchie, geringe Interaktionskosten |
+| RESPONSIVE | alle vier Viewports, kein horizontales Scrollen |
+| ACCESSIBILITY | Regeln aus Abschnitt 9, Kontrast, Tastatur, Zielgröße |
+| FUNCTION | Verhalten unverändert bzw. wie spezifiziert |
+| TEST | `yarn compile`, `yarn test`, `yarn test:components`, `yarn gate run` PASS |
+| VISUAL BASELINE | Baseline je Viewport bewusst geprüft und committet |
+| REVIEW | `code-review` ohne offene Befunde, Required Checks grün |
+
+Messbare Zielwerte (Quality Bar): CLS ≤ 0,1 · INP ≤ 200 ms · Kontrast ≥ 4,5:1 / 3:1 · Touch-Ziele ≥ 44px · Animationen ≤ 300 ms (Mikro) ·
+kein Größen-Regress gegenüber der in UI-2 erhobenen Build-Baseline. CLS/INP sind Zielwerte, in UI-1 **nicht gemessen**.
+
+## 14. Bekannte Abweichungen und offene Entscheidungen (Stand UI-1)
+
+Verifizierte Befunde, absichtlich nicht in UI-1 behoben (kein visueller Diff am Bestand):
+
+1. **Schriften nicht gebündelt.** `style.css` deklariert Barlow Condensed/Open Sans, es gibt aber kein `@font-face`; auf dem Prüfsystem löst
+   fontconfig beide auf Noto Sans auf. Die Visual-Baselines halten diesen Fallback fest. Beim Bündeln der Schriften sind sie bewusst zu erneuern.
+2. **Kontrast:** `--cc-text-faint` (≈ 4,15:1 auf `--cc-bg`, ≈ 3,66:1 auf `--cc-bg-elev`) und `--cc-accent` als Text (≈ 4,20:1 / 3,70:1)
+   liegen unter 4,5:1; beide sind im Test als bekannte Ausnahme (Untergrenze 3:1) geführt. Behebung = sichtbare Design-Änderung (UI-2, mit Baseline).
+3. **Fokus uneinheitlich:** Bestand mischt Gold-Outline (2px/2px) und `--cc-accent-soft`-Ring. `--cc-focus-color` ist vorläufig Gold (häufigster Fall);
+   das kollidiert mit „Gold nur Pokal/Rang“ — einheitliche Fokusfarbe ist eine **offene Design-Entscheidung** für UI-2.
+4. **Kleine Schrift:** 86 Schriftgrößen unter 12px (Ratchet fixiert den Stand).
+5. **Hardcodes:** 152 Farb-Literale in `style.css`, 21 in `components/ControlCenter`; `components/Settings` (inkl. Protected-Core-Datei) ist **nicht** Teil der Ratchets.
+6. **Breakpoints uneinheitlich** (7 Legacy-Werte), Migration bildschirmweise.
+7. **Externer Request:** die Control-Center-Seite ruft `…/api/marathon/health` (KI-Backend). Die Visual-Spec stubbt ihn; im Betrieb bleibt er unverändert.
+8. **Accessibility-Gate:** siehe Abschnitt 9 (kein axe).
+9. **Nicht gemessen:** CLS, INP, Bundle-Größen-Baseline, Lighthouse auf Extension-Seiten (UNKNOWN).
