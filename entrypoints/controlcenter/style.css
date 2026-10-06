@@ -154,6 +154,41 @@ ul {
   padding: 24px 28px 64px;
 }
 
+/* ─── Skip-Link und programmatische Fokus-Ziele (UI-2A) ─────────────────────
+   Der Skip-Link liegt außerhalb des Grid-Flusses (fixed), ist bis zum Fokus per
+   transform aus dem Viewport geschoben (keine Transition) und nutzt die
+   Fokus-Tokens. <main> und <h1> sind programmatische Fokus-Ziele (tabindex=-1,
+   Fokus-Management in CcShell) und tragen daher keinen eigenen Fokusring. */
+.cc-skip-link {
+  position: fixed;
+  top: var(--cc-space-2);
+  left: var(--cc-space-2);
+  z-index: var(--cc-z-panel);
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--cc-hit-min);
+  padding: 0 var(--cc-space-4);
+  border: var(--cc-border-width) solid var(--cc-border-bright);
+  border-radius: var(--cc-radius-sm);
+  background: var(--cc-bg-elev);
+  color: var(--cc-text);
+  font-size: var(--cc-fs-sm);
+  font-weight: var(--cc-fw-bold);
+  text-decoration: none;
+  transform: translateY(-200%);
+}
+
+.cc-skip-link:focus-visible {
+  transform: none;
+  outline: var(--cc-focus-width) solid var(--cc-focus-color);
+  outline-offset: var(--cc-focus-offset);
+}
+
+.cc-content:focus,
+.cc-topbar-heading:focus {
+  outline: none;
+}
+
 /* ─── Sidebar ────────────────────────────────────────────────────────────── */
 
 .cc-sidebar {
@@ -400,7 +435,7 @@ ul {
 .cc-topbar {
   position: sticky;
   top: 0;
-  z-index: 20;
+  z-index: var(--cc-z-topbar);
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -455,11 +490,72 @@ ul {
   color: var(--cc-text-dim);
 }
 
+.cc-topbar-controls,
 .cc-topbar-status {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 8px;
+}
+
+/* Header-Aktionen (UI-2A): eigener Cluster neben den Status-Pills. Ziele mindestens
+   --cc-hit-min hoch; sichtbarer Tastaturfokus über die Fokus-Tokens (der Wert der
+   Fokusfarbe wird zentral im Token-File entschieden, nicht hier). */
+.cc-topbar-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.cc-topbar .cc-btn {
+  min-height: var(--cc-hit-min);
+}
+
+.cc-topbar .cc-btn:focus-visible {
+  outline: var(--cc-focus-width) solid var(--cc-focus-color);
+  outline-offset: var(--cc-focus-offset);
+}
+
+/* Phone: kompakter Header. Die Seite scrollt wie gewohnt, ein sticky Header von rund
+   einem Viertel der Viewport-Höhe würde dauerhaft Inhalt verdecken — daher nicht sticky.
+   Nebenaktionen werden zu quadratischen Icon-Buttons; das Label bleibt für Screenreader
+   und Spracheingabe im DOM (nur visuell versteckt). Der Haupt-CTA füllt die Restbreite. */
+@media (max-width: 640px) {
+  .cc-topbar { position: static; }
+  .cc-topbar-controls { width: 100%; }
+  /* Layout-stabil: Die Pill-Texte wechseln während der Backend-Prüfung ("nicht geprüft" → "wird geprüft …"
+     → Ergebnis). Nebeneinander umbrach die zweite Pill dabei erst später in eine neue Zeile — der Header wuchs
+     (gemessen 185 → 241px bei 390px Breite) und der Inhalt sprang (Layout-Shift ≈ 0,15). Untereinander ist der
+     Umbruch unabhängig von der Textlänge. */
+  .cc-topbar-status { flex-direction: column; align-items: flex-start; max-width: 100%; }
+  .cc-topbar-actions { width: 100%; flex-wrap: nowrap; }
+  .cc-topbar-actions .is-primary { flex: 1 1 auto; }
+  .cc-topbar .cc-btn-compact {
+    flex: 0 0 var(--cc-hit-min);
+    width: var(--cc-hit-min);
+    padding: 0;
+  }
+  .cc-btn-compact .cc-btn-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    border: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+}
+
+/* Reduced Motion für die Shell: keine Übergänge/Hover-Bewegung, kein Drehen des Reload-Icons. */
+@media (prefers-reduced-motion: reduce) {
+  .cc-topbar .cc-btn,
+  .cc-nav-item,
+  .cc-bottom-nav-item { transition: none; }
+  .cc-topbar .cc-btn:hover { transform: none; }
+  .cc-topbar .animate-spin { animation: none; }
 }
 
 /* ─── Karten ─────────────────────────────────────────────────────────────── */
