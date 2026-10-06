@@ -34,13 +34,13 @@
     "@wxt-dev/webextension-polyfill": "^1.0.0",
     "idb": "^8.0.2",
     "jszip": "^3.10.1",
-    "lodash": "^4.17.21",
+    "lodash": "4.18.0",
     "mitt": "^3.0.1",
     "qr-code-styling": "^1.9.2",
     "radix-vue": "^1.8.5",
-    "socket.io-client": "^4.8.1",
+    "socket.io-client": "4.8.4",
     "sortablejs": "^1.15.6",
-    "vue": "^3.4.31",
+    "vue": "3.5.42",
     "webextension-polyfill": "^0.12.0"
   },
   "devDependencies": {
@@ -83,5 +83,12 @@
     "wxt": "^0.20.0",
     "zx": "^7.2.3"
   },
-  "packageManager": "yarn@1.22.22+sha256.c17d3797fb9a9115bf375e31bfd30058cac6bc9c3b8807a3d8cb2094794b51ca"
+  "packageManager": "yarn@1.22.22+sha256.c17d3797fb9a9115bf375e31bfd30058cac6bc9c3b8807a3d8cb2094794b51ca",
+  "resolutions": {
+    "**/engine.io-client": "6.6.7",
+    "**/socket.io-parser": "4.2.7",
+    "**/defu": "6.1.5",
+    "radix-vue/nanoid": "5.1.16",
+    "**/source-map-js": "1.2.2"
+  }
 }
