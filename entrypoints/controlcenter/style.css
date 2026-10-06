@@ -17,101 +17,13 @@
 
 /* ─── Design-Tokens ───────────────────────────────────────────────────────
  *
- * AUTODARTS ELITE — Wave 1 formalisiert hier die bereits bestehenden
- * `--cc-*`-Tokens (keine Werte geändert, nur benannt/dokumentiert) als
- * verbindliches Vokabular für alle künftigen Elite-Screens:
- *
- *   Flächen         near-black Basis, Glass-Panels (--cc-surface*)
- *   Spieler-Akzente Rot = lokaler Spieler, Blau = Gegner — NIE vertauschen
- *   Gold            ausschließlich Pokale / Rang / Achievements / Sieger
- *   Grün (--cc-ok)  ausschließlich Erfolg / Online / Checkout-Erfolg
- *   Glow            zurückhaltend: nur auf Live-Indikatoren, aktive
- *                   Zustände, Badges — nie auf Fließtext
+ * Die `--cc-*`-Tokens (Single Source of Truth) liegen in
+ * `assets/design-tokens.css` und werden in main.ts VOR dieser Datei geladen.
+ * Hier verbleibt nur der Chakra-Kompatibilitäts-/Host-Shim, der auf die Tokens
+ * verweist. Regeln: docs/UI_GOVERNANCE.md.
  * ────────────────────────────────────────────────────────────────────────── */
 
 :root {
-  color-scheme: dark;
-
-  /* Flächen — Basis ist das bestehende Projekt-Navy #0D1B2A */
-  --cc-bg: #060b12;
-  --cc-bg-elev: #0d1b2a;
-  --cc-surface: rgba(255, 255, 255, 0.035);
-  --cc-surface-hover: rgba(255, 255, 255, 0.07);
-  --cc-surface-strong: rgba(255, 255, 255, 0.1);
-  --cc-border: rgba(255, 255, 255, 0.08);
-  --cc-border-bright: rgba(255, 255, 255, 0.16);
-
-  /* Spieler-Akzente — Rot = lokaler Spieler, Blau = Gegner (Elite-Konvention) */
-  --cc-accent: #e8002d;
-  --cc-accent-soft: rgba(232, 0, 45, 0.14);
-  --cc-accent-line: rgba(232, 0, 45, 0.45);
-  --cc-gold: #f5c842;
-  --cc-gold-soft: rgba(245, 200, 66, 0.14);
-
-  /* Blau = sekundäre/gegnerische Live-Elemente. Grün bleibt echten
-     positiven bzw. Online-Zuständen vorbehalten. */
-  --cc-blue: #3b82f6;
-  --cc-blue-soft: rgba(59, 130, 246, 0.14);
-  --cc-blue-line: rgba(59, 130, 246, 0.45);
-
-  /* Text */
-  --cc-text: #e8eaf0;
-  --cc-text-dim: #94a3b8;
-  --cc-text-faint: #64748b;
-
-  /* Status */
-  --cc-ok: #10b981;
-  --cc-ok-soft: rgba(16, 185, 129, 0.14);
-  --cc-warn: #f59f00;
-  --cc-warn-soft: rgba(245, 159, 0, 0.14);
-  --cc-bad: #ef4444;
-  --cc-bad-soft: rgba(239, 68, 68, 0.14);
-  --cc-idle: #64748b;
-  --cc-idle-soft: rgba(100, 116, 139, 0.14);
-
-  /* Maße */
-  --cc-radius: 14px;
-  --cc-radius-sm: 8px;
-  --cc-sidebar-w: 244px;
-  --cc-sidebar-w-rail: 76px;
-
-  --cc-font-display: "Barlow Condensed", "Oswald", "Arial Narrow", system-ui, sans-serif;
-  --cc-font-body: "Open Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-
-  /* Elite-Typografie-Skala (dokumentierend, additiv) — die Regeln unten
-     behalten in Wave 1 ihre bisherigen literalen px-Werte (kein visueller
-     Diff); diese Tokens sind die benannte Referenz für kommende Wellen,
-     damit neue Elite-Widgets dieselbe Skala erben statt neue Größen zu
-     erfinden. */
-  --cc-fs-score-hero: 76px;      /* .cc-sb-score */
-  --cc-fs-score-hero-tv: 96px;   /* .cc-sb-score ab 1800px */
-  --cc-fs-name-hero: 30px;       /* .cc-sb-name / .cc-hero-name */
-  --cc-fs-name-hero-tv: 36px;    /* ab 1800px */
-  --cc-fs-tile-value: 34px;      /* .cc-tile-value */
-  --cc-fs-tile-value-tv: 40px;   /* ab 1800px */
-
-  /* Phase 2C — Abstands-Skala (additiv, dokumentierend). Bestehende Regeln
-     behalten ihre literalen px-Werte (kein visueller Diff an Bestandscode);
-     diese Tokens sind das benannte Vokabular für neue Elite-Widgets wie
-     CcMatchCenterShell, damit die 12-Spalten-Grid-Abstände (--cc-space-4
-     entspricht dem bestehenden `.cc-grid { gap: 18px }`) nicht neu erfunden
-     werden. */
-  --cc-space-1: 4px;
-  --cc-space-2: 8px;
-  --cc-space-3: 12px;
-  --cc-space-4: 18px;
-  --cc-space-5: 24px;
-
-  /* Phase 2C — Glow-/Schatten-Tokens: benennen bereits im Bestand mehrfach
-     wiederholte Werte (siehe z. B. .cc-card box-shadow, die Sieger-/Live-Glows
-     auf .cc-hero-side.is-active-side), statt sie ein weiteres Mal literal zu
-     wiederholen. Bestehende Stellen werden dadurch NICHT umgeschrieben (kein
-     breites Refactoring) — die Tokens stehen für neuen Code bereit. */
-  --cc-shadow-card: 0 16px 44px rgba(0, 0, 0, 0.45);
-  --cc-glow-accent: 0 0 26px rgba(232, 0, 45, 0.16);
-  --cc-glow-blue: 0 0 26px rgba(59, 130, 246, 0.16);
-  --cc-glow-gold: 0 0 0 1px rgba(245, 200, 66, 0.08), 0 0 32px rgba(245, 200, 66, 0.06);
-
   /* ── Chakra-Shim ────────────────────────────────────────────────────────
      Nur die Variablen, die im Repo tatsächlich verwendet werden.            */
   --chakra-fonts-body: var(--cc-font-body);
