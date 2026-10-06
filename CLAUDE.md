@@ -50,7 +50,7 @@ Reality check of the routing table above (Playwright rows and the E2E-CI row upd
 | Playwright MCP (`playwright@claude-plugins-official`) | INSTALLED (user scope, `npx @playwright/mcp@latest`, unpinned); DISABLED in this project. On demand/optional, not activated |
 | Context7 plugin | INSTALLED (user scope); DISABLED in this project |
 | Context7 access | claude.ai connector present in sessions (`mcp__claude_ai_Context7__*`, presence verified, not invoked); Codex has its own `context7` entry in `~/.codex/config.toml` |
-| Chrome DevTools MCP | CONFIGURED in `~/.claude.json` for this project (stdio, `chrome-devtools-mcp@1.8.0`); the ECC plugin duplicate (`@latest`) is disabled via `disabledMcpServers`. Tools present in sessions, not invoked. An uncommitted local `.codex/config.toml` entry adds the same server for Codex |
+| Chrome DevTools MCP | CONFIGURED in `~/.claude.json` for this project (stdio, `chrome-devtools-mcp@1.8.0`); the ECC plugin duplicate (`@latest`) is disabled via `disabledMcpServers`. Tools present in sessions, not invoked. For Codex the same server is configured only in the user config `~/.codex/config.toml` (not in the project `.codex/config.toml`, which is clean since Wave 3) |
 
 ### ECC hook profile (deliberate project decision)
 

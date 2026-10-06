@@ -688,7 +688,7 @@ Firefox-/Chrome-Build, `vue-tsc`, Package-C-Teststände (501/501, 50/50, 82/82).
 Recovery-Tags behalten den Alt-Hash im Namen, zeigen aber auf Commits der neuen Historie; Tag-Namen sind keine Hash-Belege.
 
 **OPEN:** CURRENT-HEAD RE-VERIFICATION; TEMP-DIAG (5 Non-Core-Stellen); MCP-Konsolidierung; Branch-Protection; Codex-Laufzeitverhalten
-(Abschnitt 8-B, weiter UNKNOWN); lokale Änderung `.codex/config.toml`; untracked `.claude/settings.local.json.bak-20260930T234259`.
+(Abschnitt 8-B, weiter UNKNOWN); untracked `.claude/settings.local.json.bak-20260930T234259`.
 **BLOCKED:** TEMP-DIAG-Core-Block (nur mit ausdrücklicher Freigabe); Release-Gate (Human Live QA, Hardware); `p345.sh` (darf nicht ausgeführt werden).
 
 **OPEN_DECISION – Autor-Identität:** 121 Commits tragen `du@example.com` und sind gepusht. Die in Abschnitt 9 verlangte Entscheidung vor dem
@@ -727,7 +727,7 @@ berechnet (ECC `hook-flags.js`); „nicht aufgerufen" heißt: Vorhandensein best
   (`core.hooksPath=scripts/githooks`); `Agent(ecc:…)`-Deny-Regeln (lokal, nicht im Repository; D1: 46, Wave 1B: 50, seit Wave 2B 2026-10-06: 59); Validation-Gate; Truth & Verification Contract in `CLAUDE.md`.
 - **Weitere projektlokale Einstellungen** in `.claude/settings.local.json` (bisher hier nicht beschrieben): Plugins `hookify`, `playwright`,
   `github`, `context7`, `security-guidance`, `claude-mem` auf `false`; `ecc@ecc` aktiv. Diese Plugin-Disables beeinflussen die ECC-Hooks nicht.
-- **Hinweis:** Dieselbe Variable steht auch in der lokalen, nicht committeten `.codex/config.toml` (OPEN: Entscheidung dazu).
+- **Hinweis:** Dieselbe Variable stand zeitweise auch in der lokalen, nicht committeten `.codex/config.toml`. Entscheidung Wave 3 (2026-10-06): für Codex bewusst nicht gesetzt und dort entfernt (kein Codex-Hook ruft ECC auf; Wirkungslosigkeit INFERRED, nicht per Laufzeittest belegt). `minimal` gilt nur für Claude Code.
 
 ### 11.2 Werkzeugstatus und Routing
 
@@ -753,7 +753,8 @@ redundanten dauerhaft aktiven Werkzeuge ohne belegten Nutzen.
 - Veraltete `mcp__github__*`-Allow-Regeln in `~/.claude/settings.local.json` (alte Namensform, wirkungslos).
 - graphify-Hook-Text („MANDATORY: run graphify query") widerspricht der Regel „graphify nur bei Beziehungsfragen".
 - Weitere E3.1-Befunde bleiben offen: Node-Default v24 vs. `.nvmrc` v22.23.2, der Codex-Sollstand „0.153.3" (nirgends belegt; dokumentiert ist 0.153.4),
-  zwei Alt-Worktrees ohne exklusive Commits, lokale `.codex/config.toml`-Änderung.
+  zwei Alt-Worktrees ohne exklusive Commits. (Die lokale `.codex/config.toml`-Änderung ist seit Wave 3, 2026-10-06, erledigt: Projektdatei clean,
+  `ECC_HOOK_PROFILE` dort entfernt, chrome-devtools nur in `~/.codex/config.toml`.)
 
 ## 12. PLAYWRIGHT / E2E-CI: VERIFIZIERTER STAND (2026-10-04, HEAD `92b723e`)
 
