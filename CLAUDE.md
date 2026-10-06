@@ -58,7 +58,7 @@ Reality check of the routing table above (Playwright rows and the E2E-CI row upd
 
 With `minimal` (verified by evaluating `hook-flags.js` for ECC 2.2.1) these ECC groups are **not active**: GateGuard (Bash and Edit/Write fact-forcing), `config-protection`, `governance-capture`, `mcp-health-check`, and the standard-only quality/convenience hooks (e.g. `post:quality-gate`). Still active: `pre:bash:block-no-verify` and the Bash dispatcher. Additionally, 7 ECC session/observe hooks are disabled user-wide via `ECC_DISABLED_HOOKS` (see `docs/SETUP_2_0_DEV_AGENT_SETUP.md` section 2).
 
-Substitute protection layers (they do not replace GateGuard's fact-forcing): `pre:bash:block-no-verify`; project-local `destructive-guard.sh` (PreToolUse/Bash); `permissions.ask` plus `disableBypassPermissionsMode` for the protected core files; the git hooks `commit-msg`/`pre-push` (`scripts/core-guard.mjs`, `core.hooksPath=scripts/githooks`); 46 `Agent(ecc:…)` deny rules; the validation gate; the Truth & Verification Contract below.
+Substitute protection layers (they do not replace GateGuard's fact-forcing): `pre:bash:block-no-verify`; project-local `destructive-guard.sh` (PreToolUse/Bash); `permissions.ask` plus `disableBypassPermissionsMode` for the protected core files; the git hooks `commit-msg`/`pre-push` (`scripts/core-guard.mjs`, `core.hooksPath=scripts/githooks`); 50 `Agent(ecc:…)` deny rules (local-only in the git-ignored `.claude/settings.local.json`); the validation gate; the Truth & Verification Contract below.
 
 ### Routing principle
 
@@ -79,7 +79,7 @@ Substitute protection layers (they do not replace GateGuard's fact-forcing): `pr
 |---|---|
 | MAIN | main session itself — orchestration, implementation, decisions |
 | BUG-TRIAGE | native `fork` (reproduce/root-cause) or `Explore` (read-only search) |
-| CODE-REVIEW | `pr-review-toolkit:code-reviewer` + `pr-review-toolkit:silent-failure-hunter` (regressions, lifecycle, race conditions, side effects) |
+| CODE-REVIEW | normal review: `code-review` skill (primary). Special cases: `pr-review-toolkit:code-reviewer` + `pr-review-toolkit:silent-failure-hunter` (regressions, lifecycle, race conditions, side effects). ECC/Codex review functions are not automatic competing primaries (`ecc:typescript-reviewer`, `ecc:vue-reviewer` are denied locally) |
 | TEST/VALIDATION | `.claude/agents/testing/production-validator.md` |
 | BROWSER/RUNTIME | no dedicated agent — call Chrome DevTools MCP / `web-ext` directly from MAIN; automated E2E via `yarn test:e2e` (Playwright suite) |
 

@@ -134,17 +134,36 @@ reduziert. Für Plugin-Skills gibt es keinen unterstützten Filter
 Nicht-ECC-Agents (u. a. `pr-review-toolkit:*`, `feature-dev:*`,
 `production-validator`) sind von D1 nicht betroffen.
 
-### 3.2 Deny-Liste (46 Einträge, versionsabhängig)
+Änderung Wave 1B (2026-10-06): `architect`, `planner`, `typescript-reviewer` und
+`vue-reviewer` stehen in dieser Klassifikation noch als KEEP, sind aber seither lokal
+gesperrt (siehe 3.2). Klassifikation und die Tabelle oben sind die unveränderte
+D1-Messung und wurden nicht neu gemessen.
+
+### 3.2 Deny-Liste (aktueller lokaler Stand: 50 Einträge, versionsabhängig)
 
 Rekonstruktionsreferenz für `.claude/settings.local.json`, falls die lokale
 Datei verloren geht. Nur der Block `permissions` ist hier wiedergegeben; die
 übrigen Schlüssel der Datei (u. a. die Aktivierung des ECC-Plugins) gehören
 nicht zu D1.
 
+**Stand (2026-10-06):** Die D1-Baseline umfasste 46 Einträge (gemessen, siehe oben).
+Mit Setup 2.0 Wave 1B kamen vier hinzu, der aktuelle lokale Stand sind **50**:
+`ecc:architect` und `ecc:planner` (Planning: nativer Plan-Subagent / Plan Mode ist
+Primary Owner) sowie `ecc:typescript-reviewer` und `ecc:vue-reviewer` (normaler
+Code-Review: der `code-review` Skill ist Primary Owner; Spezialfälle bleiben
+`pr-review-toolkit` und `silent-failure-hunter`). Die Agents sind weder gelöscht
+noch deinstalliert; nach der Änderung meldete Claude Code sie als nicht mehr
+verfügbare Agent-Typen. **Diese Regeln liegen ausschließlich in
+`.claude/settings.local.json`. Die Datei ist git-ignoriert und kein Bestandteil des
+Repositories; die vier Wave-1B-Regeln wirken deshalb nur auf diesem Rechner. Andere
+Klone oder Rechner besitzen sie nicht automatisch.** Die Liste unten gibt den
+aktuellen lokalen Stand (50) wieder.
+
 ```json
 {
   "permissions": {
     "deny": [
+      "Agent(ecc:architect)",
       "Agent(ecc:chief-of-staff)",
       "Agent(ecc:code-architect)",
       "Agent(ecc:code-explorer)",
@@ -181,6 +200,7 @@ nicht zu D1.
       "Agent(ecc:opensource-packager)",
       "Agent(ecc:opensource-sanitizer)",
       "Agent(ecc:php-reviewer)",
+      "Agent(ecc:planner)",
       "Agent(ecc:pytorch-build-resolver)",
       "Agent(ecc:rag-pipeline-reviewer)",
       "Agent(ecc:react-build-resolver)",
@@ -190,7 +210,9 @@ nicht zu D1.
       "Agent(ecc:seo-specialist)",
       "Agent(ecc:swift-build-resolver)",
       "Agent(ecc:swift-reviewer)",
-      "Agent(ecc:type-design-analyzer)"
+      "Agent(ecc:type-design-analyzer)",
+      "Agent(ecc:typescript-reviewer)",
+      "Agent(ecc:vue-reviewer)"
     ]
   }
 }
@@ -213,11 +235,13 @@ ECC-Installation):
 4. Danach wird bewusst zwischen KEEP und DENY entschieden.
 5. Die Zahl 22 ist eine gemessene Baseline für ECC 2.2.1, kein unveränderlicher
    Vertrag.
-6. Die 46 Deny-Einträge sind versionsabhängig.
+6. Die Deny-Einträge (D1: 46; lokaler Stand seit Wave 1B: 50) sind versionsabhängig.
 7. Die erforderlichen Spezialisten müssen nach jedem ECC-Update weiterhin
    verfügbar sein, mindestens: `vue-reviewer`, `typescript-reviewer`,
    `silent-failure-hunter`, `database-reviewer`, `python-reviewer`,
-   `spec-miner`, `loop-operator`.
+   `spec-miner`, `loop-operator`. (`vue-reviewer` und `typescript-reviewer` sind seit
+   Wave 1B bewusst lokal gesperrt; nach einem Update ist für diese beiden nur zu
+   prüfen, dass sie im ECC-Katalog weiterhin vorhanden sind.)
 8. Package-A-Sicherheits- und Governance-Funktionen (GateGuard,
    `pre:bash:block-no-verify`, `config-protection`, `governance-capture`)
    dürfen durch zukünftige Katalogoptimierungen nicht versehentlich
@@ -668,7 +692,7 @@ berechnet (ECC `hook-flags.js`); „nicht aufgerufen" heißt: Vorhandensein best
 - **Ersatzschutzschichten** (ersetzen GateGuards Faktenzwang vor Edits nicht): `block-no-verify`; projektlokaler Hook
   `destructive-guard.sh` (PreToolUse/Bash, Exit 2 blockt); `permissions.ask` + `disableBypassPermissionsMode` für die 5 Core-Dateien
   (`docs/PROTECTED_CORE_ENFORCEMENT.md`); Git-Hooks `commit-msg`/`pre-push` mit `scripts/core-guard.mjs`
-  (`core.hooksPath=scripts/githooks`); 46 `Agent(ecc:…)`-Deny-Regeln; Validation-Gate; Truth & Verification Contract in `CLAUDE.md`.
+  (`core.hooksPath=scripts/githooks`); `Agent(ecc:…)`-Deny-Regeln (lokal, nicht im Repository; D1: 46, seit Wave 1B 2026-10-06: 50); Validation-Gate; Truth & Verification Contract in `CLAUDE.md`.
 - **Weitere projektlokale Einstellungen** in `.claude/settings.local.json` (bisher hier nicht beschrieben): Plugins `hookify`, `playwright`,
   `github`, `context7`, `security-guidance`, `claude-mem` auf `false`; `ecc@ecc` aktiv. Diese Plugin-Disables beeinflussen die ECC-Hooks nicht.
 - **Hinweis:** Dieselbe Variable steht auch in der lokalen, nicht committeten `.codex/config.toml` (OPEN: Entscheidung dazu).
@@ -742,9 +766,9 @@ Nachtrag; Abschnitt 11 bleibt als historischer Stand vom 2026-10-03 erhalten. Wo
 
 ### 12.4 Offene Punkte (ohne Hardware, nicht Teil dieses Nachtrags)
 
-- Branch-Protection auf `main`: keine (404), keine Rulesets; CODEOWNERS: keiner. Dependabot-Sicherheitsupdates: aus (API-Status `disabled`); Vulnerability-Alerts: Endpunkt liefert 404 (vermutlich aus, INFERRED).
+- Schutz von `main` (Stand 2026-10-06, per GitHub-API gelesen): klassische Branch-Protection weiterhin keine (HTTP 404 „Branch not protected"), dafür ist das Ruleset 24533689 „AUTODARTS ELITE - main protection" aktiv (`enforcement=active`, Ziel `refs/heads/main`, Required Checks „Control Center PR Gates" und „Playwright E2E"; Details in `docs/PROTECTED_CORE_ENFORCEMENT.md`). CODEOWNERS: keiner. Dependabot-Sicherheitsupdates: aus (API-Status `disabled`, erneut gelesen); Vulnerability-Alerts: Endpunkt liefert weiter 404 (vermutlich aus, INFERRED).
 - `yarn audit --groups dependencies` (2026-10-04): 0 critical, 16 high, 5 moderate (u. a. `socket.io-parser`, `lodash`, `ws`); Triage offen.
-- TEMP-DIAG-Bereinigung (5 Non-Core-Stellen, davon `utils/friends-api.ts` mit Gate-Freigabepflicht), MCP-Konsolidierung, Autor-Identität `du@example.com` (127 Commits).
+- TEMP-DIAG: Commit `0e09986` („chore: remove temporary diagnostic logs") hat die Non-Core-Stellen in 4 Dateien entfernt (u. a. `utils/friends-api.ts`); ein `TEMP-DIAG`-Kommentar steht im Quelltext nur noch in `utils/websocket-helpers.ts` (Protected Core, nicht ohne ausdrückliche Freigabe ändern). MCP-Konsolidierung: offen. Autor-Identität `du@example.com`: 128 Commits (Stand 2026-10-06, `git log --format=%ae`).
 - Potenzielles Produktrisiko (nicht geändert): Das Capture-Skript hat keinen Idempotenz-Mechanismus; bei zweimaliger Injektion entstehen pro Nachricht zwei
   `websocket-incoming`-Events (Probe, im normalen Ablauf wird nur einmal injiziert).
 - **Human Live QA ist nicht der nächste Gate** und bleibt DEFERRED/BLOCKED (Hardware). Für den Setup-Abschluss ist keine Hardware erforderlich.
