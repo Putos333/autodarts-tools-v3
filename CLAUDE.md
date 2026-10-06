@@ -58,7 +58,7 @@ Reality check of the routing table above (Playwright rows and the E2E-CI row upd
 
 With `minimal` (verified by evaluating `hook-flags.js` for ECC 2.2.1) these ECC groups are **not active**: GateGuard (Bash and Edit/Write fact-forcing), `config-protection`, `governance-capture`, `mcp-health-check`, and the standard-only quality/convenience hooks (e.g. `post:quality-gate`). Still active: `pre:bash:block-no-verify` and the Bash dispatcher. Additionally, 7 ECC session/observe hooks are disabled user-wide via `ECC_DISABLED_HOOKS` (see `docs/SETUP_2_0_DEV_AGENT_SETUP.md` section 2).
 
-Substitute protection layers (they do not replace GateGuard's fact-forcing): `pre:bash:block-no-verify`; project-local `destructive-guard.sh` (PreToolUse/Bash); `permissions.ask` plus `disableBypassPermissionsMode` for the protected core files; the git hooks `commit-msg`/`pre-push` (`scripts/core-guard.mjs`, `core.hooksPath=scripts/githooks`); 50 `Agent(ecc:…)` deny rules (local-only in the git-ignored `.claude/settings.local.json`); the validation gate; the Truth & Verification Contract below.
+Substitute protection layers (they do not replace GateGuard's fact-forcing): `pre:bash:block-no-verify`; project-local `destructive-guard.sh` (PreToolUse/Bash); `permissions.ask` plus `disableBypassPermissionsMode` for the protected core files; the git hooks `commit-msg`/`pre-push` (`scripts/core-guard.mjs`, `core.hooksPath=scripts/githooks`); 59 `Agent(ecc:…)` deny rules (local-only in the git-ignored `.claude/settings.local.json`); the validation gate; the Truth & Verification Contract below.
 
 ### Routing principle
 
@@ -77,11 +77,13 @@ Substitute protection layers (they do not replace GateGuard's fact-forcing): `pr
 
 | Role | Agent |
 |---|---|
-| MAIN | main session itself — orchestration, implementation, decisions |
+| MAIN | main session itself — orchestration, implementation, decisions. Writing changes go through the main session; subagents default to analysis/review/planning unless explicitly authorized otherwise. Auto-delegating write-capable ECC agents (`ecc:refactor-cleaner`, `ecc:performance-optimizer`, `ecc:tdd-guide`, `ecc:doc-updater`, `ecc:e2e-runner`) are denied locally |
+| PLANNING | native Plan mode / `Plan` subagent (primary). `ecc:planner` and `ecc:architect` are denied locally |
 | BUG-TRIAGE | native `fork` (reproduce/root-cause) or `Explore` (read-only search) |
-| CODE-REVIEW | normal review: `code-review` skill (primary). Special cases: `pr-review-toolkit:code-reviewer` + `pr-review-toolkit:silent-failure-hunter` (regressions, lifecycle, race conditions, side effects). ECC/Codex review functions are not automatic competing primaries (`ecc:typescript-reviewer`, `ecc:vue-reviewer` are denied locally) |
+| CODE-REVIEW | normal review: `code-review` skill (primary). Special cases: `pr-review-toolkit:code-reviewer` + `pr-review-toolkit:silent-failure-hunter` (regressions, lifecycle, race conditions, side effects; the only routable silent-failure-hunter). ECC/Codex review functions are not automatic competing primaries (`ecc:typescript-reviewer`, `ecc:vue-reviewer`, `ecc:silent-failure-hunter`, `ecc:pr-test-analyzer`, `ecc:python-reviewer`, `ecc:database-reviewer` are denied locally) |
+| SECURITY-REVIEW | `security-review` skill (primary; only for security-relevant changes) |
 | TEST/VALIDATION | `.claude/agents/testing/production-validator.md` |
-| BROWSER/RUNTIME | no dedicated agent — call Chrome DevTools MCP / `web-ext` directly from MAIN; automated E2E via `yarn test:e2e` (Playwright suite) |
+| BROWSER/RUNTIME | no dedicated agent — call Chrome DevTools MCP / `web-ext` directly from MAIN; automated E2E via `yarn test:e2e` (Playwright suite; `ecc:e2e-runner` is denied locally) |
 
 Don't create new agents for roles already covered above.
 
