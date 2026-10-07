@@ -1,13 +1,24 @@
 /**
  * Content script that injects the WebSocket capture script
  */
+import { createSerialTaskQueue } from "@/utils/serial-task-queue";
 import { processWebSocketMessage } from "@/utils/websocket-helpers";
+
+/** R1b – Obergrenze für eine einzelne Nachrichtenverarbeitung, damit eine hängende Aufgabe die Queue nicht dauerhaft blockiert. */
+const MESSAGE_TASK_TIMEOUT_MS = 15000;
 
 export default defineContentScript({
   matches: [ "*://play.autodarts.io/*", "*://play.autodarts.com/*" ],
   runAt: "document_start",
   async main(ctx) {
     console.log("Injecting WebSocket capture script...");
+
+    // R1b – eingehende Nachrichten werden strikt nacheinander, in Eintreffreihenfolge verarbeitet.
+    const messageQueue = createSerialTaskQueue({
+      timeoutMs: MESSAGE_TASK_TIMEOUT_MS,
+      onError: (error) => console.error(error),
+      onTimeout: () => console.warn("[Content Script] Message processing exceeded", MESSAGE_TASK_TIMEOUT_MS, "ms; continuing with next message"),
+    });
 
     // Set up event listeners BEFORE injecting the script to avoid race conditions
     // This is critical for WXT 0.20.13+ where injectScript waits for script to load
@@ -18,7 +29,7 @@ export default defineContentScript({
         try {
           const jsonData = JSON.parse(data);
           console.log("[Content Script] Parsed JSON data:", jsonData);
-          processWebSocketMessage(jsonData.channel, jsonData.data).catch(console.error);
+          void messageQueue.enqueue(() => processWebSocketMessage(jsonData.channel, jsonData.data));
         } catch (e) {
           // Not JSON data, don't log
         }
@@ -48,6 +59,7 @@ export default defineContentScript({
 
     // Cleanup on content script unload (SPA navigation or extension update)
     ctx.onInvalidated?.(() => {
+      messageQueue.dispose();
       window.removeEventListener("websocket-incoming", handleIncoming);
       window.removeEventListener("websocket-outgoing", handleOutgoing);
       window.removeEventListener("autodarts-ws-status", handleStatus);
