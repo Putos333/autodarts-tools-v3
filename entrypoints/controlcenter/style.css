@@ -189,6 +189,24 @@ ul {
   outline: none;
 }
 
+/* ─── Fokus (UI-2D): eine einzige Fokus-Sprache ──────────────────────────────
+   Jedes interaktive Element bekommt denselben Ring (2px, --cc-focus-color); die Regel steht in :where() (Spezifität 0),
+   Komponenten brauchen keine eigene Fokusregel. Einzige zulässige Abweichung: Einträge in scrollenden Containern
+   (.cc-nav-item, .cc-bottom-nav-item) setzen den Ring nach innen, weil der Container äußere Ringe abschneiden würde.
+   Gold ist nicht Fokusfarbe. Programmatische Fokus-Ziele (main, h1; tabindex=-1) tragen bewusst keinen Ring. */
+:where(a[href], button, input, select, textarea, summary, [tabindex]:not([tabindex="-1"])):focus-visible {
+  outline: var(--cc-focus-width) solid var(--cc-focus-color);
+  outline-offset: var(--cc-focus-offset);
+}
+
+/* Focus Not Obscured (WCAG 2.4.11): Der Header ist ab 641px sticky; ohne Scroll-Padding landet ein per Shift+Tab
+   nach oben gescrolltes Element hinter ihm. Konservative Obergrenzen der gemessenen Header-Höhen über alle Bereiche
+   (641px: bis 259px, 700–1081px: bis 207px, darüber bis 176px); Mobil (≤640px) ist der Header nicht sticky.
+   Ein E2E-Test hält die Werte gegen die tatsächliche Höhe. */
+html { scroll-padding-top: 12rem; }
+@media (max-width: 1280px) { html { scroll-padding-top: 17rem; } }
+@media (max-width: 640px) { html { scroll-padding-top: 0; } }
+
 /* ─── Sidebar ────────────────────────────────────────────────────────────── */
 
 .cc-sidebar {
@@ -593,11 +611,6 @@ ul {
   min-height: var(--cc-hit-min);
 }
 
-.cc-topbar .cc-btn:focus-visible {
-  outline: var(--cc-focus-width) solid var(--cc-focus-color);
-  outline-offset: var(--cc-focus-offset);
-}
-
 /* Phone: kompakter Header. Die Seite scrollt wie gewohnt, ein sticky Header von rund
    einem Viertel der Viewport-Höhe würde dauerhaft Inhalt verdecken — daher nicht sticky.
    Nebenaktionen werden zu quadratischen Icon-Buttons; das Label bleibt für Screenreader
@@ -768,7 +781,7 @@ ul {
 .cc-tone-warn { color: var(--cc-warn); border-color: rgba(245, 159, 0, 0.35); background: var(--cc-warn-soft); }
 .cc-tone-bad { color: var(--cc-bad); border-color: rgba(239, 68, 68, 0.35); background: var(--cc-bad-soft); }
 .cc-tone-idle { color: var(--cc-idle); border-color: rgba(100, 116, 139, 0.3); background: var(--cc-idle-soft); }
-.cc-tone-accent { color: var(--cc-accent); border-color: var(--cc-accent-line); background: var(--cc-accent-soft); }
+.cc-tone-accent { color: var(--cc-accent-text); border-color: var(--cc-accent-line); background: var(--cc-accent-soft); }
 .cc-tone-gold { color: var(--cc-gold); border-color: rgba(245, 200, 66, 0.4); background: var(--cc-gold-soft); }
 .cc-tone-blue { color: var(--cc-blue); border-color: var(--cc-blue-line); background: var(--cc-blue-soft); }
 
@@ -866,7 +879,7 @@ ul {
   font-weight: 700;
   letter-spacing: 3px;
   text-transform: uppercase;
-  color: var(--cc-accent);
+  color: var(--cc-accent-text);
 }
 
 .cc-hero-meta {
@@ -1342,7 +1355,6 @@ ul {
 }
 .cc-herobar-cta.is-continue { background: var(--cc-gold); color: #1a1400; }
 .cc-herobar-cta:hover { filter: brightness(1.08); }
-.cc-herobar-cta:focus-visible { outline: 2px solid var(--cc-gold); outline-offset: 2px; }
 
 /* ── Quick Play ── */
 .cc-quickplay-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px; }
@@ -1360,7 +1372,6 @@ ul {
   transition: border-color 0.15s ease, transform 0.15s ease;
 }
 .cc-quickplay-tile:hover { border-color: var(--cc-border-bright); transform: translateY(-1px); }
-.cc-quickplay-tile:focus-visible { outline: 2px solid var(--cc-gold); outline-offset: 2px; }
 .cc-quickplay-tile.is-accent { border-color: var(--cc-accent-line); }
 .cc-quickplay-n { font-family: var(--cc-font-display); font-weight: 700; font-size: 19px; }
 .cc-quickplay-l { font-size: 9px; color: var(--cc-text-faint); text-transform: uppercase; letter-spacing: 0.02em; line-height: 1.3; }
@@ -1381,14 +1392,13 @@ ul {
 .cc-activity-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
 .cc-activity-eyebrow { display: flex; align-items: center; gap: 7px; font-family: var(--cc-font-display); font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; font-size: 12px; color: var(--cc-text-dim); }
 .cc-activity-open { font-size: 12px; font-weight: 700; color: var(--cc-gold); cursor: pointer; }
-.cc-activity-open:focus-visible { outline: 2px solid var(--cc-gold); outline-offset: 2px; }
 
 .cc-activity-body { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 16px; }
 .cc-activity-side { display: flex; align-items: center; gap: 10px; }
 .cc-activity-side.right { flex-direction: row-reverse; text-align: right; }
 .cc-activity-name { font-family: var(--cc-font-display); font-weight: 600; font-size: 14px; }
 .cc-activity-tag { font-size: 9px; font-weight: 700; text-transform: uppercase; }
-.cc-activity-tag.is-red { color: var(--cc-accent); }
+.cc-activity-tag.is-red { color: var(--cc-accent-text); }
 .cc-activity-tag.is-blue { color: var(--cc-blue); }
 .cc-activity-rem { font-family: var(--cc-font-display); font-weight: 700; font-size: 32px; line-height: 1; font-variant-numeric: tabular-nums; }
 .cc-activity-rem.is-red { color: var(--cc-accent); }
@@ -1427,7 +1437,7 @@ ul {
 .cc-form-chip { width: 20px; height: 20px; border-radius: 5px; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; font-family: var(--cc-font-display); }
 .cc-form-chip.win { background: var(--cc-ok-soft); color: var(--cc-ok); }
 .cc-form-chip.loss { background: rgba(239, 68, 68, 0.14); color: var(--cc-bad); }
-.cc-form-chip.undecided { background: var(--cc-surface-strong); color: var(--cc-text-faint); }
+.cc-form-chip.undecided { background: var(--cc-surface-strong); color: var(--cc-text-dim); }
 
 /* ── Friends / Training two-up ── */
 .cc-home-split { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
@@ -1436,7 +1446,6 @@ ul {
 .cc-panel-title { font-family: var(--cc-font-display); font-size: 12px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: var(--cc-text-faint); }
 .cc-panel-link { font-size: 11px; color: var(--cc-text-dim); cursor: pointer; }
 .cc-panel-cta { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700; color: var(--cc-text); background: var(--cc-surface-strong); padding: 7px 12px; border-radius: 999px; cursor: pointer; margin-top: 4px; }
-.cc-panel-cta:focus-visible { outline: 2px solid var(--cc-gold); outline-offset: 2px; }
 
 .cc-home-friend-list { display: flex; flex-direction: column; gap: 6px; margin-bottom: 10px; }
 .cc-home-friend-row { display: flex; align-items: center; gap: 8px; font-size: 12px; }
@@ -1454,7 +1463,7 @@ ul {
 .cc-flag {
   display: inline-flex; align-items: center; font-size: 9px; font-weight: 700;
   letter-spacing: 0.02em; padding: 2px 7px; border-radius: 999px; margin-left: 6px;
-  color: var(--cc-text-faint); background: var(--cc-surface-strong); border: 1px solid var(--cc-border);
+  color: var(--cc-text-dim); background: var(--cc-surface-strong); border: 1px solid var(--cc-border);
   white-space: nowrap;
 }
 
@@ -1578,7 +1587,7 @@ ul {
   font-weight: 800;
   letter-spacing: 2px;
   text-transform: uppercase;
-  color: var(--cc-accent);
+  color: var(--cc-accent-text);
 }
 
 .cc-live-widget-title {
@@ -2186,7 +2195,7 @@ ul {
   color: var(--cc-text-dim);
 }
 
-.cc-tag.is-accent { color: var(--cc-accent); border-color: var(--cc-accent-line); }
+.cc-tag.is-accent { color: var(--cc-accent-text); border-color: var(--cc-accent-line); }
 .cc-tag.is-gold { color: var(--cc-gold); border-color: rgba(245, 200, 66, 0.4); }
 
 .cc-player-stats {
@@ -2280,15 +2289,6 @@ ul {
   transform: none;
 }
 
-/* Wave 1 — Top-Bar-Buttons (Aktualisieren/Autodarts öffnen/Klassische
-   Ansicht) hatten keinen sichtbaren Fokusring; gleiche Glow-Sprache wie
-   dem früheren .cc-nav-item:focus-visible (Rail; die Desktop-Sidebar nutzt seit UI-2B den Fokus-Outline), nur additiv ergänzt. */
-.cc-btn:focus-visible {
-  outline: none;
-  border-color: var(--cc-accent-line);
-  box-shadow: 0 0 0 2px var(--cc-accent-soft);
-}
-
 .cc-btn.is-primary {
   border-color: transparent;
   background: linear-gradient(90deg, var(--cc-gold), var(--cc-accent));
@@ -2344,11 +2344,9 @@ ul {
   font-family: inherit;
 }
 
-.cc-filter-input:focus,
-.cc-filter-select:focus {
-  outline: none;
+.cc-filter-input:focus-visible,
+.cc-filter-select:focus-visible {
   border-color: var(--cc-accent-line);
-  box-shadow: 0 0 0 2px var(--cc-accent-soft);
 }
 
 .cc-filter-select {
@@ -2801,7 +2799,7 @@ ul {
   display: flex; align-items: center; justify-content: space-between; gap: 22px; flex-wrap: wrap;
 }
 .cc-friends-hero-id { display: flex; align-items: center; gap: 18px; min-width: 0; }
-.cc-friends-hero-eyebrow { font-family: var(--cc-font-display); font-size: 11px; font-weight: 700; letter-spacing: 3px; text-transform: uppercase; color: var(--cc-accent); }
+.cc-friends-hero-eyebrow { font-family: var(--cc-font-display); font-size: 11px; font-weight: 700; letter-spacing: 3px; text-transform: uppercase; color: var(--cc-accent-text); }
 .cc-friends-hero-name { font-family: var(--cc-font-display); font-size: 34px; font-weight: 700; letter-spacing: 0.4px; line-height: 1.08; margin-top: 2px; }
 .cc-friends-hero-meta { display: flex; gap: 9px; margin-top: 9px; flex-wrap: wrap; }
 .cc-friends-hero-actions { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
@@ -2859,7 +2857,7 @@ ul {
 .cc-challenge-side.is-red { border-color: var(--cc-accent-line); background: var(--cc-accent-soft); }
 .cc-challenge-side.is-blue { border-color: var(--cc-blue-line); background: var(--cc-blue-soft); }
 .cc-challenge-side-label { font-family: var(--cc-font-display); font-size: 10px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; }
-.cc-challenge-side.is-red .cc-challenge-side-label { color: var(--cc-accent); }
+.cc-challenge-side.is-red .cc-challenge-side-label { color: var(--cc-accent-text); }
 .cc-challenge-side.is-blue .cc-challenge-side-label { color: var(--cc-blue); }
 .cc-challenge-side-name { font-family: var(--cc-font-display); font-size: 26px; font-weight: 700; line-height: 1.05; }
 .cc-challenge-side-tags { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; }
@@ -2947,7 +2945,7 @@ ul {
 .cc-recent-pill { font-family: var(--cc-font-display); font-weight: 700; font-size: 10px; padding: 3px 10px; border-radius: 999px; white-space: nowrap; }
 .cc-recent-pill.win { background: var(--cc-ok-soft); color: var(--cc-ok); }
 .cc-recent-pill.loss { background: rgba(239, 68, 68, 0.14); color: var(--cc-bad); }
-.cc-recent-pill.undecided { background: var(--cc-surface-strong); color: var(--cc-text-faint); }
+.cc-recent-pill.undecided { background: var(--cc-surface-strong); color: var(--cc-text-dim); }
 
 /* ── 6) Friend-Detail-Panel (Slide-over) ── */
 .cc-fd-scrim { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.6); z-index: 60; opacity: 0; pointer-events: none; transition: opacity 0.2s ease; }
@@ -2961,7 +2959,6 @@ ul {
 .cc-friend-detail.is-open { transform: translateX(0); }
 .cc-fd-close { position: absolute; top: 16px; right: 16px; background: none; border: none; color: var(--cc-text-faint); font-size: 19px; cursor: pointer; padding: 4px; }
 .cc-fd-close:hover { color: var(--cc-text); }
-.cc-fd-close:focus-visible { outline: 2px solid var(--cc-gold); outline-offset: 2px; }
 .cc-fd-head { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 11px; padding-top: 8px; }
 .cc-fd-name { font-family: var(--cc-font-display); font-size: 25px; font-weight: 700; }
 .cc-fd-stats { display: flex; justify-content: center; gap: 22px; margin-top: 18px; padding: 14px 0; border-top: 1px solid var(--cc-border); border-bottom: 1px solid var(--cc-border); }

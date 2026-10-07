@@ -1,3 +1,5 @@
+import type { Page } from "@playwright/test";
+
 import { expect, test } from "./fixtures/extension";
 import { openControlCenter, readLayoutShift } from "./helpers/control-center";
 import { VIEWPORTS } from "./helpers/viewports";
@@ -448,3 +450,157 @@ for (const viewport of VIEWPORTS.filter(candidate => candidate.name === "mobile"
     });
   });
 }
+
+/**
+ * Einheitlicher Fokus und Focus Not Obscured (UI-2D): eine Fokus-Sprache für alle Controls, kein Doppelring,
+ * und der sticky Header verdeckt beim Rückwärts-Tabben kein fokussiertes Element.
+ */
+const SECTION_HASHES = [ "", "board", "match", "matchcenter", "training", "party", "stats", "history", "settings" ];
+
+/** Alle fokussierbaren Elemente der Seite per Tab durchlaufen und den berechneten Fokusstil sammeln. */
+async function collectFocusStyles(page: Page, limit = 80) {
+  const seen: Array<{ tag: string; cls: string; outlineStyle: string; outlineWidth: number; outlineColor: string; boxShadow: string }> = [];
+  await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
+  for (let index = 0; index < limit; index++) {
+    await page.keyboard.press("Tab");
+    const state = await page.evaluate(() => {
+      const element = document.activeElement as HTMLElement;
+      if (!element || element === document.body) return null;
+      const style = getComputedStyle(element);
+      return {
+        tag: element.tagName,
+        cls: element.className && typeof element.className === "string" ? element.className : "",
+        testId: element.dataset.testid ?? "",
+        outlineStyle: style.outlineStyle,
+        outlineWidth: parseFloat(style.outlineWidth),
+        outlineColor: style.outlineColor,
+        boxShadow: style.boxShadow,
+        isSkipLink: element.classList.contains("cc-skip-link"),
+      };
+    });
+    if (!state) break;
+    if (state.isSkipLink && seen.length > 0) break; // einmal rundherum
+    seen.push(state);
+  }
+  return seen;
+}
+
+const focusTokenColor = (page: Page) => page.evaluate(() => {
+  const probe = document.createElement("span");
+  probe.style.color = "var(--cc-focus-color)";
+  document.body.appendChild(probe);
+  const color = getComputedStyle(probe).color;
+  probe.remove();
+  return color;
+});
+
+for (const viewport of VIEWPORTS) {
+  test.describe(`cc-focus ${viewport.name} ${viewport.width}x${viewport.height}`, () => {
+    test("Einheitlicher Fokus: jedes Control hat denselben Ring (Token), kein Doppelring, kein Gold", async ({ context, extensionId }) => {
+      for (const hash of [ "", "settings", "history" ]) {
+        const page = await openControlCenter(context, extensionId, { viewport, hash });
+        const expected = await focusTokenColor(page);
+        expect(expected).not.toBe("rgb(245, 200, 66)"); // Gold ist nicht Fokusfarbe
+        const styles = await collectFocusStyles(page);
+        expect(styles.length, `fokussierbare Elemente auf #${hash || "dashboard"}`).toBeGreaterThan(5);
+        for (const state of styles) {
+          const label = `${state.tag}.${state.cls} auf #${hash || "dashboard"}`;
+          expect(state.outlineStyle, label).toBe("solid");
+          expect(state.outlineWidth, label).toBe(2);
+          expect(state.outlineColor, label).toBe(expected);
+          // Kein zweiter Ring per box-shadow (alter accent-soft-Ring).
+          expect(state.boxShadow, label).not.toContain("rgba(232, 0, 45, 0.14)");
+        }
+      }
+    });
+
+    test("Header-Buttons: ein Ring, keine zusätzliche Rahmen-/Schatten-Sprache", async ({ context, extensionId }) => {
+      const page = await openControlCenter(context, extensionId, { viewport });
+      const expected = await focusTokenColor(page);
+      for (const name of [ "Aktualisieren", "Autodarts öffnen", "Klassische Ansicht" ]) {
+        const button = page.getByRole("banner").getByRole("button", { name });
+        await button.focus();
+        await page.keyboard.press("Shift+Tab");
+        await page.keyboard.press("Tab");
+        await expect(button).toBeFocused();
+        const state = await button.evaluate((el) => {
+          const style = getComputedStyle(el);
+          return { outline: style.outlineStyle, width: parseFloat(style.outlineWidth), color: style.outlineColor, shadow: style.boxShadow };
+        });
+        expect(state.outline).toBe("solid");
+        expect(state.width).toBe(2);
+        expect(state.color).toBe(expected);
+        expect(state.shadow).not.toContain("rgba(232, 0, 45, 0.14)");
+      }
+    });
+
+    test("Focus Not Obscured: Rückwärts-Tabben vom Seitenende, kein Element hinter Header oder Bottom-Nav", async ({ context, extensionId }) => {
+      for (const hash of [ "", "settings" ]) {
+        const page = await openControlCenter(context, extensionId, { viewport, hash });
+        await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+        await page.evaluate(() => {
+          const focusable = [ ...document.querySelectorAll<HTMLElement>("main a[href], main button, main input, main select, main [tabindex]:not([tabindex='-1'])") ]
+            .filter(element => element.offsetParent !== null);
+          (focusable[focusable.length - 1] ?? document.body).focus();
+        });
+        let checked = 0;
+        for (let step = 0; step < 40; step++) {
+          await page.keyboard.press("Shift+Tab");
+          const state = await page.evaluate(() => {
+            const element = document.activeElement as HTMLElement;
+            const box = element.getBoundingClientRect();
+            const header = document.querySelector(".cc-topbar")!;
+            const bottomNav = document.querySelector(".cc-bottom-nav") as HTMLElement | null;
+            return {
+              inMain: !!element.closest("main"),
+              top: box.top,
+              bottom: box.bottom,
+              headerSticky: getComputedStyle(header).position === "sticky",
+              headerBottom: header.getBoundingClientRect().bottom,
+              bottomNavTop: bottomNav && getComputedStyle(bottomNav).display !== "none" ? bottomNav.getBoundingClientRect().top : null,
+            };
+          });
+          if (!state.inMain) break;
+          checked++;
+          if (state.headerSticky) {
+            // Mit ausreichendem scroll-padding-top landet das Element unterhalb des Headers.
+            expect(state.top, `Element hinter sticky Header (#${hash || "dashboard"})`).toBeGreaterThanOrEqual(state.headerBottom - 1);
+          }
+          if (state.bottomNavTop !== null) {
+            expect(state.top, `Element hinter Bottom-Nav (#${hash || "dashboard"})`).toBeLessThan(state.bottomNavTop);
+          }
+        }
+        expect(checked, `geprüfte Elemente auf #${hash || "dashboard"}`).toBeGreaterThan(3);
+      }
+    });
+  });
+}
+
+test("scroll-padding-top ist über alle Bereiche und Breiten mindestens so hoch wie der sticky Header", async ({ context, extensionId }) => {
+  test.setTimeout(180_000);
+  const page = await openControlCenter(context, extensionId);
+  for (const width of [ 641, 700, 768, 1000, 1081, 1280, 1281, 1500, 1920 ]) {
+    await page.setViewportSize({ width, height: 800 });
+    for (const hash of SECTION_HASHES) {
+      await page.goto(`${page.url().split("#")[0]}${hash ? `#${hash}` : ""}`);
+      await page.reload();
+      await expect(page.getByRole("main")).toBeVisible();
+      const measured = await page.evaluate(() => {
+        const header = document.querySelector(".cc-topbar")!;
+        return {
+          sticky: getComputedStyle(header).position === "sticky",
+          height: header.getBoundingClientRect().height,
+          padding: parseFloat(getComputedStyle(document.documentElement).scrollPaddingTop) || 0,
+        };
+      });
+      expect(measured.sticky, `Header sticky bei ${width}px`).toBe(true);
+      expect(measured.padding, `scroll-padding-top bei ${width}px #${hash || "dashboard"} (Header ${measured.height}px)`)
+        .toBeGreaterThanOrEqual(measured.height);
+    }
+  }
+  // Mobil: Header nicht sticky, kein Padding nötig.
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.reload();
+  expect(await page.evaluate(() => getComputedStyle(document.querySelector(".cc-topbar")!).position)).toBe("static");
+  expect(await page.evaluate(() => parseFloat(getComputedStyle(document.documentElement).scrollPaddingTop) || 0)).toBe(0);
+});

@@ -31,7 +31,7 @@ Folge: Tailwind-Klassen dürfen **nicht** auf `--cc-*` zeigen, solange sie auch 
 
 - **Near-black Basis** (`--cc-bg`), Glass-Surfaces (`--cc-surface*`), kein generisches Admin-Dashboard-Layout.
 - **Rot** (`--cc-accent`) = lokaler Spieler · **Blau** (`--cc-blue`) = Gegner — **nie vertauschen**.
-- **Gold** (`--cc-gold`) ausschließlich Pokale / Rang / Achievements / Sieger (Ausnahme Fokus: siehe Abschnitt 14).
+- **Gold** (`--cc-gold`) ausschließlich Pokale / Rang / Achievements / Sieger (seit UI-2D **nicht** Fokusfarbe, siehe Abschnitt 18).
 - **Grün** (`--cc-ok`) ausschließlich Erfolg / Online / Checkout-Erfolg.
 - **Glow** zurückhaltend: nur auf Live-Indikatoren, aktiven Zuständen, Badges — nie auf Fließtext.
 - **Schriften:** Barlow Condensed (Display), Open Sans (Body). Hinweis: im Ist-Zustand nicht gebündelt (Abschnitt 14).
@@ -116,8 +116,8 @@ Inhalte brechen um statt abzuschneiden; Tabellen/Listen haben eine mobile Darste
 
 Ziel: WCAG 2.2 Level AA.
 
-- **Kontrast:** Text ≥ 4,5:1, große Texte und UI-Elemente ≥ 3:1. Der Token-Kontrast ist im Test geprüft; bekannte Ausnahmen in Abschnitt 14.
-- **Tastatur:** alle Funktionen per Tastatur erreichbar; sichtbarer Fokus (`--cc-focus-*`); logische Tab-Reihenfolge; kein Fokusfang.
+- **Kontrast:** Text ≥ 4,5:1, große Texte und UI-Elemente ≥ 3:1. Der Token-Kontrast ist im Test geprüft (Abschnitt 18); bekannte Ausnahme: `--cc-accent` als kleiner Text.
+- **Tastatur:** alle Funktionen per Tastatur erreichbar; sichtbarer Fokus (eine einzige Fokus-Sprache über `--cc-focus-*`, Abschnitt 18); logische Tab-Reihenfolge; kein Fokusfang; der sticky Header verdeckt keinen Fokus.
 - **Semantik:** native Elemente zuerst (`button`, `nav`, `main`); ARIA nur, wo nötig. Das sichtbare Label ist Teil des Accessible Name (WCAG 2.5.3,
   im Bestand in `sections.ts` dokumentiert). Dialoge/Tabs über die vorhandenen Bausteine (`AppModal`, `AppTabs`); `radix-vue` ist als Abhängigkeit vorhanden, im Bestand aber nur in `StreamingMode.vue` genutzt — Tastatur- und ARIA-Verhalten dieser Bausteine ist vor Wiederverwendung zu prüfen.
 - **Text:** neuer Text mindestens 12px (`--cc-fs-xs`); Bestand unter 12px wird per Ratchet abgebaut.
@@ -180,11 +180,10 @@ Verifizierte Befunde, absichtlich nicht in UI-1 behoben (kein visueller Diff am 
 
 1. **Schriften nicht gebündelt.** `style.css` deklariert Barlow Condensed/Open Sans, es gibt aber kein `@font-face`; auf dem Prüfsystem löst
    fontconfig beide auf Noto Sans auf. Die Visual-Baselines halten diesen Fallback fest. Beim Bündeln der Schriften sind sie bewusst zu erneuern.
-2. **Kontrast:** `--cc-text-faint` (≈ 4,15:1 auf `--cc-bg`, ≈ 3,66:1 auf `--cc-bg-elev`) und `--cc-accent` als Text (≈ 4,20:1 / 3,70:1)
-   liegen unter 4,5:1; beide sind im Test als bekannte Ausnahme (Untergrenze 3:1) geführt. Behebung = sichtbare Design-Änderung (UI-2, mit Baseline).
-3. **Fokus uneinheitlich:** Bestand mischt Gold-Outline (2px/2px) und `--cc-accent-soft`-Ring. `--cc-focus-color` ist vorläufig Gold (häufigster Fall);
-   das kollidiert mit „Gold nur Pokal/Rang“ — einheitliche Fokusfarbe ist eine **offene Design-Entscheidung** für UI-2.
-4. **Kleine Schrift:** 86 Schriftgrößen unter 12px (Ratchet fixiert den Stand).
+2. ~~**Kontrast:**~~ **Behoben in UI-2D** (Abschnitt 18): `--cc-text-faint` ist `#8593a7`, kleiner Akzent-Text nutzt `--cc-accent-text`. Offen bleibt nur `--cc-accent`
+   als Farbe für Nicht-Text und große Texte (≈ 3,7:1, im Test als benannte Ausnahme geführt).
+3. ~~**Fokus uneinheitlich:**~~ **Behoben in UI-2D** (Abschnitt 18): eine Fokus-Sprache, Gold ist nicht mehr Fokusfarbe.
+4. **Kleine Schrift:** 85 Schriftgrößen unter 12px (Ratchet fixiert den Stand).
 5. **Hardcodes:** 152 Farb-Literale in `style.css`, 21 in `components/ControlCenter`; `components/Settings` (inkl. Protected-Core-Datei) ist **nicht** Teil der Ratchets.
 6. **Breakpoints uneinheitlich** (7 Legacy-Werte), Migration bildschirmweise.
 7. **Externer Request:** die Control-Center-Seite ruft `…/api/marathon/health` (KI-Backend). Die Visual-Spec stubbt ihn; im Betrieb bleibt er unverändert.
@@ -200,7 +199,7 @@ Verbindliche Muster für App-Shell und Header (`CcShell`, `CcTopBar`); Desktop-N
 2. **Fokus-Management:** Nach einem Bereichswechsel wandert der Fokus auf die `<h1>` (`tabindex="-1"`, kein eigener Fokusring). **Nicht** beim Erstladen oder
    Deep-Link (der Hash-Wechsel in `ControlCenter.vue` ist keine Nutzeraktion). `main` und `h1` sind programmatische Ziele, nicht Teil der Tab-Reihenfolge.
 3. **Header-Aktionen:** eigener Cluster (`.cc-topbar-actions`), Zielgröße mindestens `--cc-hit-min` (44px), sichtbarer Tastaturfokus über die Fokus-Tokens
-   (`--cc-focus-*`). Der **Wert** der Fokusfarbe wird zentral im Token-File entschieden (offene Entscheidung, Abschnitt 14), nicht in Komponenten.
+   (`--cc-focus-*`). Der **Wert** der Fokusfarbe steht zentral im Token-File (Abschnitt 18), nicht in Komponenten.
 4. **Phone (≤ 640px):** Header nicht sticky (ein dauerhafter Header von rund einem Viertel der Viewport-Höhe verdeckt sonst Inhalt); Nebenaktionen werden
    quadratische Icon-Buttons (`.cc-btn-compact`). Das Label bleibt im DOM und wird nur **visuell** versteckt, kein `aria-label` — sichtbarer und zugänglicher
    Name sind identisch (WCAG 2.5.3, Test in `tests/components/CcTopBar.component.test.ts`).
@@ -223,7 +222,7 @@ Gilt für die volle Sidebar (ab 1081px, QA-Viewports 1280×720 und 1920×1080). 
    Der Balken liegt innerhalb des Eintrags, weil `.cc-nav` (overflow) außenliegende Elemente abschneidet.
 4. **Hover:** `--cc-surface-hover`, Text und Icon hellen auf; Dauer `--cc-dur-fast`, mit Reduced Motion ohne Übergang.
 5. **Fokus:** Fokus-Tokens (`--cc-focus-*`) wie der Skip-Link (Header-Aktionen nutzen ebenfalls den Fokus-Outline); Ring **innen** (negativer Offset), weil ein äußerer Ring vom scrollenden Container abgeschnitten würde.
-   Die Fokusfarbe bleibt die offene Entscheidung aus Abschnitt 14.
+   Die Fokusfarbe ist seit UI-2D entschieden (Abschnitt 18).
 6. **Zielgröße und Höhe:** Einträge `min-height: var(--cc-hit-min)`, ohne vertikales Padding (sonst ~50px und 1280×720 passt nicht). Ohne Live-Match passt die gesamte Navigation ohne
    internen Scrollbalken in 1280×720; mit Live-Widget darf `.cc-nav` scrollen.
 7. **Rail:** übernimmt Hover-, Fokus- und Aktivzustand dieser Sidebar (Abschnitt 17).
@@ -242,3 +241,28 @@ Tablet-Rail (≤ 1080px, QA-Viewport 768×1024) und mobile Bottom-Navigation (�
 6. **Aktiver Zustand:** wie Desktop — `--cc-accent-soft`-Fläche, Akzent-Icon, kräftigere Schrift, Akzentlinie (Rail: seitlich, Bottom-Nav: oben) als Hinweis ohne Farbe. Kein Gold (das Gold-Punkt-Badge für „Vorschau“-Bereiche ist ein Status, kein Aktivzustand).
 7. **Fokus:** Fokus-Tokens (`--cc-focus-*`), Ring innen (negativer Offset), weil der scrollende Container einen äußeren Ring abschneiden würde.
 8. **Prüfung:** `tests/components/CcSidebar.component.test.ts`; `tests/e2e/cc-navigation.spec.ts` (Blöcke „cc-tablet-rail“ und „cc-bottom-nav“: Zielgrößen, Namen, Gruppen, Scrollbereich, Labels ungekürzt, kein Seiten-Überlauf, Tab-Reihenfolge, Fokusringe, Deep-Link, Reduced Motion); Pixelvergleich Tablet/Mobil in `tests/e2e/cc-shell-visual.spec.ts` (Baselines in UI-2C bewusst erneuert). Die Ratchets in `tests/design-governance.test.ts` sanken dabei (Farb-Literale `style.css` 152 → 150, Text unter 12px 86 → 85).
+
+## 18. Fokus und Kontrast (seit UI-2D)
+
+1. **Eine Fokus-Sprache:** Jedes interaktive Element (`a[href]`, `button`, `input`, `select`, `textarea`, `summary`, `[tabindex]` außer `-1`) bekommt über eine einzige
+   Basisregel in `style.css` (`:where(...):focus-visible`, Spezifität 0) einen 2px-Outline-Ring in `--cc-focus-color` mit Abstand `--cc-focus-offset`.
+   Komponenten brauchen keine eigene Fokusregel. Es gibt keinen zweiten Ring per `box-shadow` und keine hartcodierte Outline mehr; im Header gab es zuvor einen Doppelring.
+2. **Einzige zulässige Abweichung:** Einträge in scrollenden Containern (`.cc-nav-item`, `.cc-bottom-nav-item`) setzen denselben Ring nach **innen**, weil der Container
+   äußere Ringe abschneidet. Programmatische Fokus-Ziele (`main`, `h1`, `tabindex="-1"`) tragen bewusst keinen Ring (`outline:none` ist nur dort erlaubt).
+3. **Gold ist nicht Fokusfarbe.** `--cc-focus-color` ist `#8593a7` (eigenes Token, nicht an `--cc-text-faint` gekoppelt; ≥ 3:1 auf allen Standardflächen und auf `surface-strong`).
+   Gold bleibt Branding und Semantik (Pokal, Rang). Ein Test verhindert, dass Gold wieder im Fokus auftaucht.
+4. **Focus Not Obscured (WCAG 2.4.11):** Der Header ist ab 641px sticky. Ohne Scroll-Padding landete ein per Shift+Tab hochgescrolltes Element hinter ihm (gemessen: Tablet 5 von 6,
+   Desktop in den Einstellungen 1 Element komplett verdeckt). `html { scroll-padding-top }` ist gestaffelt: `12rem` (>1280px), `17rem` (≤1280px), `0` (≤640px, Header nicht sticky).
+   Das sind konservative Obergrenzen der gemessenen Header-Höhen (641px: bis 259px; 700–1081px: bis 207px; darüber bis 176px). Nachteil: Elemente, die zwischen Header
+   und Padding sichtbar sind, lösen beim Fokus ein kleines Scrollen aus. Ein E2E-Test hält das Padding gegen die tatsächliche Höhe aller Bereiche. Eine exakte Messung
+   (ResizeObserver) wäre eine spätere Verbesserung; sie bräuchte eine Änderung in `CcShell.vue` bzw. `CcTopBar.vue`. Die fixierte Bottom-Nav verdeckte in der Messung keinen Fokus.
+5. **Text-Kontrast ≥ 4,5:1** auf den Standardflächen `--cc-bg`, `--cc-bg-elev`, Karte (`--cc-surface`), `--cc-surface-hover` und `--cc-accent-soft`. `--cc-text-faint` ist `#8593a7`
+   (zuvor `#64748b`), `--cc-accent-text` ist `#ff4f71`. Beide sind im Test gegen genau diese Flächen geprüft.
+6. **`--cc-accent` als Textfarbe:** nur für Flächen, Rahmen, Icons, große Texte (≥ 24px, 3:1 genügt) und das Branding (`.cc-herobar-accent`, bleibt bewusst unverändert). Kleiner
+   Akzent-Text nutzt `--cc-accent-text`. Eine benannte Allowlist im Test hält das fest; `--cc-accent` und `--cc-gold` selbst sind unverändert.
+7. **Getönte Flächen:** Auf stark getönten Flächen (`surface-strong`, gold-/ok-/warn-soft) erreicht auch das neue faint keine 4,5:1 (z. B. 4,2:1 auf `surface-strong`). Text dort nutzt
+   lokal `--cc-text-dim`; umgestellt wurden `.cc-form-dot.is-idle`, `.cc-form-chip.undecided`, `.cc-recent-pill.undecided` und `.cc-flag`. Einzige benannte Ausnahme im Test:
+   das Icon `.cc-momentum.is-flat .cc-momentum-icon` (kein Text, 3:1 genügt). Die Sidebar-, Rail- und Bottom-Nav-Einträge nutzen `--cc-text-dim` und sind unverändert.
+8. **Prüfung:** `tests/design-governance.test.ts` (Fokus-Sprache, Kontrast auf Standardflächen, Akzent-Allowlist, faint auf getönter Fläche), `tests/e2e/cc-navigation.spec.ts`
+   (Blöcke „cc-focus“ je Viewport und der Scroll-Padding-Test über alle Bereiche und neun Breiten); alle vier Visual-Baselines sind bewusst erneuert (Faint-Umfärbung; Pixel
+   ändern sich nur an Texten, Navigationseinträge und Layout sind unverändert).
