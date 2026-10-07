@@ -266,3 +266,20 @@ Tablet-Rail (≤ 1080px, QA-Viewport 768×1024) und mobile Bottom-Navigation (�
 8. **Prüfung:** `tests/design-governance.test.ts` (Fokus-Sprache, Kontrast auf Standardflächen, Akzent-Allowlist, faint auf getönter Fläche), `tests/e2e/cc-navigation.spec.ts`
    (Blöcke „cc-focus“ je Viewport und der Scroll-Padding-Test über alle Bereiche und neun Breiten); alle vier Visual-Baselines sind bewusst erneuert (Faint-Umfärbung; Pixel
    ändern sich nur an Texten, Navigationseinträge und Layout sind unverändert).
+
+## 19. Button- und Touch-Target-System (seit UI-2E K1)
+
+1. **Zentrale Regel:** Die Mindest-Zielgröße (`--cc-hit-min`, 44px) wird an den Basisregeln der Buttons erzwungen, nicht pro Ansicht: `.cc-btn`, `.cc-herobar-cta` und `.cc-fd-close`
+   setzen `min-height: var(--cc-hit-min)` (`.cc-fd-close` zusätzlich `min-width`). Vorher war `.cc-btn` 38px hoch (gemessen: 39–43 Ziele je Viewport unter 44px, davon fast alle `.cc-btn`,
+   allein 26 im Training), `.cc-herobar-cta` 43px und der Schließen-Button der Freund-Details 24×36px. Die frühere Sonderregel `.cc-topbar .cc-btn { min-height }` entfällt, weil die Basisregel sie abdeckt.
+2. **Eine Button-Architektur:** Es gibt keine zweite Button-Klasse. Neue Buttons nutzen `.cc-btn` (Varianten `.is-primary`, `.is-accent`, `.cc-btn-compact`); eigene Controls setzen die Zielgröße über denselben Token.
+3. **Zustände:** Hover-Lift und Active-Rückstellung gelten nur für bedienbare Buttons (`.cc-btn:where(:not(:disabled)):hover/:active`; `:where` hält die Spezifität bei 0,2,0, damit die Reduced-Motion-Regel
+   der Shell weiter Vorrang hat). `:active` nimmt den Lift zurück (Druck-Feedback ohne neue Farbe). Gesperrte Buttons behalten Sperr-Cursor, Opacity und `transform: none` und reagieren nicht mehr mit Hover-Hintergrund.
+4. **Unverändert:** Fokus-Sprache und Kontrast aus UI-2D (Abschnitt 18), Tokens, Breakpoints und Farben. Textlinks im Fließtext (`display: inline`) sind von der 44px-Regel ausgenommen (WCAG 2.5.8 „inline“);
+   die Inline-Retry-Links mit Gold-Inline-Style sind bewusst nicht Teil von K1.
+5. **Auswirkung auf Baselines:** `.cc-herobar-cta` wächst von 43 auf 44px. Auf dem Phone (390×844) verschiebt das den Inhalt unter dem Hero um 1px (Pixelvergleich: der Bereich ist verschoben um genau 1px identisch);
+   auf Tablet, Desktop und Wide ändert sich nichts über der 1-%-Schwelle.
+6. **Bekannte Abweichung (nicht in K1 behoben):** Das geschlossene Freund-Detail (`.cc-friend-detail`) liegt per `transform: translateX(100%)` außerhalb des Viewports und ist nicht per `visibility`/`inert`
+   ausgeblendet; seine Bedienelemente bleiben im DOM sichtbar im Sinne der Messung. Ob sie per Tab erreichbar sind, wurde nicht geprüft.
+7. **Prüfung:** `tests/design-governance.test.ts` (Abschnitt 8: `min-height` an den drei Basisregeln, keine feste Button-Höhe unter dem Token, Hover/Active nur für bedienbare Buttons, disabled-Regel);
+   `tests/e2e/cc-targets.spec.ts` (je Viewport: alle sichtbaren Bedienelemente der neun Bereiche ≥ 44px und kein Seiten-Überlauf, Hover/Active/disabled an Prüfknoten, Tastaturfokus am `.cc-btn` mit unverändertem 2px-Ring).
