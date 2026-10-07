@@ -183,13 +183,14 @@ function contrast(foreground: string, background: string): number {
 }
 
 /**
- * Bekannte Verstöße gegen 4,5:1 für normalen Text (gemessen bei UI-1). Sie sind benannt statt
- * verschwiegen; die Behebung ist eine sichtbare Design-Änderung (UI-2, mit Visual-Baseline).
- * Untergrenze 3:1 (große Texte/UI-Elemente). Besteht ein Token später 4,5:1, muss er hier entfernt werden.
+ * Bekannte Verstöße gegen 4,5:1 für normalen Text. Seit UI-2D nur noch --cc-accent (3,7:1 auf --cc-bg-elev):
+ * als Fläche, Rahmen, Icon und für große Texte (≥ 24px, 3:1 genügt) zulässig; kleiner Akzent-Text nutzt
+ * --cc-accent-text (siehe "Akzent als Textfarbe" unten). Untergrenze 3:1. Besteht ein Token später 4,5:1,
+ * muss er hier entfernt werden.
  */
-const KNOWN_CONTRAST_EXCEPTIONS = [ "--cc-text-faint", "--cc-accent" ];
+const KNOWN_CONTRAST_EXCEPTIONS = [ "--cc-accent" ];
 const TEXT_TOKENS = [
-  "--cc-text", "--cc-text-dim", "--cc-text-faint", "--cc-accent", "--cc-gold",
+  "--cc-text", "--cc-text-dim", "--cc-text-faint", "--cc-accent", "--cc-accent-text", "--cc-gold",
   "--cc-blue", "--cc-ok", "--cc-warn", "--cc-bad",
 ];
 
@@ -210,4 +211,190 @@ describe("design tokens: Kontrast (WCAG 2.x)", () => {
       }
     });
   }
+});
+
+// ── 6: Kontrast auf realen Flächen (UI-2D) ──────────────────────────────────
+
+type TRgb = [ number, number, number ];
+
+function hexToRgb(hex: string): TRgb {
+  return [ 1, 3, 5 ].map(offset => parseInt(hex.slice(offset, offset + 2), 16)) as TRgb;
+}
+
+function rgbLuminance(rgb: TRgb): number {
+  const [ r, g, b ] = rgb.map((channel) => {
+    const value = channel / 255;
+    return value <= 0.03928 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4;
+  });
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+}
+
+function rgbContrast(foreground: TRgb, background: TRgb): number {
+  const [ a, b ] = [ rgbLuminance(foreground), rgbLuminance(background) ].sort((x, y) => y - x);
+  return (a + 0.05) / (b + 0.05);
+}
+
+/** Legt eine halbtransparente Token-Fläche (rgba) über einen opaken Untergrund. */
+function overlay(base: TRgb, rgbaToken: string): TRgb {
+  const match = /rgba\(\s*(\d+),\s*(\d+),\s*(\d+),\s*([\d.]+)\s*\)/.exec(tokenValue(rgbaToken) ?? "");
+  assert.ok(match, `${rgbaToken} ist kein rgba()-Token`);
+  const alpha = Number(match[4]);
+  return [ 1, 2, 3 ].map(index => Math.round(base[index - 1] * (1 - alpha) + Number(match[index]) * alpha)) as TRgb;
+}
+
+/**
+ * Die Standardflächen, auf denen normaler Text liegt: Seite, erhöhte Fläche, Karte (surface), Hover und die
+ * Akzent-Tönung. Stark getönte Flächen (gold-/ok-/warn-soft, surface-strong) gehören bewusst NICHT dazu —
+ * dort liegt Text in --cc-text bzw. --cc-text-dim (siehe Test "kein faint-Text auf getönter Fläche").
+ */
+function standardSurfaces(): Array<{ name: string; rgb: TRgb }> {
+  const bg = hexToRgb(tokenValue("--cc-bg") ?? "");
+  const elev = hexToRgb(tokenValue("--cc-bg-elev") ?? "");
+  return [
+    { name: "--cc-bg", rgb: bg },
+    { name: "--cc-bg-elev", rgb: elev },
+    { name: "--cc-surface auf --cc-bg-elev", rgb: overlay(elev, "--cc-surface") },
+    { name: "--cc-surface-hover auf --cc-bg-elev", rgb: overlay(elev, "--cc-surface-hover") },
+    { name: "--cc-accent-soft auf --cc-bg-elev", rgb: overlay(elev, "--cc-accent-soft") },
+  ];
+}
+
+describe("design tokens: Kontrast auf Standardflächen (UI-2D)", () => {
+  for (const token of [ "--cc-text-faint", "--cc-accent-text" ]) {
+    it(`${token} erreicht 4,5:1 auf allen Standardflächen`, () => {
+      const foreground = hexToRgb(tokenValue(token) ?? "");
+      for (const surface of standardSurfaces()) {
+        const ratio = rgbContrast(foreground, surface.rgb);
+        assert.ok(ratio >= 4.5, `${token} auf ${surface.name}: ${ratio.toFixed(2)}:1 unter 4,5:1`);
+      }
+    });
+  }
+
+  it("--cc-focus-color erreicht 3:1 (WCAG 1.4.11) auch auf der stark getönten surface-strong", () => {
+    const foreground = hexToRgb(tokenValue("--cc-focus-color") ?? "");
+    const strong = overlay(hexToRgb(tokenValue("--cc-bg-elev") ?? ""), "--cc-surface-strong");
+    for (const surface of [ ...standardSurfaces(), { name: "--cc-surface-strong", rgb: strong } ]) {
+      assert.ok(rgbContrast(foreground, surface.rgb) >= 3, `Fokusfarbe auf ${surface.name} unter 3:1`);
+    }
+  });
+
+  it("--cc-accent und --cc-gold sind unverändert (kein globaler Farb-Drift)", () => {
+    assert.equal(tokenValue("--cc-accent"), "#e8002d");
+    assert.equal(tokenValue("--cc-gold"), "#f5c842");
+  });
+});
+
+// ── 7: CSS-Regeln auswerten (Fokus, Akzent als Text, getönte Flächen) ───────
+
+interface ICssRule { file: string; selector: string; body: string }
+
+function cssRules(text: string, file: string): ICssRule[] {
+  const clean = text.replace(/\/\*[\s\S]*?\*\//g, "");
+  const rules: ICssRule[] = [];
+  for (const match of clean.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
+    rules.push({ file, selector: match[1].trim().replace(/\s+/g, " "), body: match[2] });
+  }
+  return rules;
+}
+
+/** Regeln aus style.css und aus den <style>-Blöcken der Control-Center-Komponenten. */
+const allCcRules: ICssRule[] = [
+  ...cssRules(styleCss, STYLE_PATH),
+  ...ccVueFiles.flatMap(file =>
+    Array.from(read(file).matchAll(/<style[^>]*>([\s\S]*?)<\/style>/g), block => cssRules(block[1], file)).flat()),
+];
+
+describe("design drift: eine einzige Fokus-Sprache (UI-2D)", () => {
+  const focusRules = allCcRules.filter(rule => rule.selector.includes(":focus"));
+
+  it("--cc-focus-color ist nicht Gold (Gold ist Branding/Semantik, nicht Fokusfarbe)", () => {
+    const value = tokenValue("--cc-focus-color") ?? "";
+    assert.ok(!/gold|#f5c842/i.test(value), `--cc-focus-color darf nicht Gold sein: ${value}`);
+    assert.notEqual(value.toLowerCase(), (tokenValue("--cc-gold") ?? "").toLowerCase());
+  });
+
+  it("keine Fokusregel und keine Outline verwendet Gold", () => {
+    const offenders = allCcRules
+      .filter(rule => (rule.selector.includes(":focus") || /outline\s*:/.test(rule.body)) && /--cc-gold|#f5c842/i.test(rule.body))
+      .map(rule => rule.selector);
+    assert.deepEqual(offenders, [], `Gold im Fokus: ${offenders.join(" | ")}`);
+  });
+
+  it("kein box-shadow-Fokusring (konkurrierende zweite Fokus-Sprache)", () => {
+    const offenders = focusRules.filter(rule => /box-shadow/.test(rule.body)).map(rule => rule.selector);
+    assert.deepEqual(offenders, [], `box-shadow in Fokusregeln: ${offenders.join(" | ")}`);
+  });
+
+  it("jede Fokus-Outline nutzt die Fokus-Tokens (kein hartcodiertes Maß/Farbe)", () => {
+    const offenders = focusRules
+      .filter(rule => /outline\s*:/.test(rule.body) && !/outline\s*:\s*(none|0)\b/.test(rule.body))
+      .filter(rule => !/var\(--cc-focus-width\)/.test(rule.body) || !/var\(--cc-focus-color\)/.test(rule.body))
+      .map(rule => rule.selector);
+    assert.deepEqual(offenders, [], `Fokus-Outline ohne Token: ${offenders.join(" | ")}`);
+  });
+
+  /** Einzige zulässige Ausnahmen: programmatische Fokus-Ziele (tabindex=-1) — main und Überschrift. */
+  const OUTLINE_NONE_ALLOWED = [ ".cc-content:focus, .cc-topbar-heading:focus" ];
+
+  it("outline:none nur an den programmatischen Fokus-Zielen", () => {
+    const offenders = allCcRules
+      .filter(rule => /outline\s*:\s*(none|0)\b/.test(rule.body))
+      .map(rule => rule.selector)
+      .filter(selector => !OUTLINE_NONE_ALLOWED.includes(selector));
+    assert.deepEqual(offenders, [], `outline:none ohne Ausnahme: ${offenders.join(" | ")}`);
+  });
+
+  it("die Basisregel deckt alle interaktiven Elemente in :where() ab", () => {
+    const base = allCcRules.find(rule => rule.selector.startsWith(":where(") && rule.selector.endsWith(":focus-visible"));
+    assert.ok(base, "Basisregel :where(...):focus-visible fehlt in style.css");
+    for (const element of [ "a[href]", "button", "input", "select", "textarea", "summary", "[tabindex]" ]) {
+      assert.ok(base.selector.includes(element), `Basisregel deckt ${element} nicht ab`);
+    }
+    assert.match(base.body, /outline:\s*var\(--cc-focus-width\) solid var\(--cc-focus-color\)/);
+    assert.match(base.body, /outline-offset:\s*var\(--cc-focus-offset\)/);
+  });
+
+  it("Scroll-Padding gegen den sticky Header: drei Stufen auf den dokumentierten Breakpoints", () => {
+    assert.match(styleCss, /html \{ scroll-padding-top: 12rem; \}/);
+    assert.match(styleCss, /@media \(max-width: 1280px\) \{ html \{ scroll-padding-top: 17rem; \} \}/);
+    assert.match(styleCss, /@media \(max-width: 640px\) \{ html \{ scroll-padding-top: 0; \} \}/);
+  });
+});
+
+describe("design drift: Akzent als Textfarbe und getönte Flächen (UI-2D)", () => {
+  /**
+   * Selektoren, die --cc-accent weiterhin als Farbe nutzen dürfen — jeweils KEIN kleiner Text:
+   * Icons und dekorative Zeichen (3:1), große Zahlen/Texte ≥ 24px (3:1) und das Branding (herobar-accent).
+   */
+  const ACCENT_COLOR_ALLOWED = [
+    ".cc-nav-item.is-active .cc-nav-icon",
+    ".cc-bottom-nav-item.is-active .cc-bottom-nav-icon",
+    ".cc-topbar-crumb-sep",
+    ".cc-hero-side.is-left .cc-hero-remaining",
+    ".cc-herobar-accent",
+    ".cc-activity-rem.is-red",
+    ".cc-sb-score.is-red",
+    ".cc-tile.is-accent .cc-tile-value",
+    ".cc-list-row > .cc-list-bullet",
+  ];
+
+  it("--cc-accent als color nur an benannten Nicht-Text-/Groß-/Branding-Stellen", () => {
+    const offenders = allCcRules
+      .filter(rule => /(^|[;\s])color\s*:\s*var\(--cc-accent\)/.test(rule.body))
+      .map(rule => rule.selector)
+      .filter(selector => !ACCENT_COLOR_ALLOWED.includes(selector));
+    assert.deepEqual(offenders, [], `kleiner Akzent-Text sollte --cc-accent-text nutzen: ${offenders.join(" | ")}`);
+  });
+
+  /** Einzige Ausnahme: ein Icon (kein Text, 3:1 genügt; faint auf surface-strong ≈ 4,2:1). */
+  const FAINT_TINTED_ALLOWED = [ ".cc-momentum.is-flat .cc-momentum-icon" ];
+
+  it("kein faint-Text auf einer eigenen getönten Fläche (dort --cc-text-dim)", () => {
+    const tinted = /background(-color)?\s*:\s*(rgba\(|var\(--cc-(accent|gold|blue|ok|warn|bad|idle)-soft\)|var\(--cc-surface-strong\))/;
+    const offenders = allCcRules
+      .filter(rule => /(^|[;\s])color\s*:\s*var\(--cc-text-faint/.test(rule.body) && tinted.test(rule.body))
+      .filter(rule => !FAINT_TINTED_ALLOWED.includes(rule.selector))
+      .map(rule => `${rule.file}: ${rule.selector}`);
+    assert.deepEqual(offenders, [], `faint auf getönter Fläche: ${offenders.join(" | ")}`);
+  });
 });

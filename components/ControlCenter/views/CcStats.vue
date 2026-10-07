@@ -383,5 +383,6 @@ onBeforeUnmount(() => {
 }
 .cc-form-dot.is-win { background: rgba(34, 197, 94, 0.2); color: #22c55e; }
 .cc-form-dot.is-loss { background: rgba(239, 68, 68, 0.2); color: #ef4444; }
-.cc-form-dot.is-idle { background: rgba(148, 163, 184, 0.15); color: var(--cc-text-faint); }
+/* Getönte Fläche: faint erreicht hier nur ~4,4:1, daher das kontraststärkere --cc-text-dim (UI-2D). */
+.cc-form-dot.is-idle { background: rgba(148, 163, 184, 0.15); color: var(--cc-text-dim); }
 </style>
