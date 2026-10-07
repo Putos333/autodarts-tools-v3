@@ -314,6 +314,28 @@ Bewusst **nicht** entfernt (unverändert): `.claude/commands/github/`,
 `standard-checkpoint-hooks.sh`), `.claude/agents/browser/browser-agent.yaml`,
 `.claude/scaffold-archive/`, `.agents/`, `.codex/`.
 
+**Nachtrag Wave 3E-A (2026-10-07):** Fünf der sechs Helper (`auto-commit.sh`,
+`checkpoint-manager.sh`, `standard-checkpoint-hooks.sh`, `helpers.manifest.json`,
+`.helpers-version`) wurden per `git mv` nach `.claude/scaffold-archive/helpers/`
+archiviert. Grund: kein Aufrufer in `settings.json`, Git-Hooks oder Commands;
+die Skripte enthalten `git add -A`/Commit/Push bzw. `reset --hard`/Stash;
+das signierte Manifest listet nicht vorhandene Dateien. In `.claude/helpers/`
+bleibt nur `github-safe.js` (kein Shell-Interpolations-Risiko, kein
+Automatismus).
+
+**Wave 3E-B (B1, 2026-10-07):** Die 7 Live-Commands `code-review-swarm`,
+`multi-repo-swarm`, `project-board-sync`, `release-swarm`, `swarm-issue`,
+`swarm-pr`, `workflow-automation` samt `README.md` wurden per `git mv` nach
+`.claude/scaffold-archive/commands/github/` archiviert (Inhalt byte-identisch,
+SHA-256 geprüft). Grund: alle rufen ungepinnt `npx ruv-swarm` auf (Paket nicht
+installiert) und enthalten Merge-/Release-/Push-/Issue-Close-Rezepte; als
+Commands waren sie modell-aufrufbar. `.claude/commands/github/` ist damit leer.
+Weiterhin offen und **nicht** ausgeführt: B2 (`browser-agent.yaml`),
+B3 (Nutzer-Settings `~/.claude/settings.json`), B4 (Skill-Deny-Regeln; die ECC-
+Skills sind nicht auditiert). Recovery-Tag: `setup-2.0-wave3e-pre-c4bc84f`.
+Zurückholen: `git mv .claude/scaffold-archive/helpers/<datei> .claude/helpers/<datei>`
+bzw. `git mv .claude/scaffold-archive/commands/github/<datei> .claude/commands/github/<datei>`.
+
 ### 5.1 Package C3 – ignorierte Ruflo-/Claude-Flow-Reste entfernt
 
 Die 14 nach Package C zurückgebliebenen, ignorierten Laufzeitdateien wurden in
