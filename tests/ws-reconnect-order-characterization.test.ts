@@ -154,13 +154,22 @@ describe("C. Multi-Tab / WS-Monitor – Quelltext-Verträge (Charakterisierung)"
     assert.deepEqual(hits, [ "entrypoints/match.content/buzzer.ts" ]);
   });
 
-  it("C3. Der WS-Monitor behandelt 'disconnected' mit Toast und 'connected' mit Ausblenden; kein Resync-Aufruf", async () => {
+  // R2 (bewusste, begründete Anpassung): Vor R2 galt hier "kein Resync-Aufruf; Reload ist der einzige Weg".
+  // Mit R2 löst ein Reconnect genau einen koaleszierten REST-Resync über createMatchResync aus
+  // (Auth über ensureFreshAuthToken, siehe tests/components/ws-resync-contract.component.test.ts).
+  // Unverändert bleiben Toast bei 'disconnected', Ausblenden bei 'connected' und der manuelle Reload-Button.
+  it("C3. Der WS-Monitor behandelt 'disconnected' mit Toast und 'connected' mit Ausblenden; seit R2 löst ein Reconnect einen Resync über createMatchResync aus (Reload bleibt der manuelle Weg)", async () => {
     const text = await readFile(new URL("../entrypoints/websocket-monitor.content.ts", import.meta.url), "utf8");
     assert.match(text, /detail\.status === 'disconnected'\)\s*\{\s*showWsDisconnectToast/);
     assert.match(text, /detail\.status === 'connected'\)\s*\{\s*hideWsDisconnectToast\(\)/);
-    // Reload ist der einzige Wiederherstellungsweg.
+    // Der Reload-Button bleibt als manueller Wiederherstellungsweg erhalten.
     assert.match(text, /data-testid="adt-ws-reload"[\s\S]*?addEventListener\('click', \(\) => location\.reload\(\)\)/);
-    assert.doesNotMatch(text, /resync|bootstrap|fetchMatch|resubscribe|getMatch/i);
+    // R2: Resync-Verdrahtung vorhanden – genau eine Instanz, Statusweitergabe, Auth über ensureFreshAuthToken.
+    assert.equal((text.match(/createMatchResync\(/g) ?? []).length, 1);
+    assert.match(text, /matchResync\.notifyStatus\(detail\.status\)/);
+    assert.match(text, /getToken: \(\) => ensureFreshAuthToken\(\)/);
+    // Weiterhin nicht vorhanden: manuelle Wiederverbindung/Neuabonnierung, eigene Abruf-Helfer und Retry-Schleifen im Monitor.
+    assert.doesNotMatch(text, /resubscribe|fetchMatch|getMatch|setInterval|while\s*\(\s*true\s*\)/i);
   });
 
   it("C4. Status 'error' löst keinen Toast aus (nur 'disconnected')", async () => {
