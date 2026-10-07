@@ -193,7 +193,7 @@ Verifizierte Befunde, absichtlich nicht in UI-1 behoben (kein visueller Diff am 
 
 ## 15. Shell-Muster (seit UI-2A)
 
-Verbindliche Muster für App-Shell und Header (`CcShell`, `CcTopBar`); Desktop-Navigation siehe Abschnitt 16, Tablet/Mobil folgt in UI-2C.
+Verbindliche Muster für App-Shell und Header (`CcShell`, `CcTopBar`); Desktop-Navigation siehe Abschnitt 16, Tablet-Rail und mobile Bottom-Navigation siehe Abschnitt 17.
 
 1. **Skip-Link:** erstes fokussierbares Element der Seite (`.cc-skip-link`), außerhalb des Grid-Flusses, bis zum Fokus per `transform` aus dem Viewport
    geschoben, ohne Transition. Er fokussiert `<main id="cc-content" tabindex="-1">` programmatisch — **kein** Hash-Sprung, weil der Hash der Router ist.
@@ -213,7 +213,7 @@ Verbindliche Muster für App-Shell und Header (`CcShell`, `CcTopBar`); Desktop-N
 
 ## 16. Desktop-Navigation (seit UI-2B)
 
-Gilt für die volle Sidebar (ab 1081px, QA-Viewports 1280×720 und 1920×1080). Die Icon-Rail (≤ 1080px) und die Bottom-Navigation bleiben bis UI-2C visuell unverändert.
+Gilt für die volle Sidebar (ab 1081px, QA-Viewports 1280×720 und 1920×1080). Icon-Rail (≤ 1080px) und Bottom-Navigation: Abschnitt 17.
 
 1. **Eine Quelle, Gruppen als Präsentation:** `components/ControlCenter/sections.ts` (`CC_SECTIONS`, `CC_SECTION_GROUPS`). Das Feld `group` gliedert nur die Sidebar
    (Live · Spielen · Auswertung · System); Section-IDs, Hash-Routing und Reihenfolge sind unverändert. Neue Bereiche brauchen eine `group`.
@@ -226,6 +226,19 @@ Gilt für die volle Sidebar (ab 1081px, QA-Viewports 1280×720 und 1920×1080). 
    Die Fokusfarbe bleibt die offene Entscheidung aus Abschnitt 14.
 6. **Zielgröße und Höhe:** Einträge `min-height: var(--cc-hit-min)`, ohne vertikales Padding (sonst ~50px und 1280×720 passt nicht). Ohne Live-Match passt die gesamte Navigation ohne
    internen Scrollbalken in 1280×720; mit Live-Widget darf `.cc-nav` scrollen.
-7. **Rail-Entkopplung:** Die Desktop-Werte werden im Block `@media (max-width: 1080px)` ausdrücklich zurückgesetzt. Hover-, Fokus- und Aktivzustand der Rail entsprechen UI-2A; die Tablet-Baseline ist pixelidentisch zu UI-2A (Screenshot ohne fokussiertes Element).
+7. **Rail:** übernimmt Hover-, Fokus- und Aktivzustand dieser Sidebar (Abschnitt 17).
 8. **Prüfung:** `tests/components/CcSidebar.component.test.ts`; `tests/e2e/cc-navigation.spec.ts` (Block „cc-desktop-nav“: Gruppen, Zielgrößen, kein Überlauf, aktiver Zustand, Hover,
    Tab-Reihenfolge, Fokusringe, Reduced Motion); Pixelvergleich Wide/Desktop in `tests/e2e/cc-shell-visual.spec.ts` (Baselines in UI-2B bewusst erneuert).
+
+## 17. Responsive Navigation (seit UI-2C)
+
+Tablet-Rail (≤ 1080px, QA-Viewport 768×1024) und mobile Bottom-Navigation (≤ 640px, QA-Viewport 390×844). Die Desktop-Sidebar (Abschnitt 16) ist unverändert; Section-IDs, Reihenfolge und Hash-Routing ebenfalls.
+
+1. **Eine Quelle:** Rail und Bottom-Navigation lesen dieselbe Registry (`sections.ts`) und emittieren dasselbe `navigate`. Es gibt keine zweite Navigationslogik; die Gruppierung (Abschnitt 16) gilt für Sidebar und Rail, die Bottom-Navigation ist eine flache Liste.
+2. **Rail übernimmt Desktop-Werte:** Zielgröße, Aktiv- und Fokuszustand der Rail sind die der Desktop-Sidebar; der Rail-Block in `style.css` enthält nur die Abweichungen (Breite `--cc-sidebar-w-rail`, zentrierte Einträge, Trennlinie zwischen Gruppen, Label ausgeblendet). Der frühere Reset-Block und `display:contents` entfallen: Gruppen bleiben echte Boxen mit `role="group"`.
+3. **Labels in der Rail** (Eintrags- und Gruppenlabel) sind nur visuell versteckt (Visually-hidden-Muster wie `.cc-btn-label`), nicht per `display:none` — der Accessible Name hängt am sichtbaren Label, nicht nur an `title`. Das „bald“-Badge bleibt in der Rail ausgeblendet (Bestand, kein neues Badge).
+4. **Bottom-Navigation scrollt horizontal:** neun Einträge passen bei 390px nicht in 44px-Ziele. Die Einträge liegen in `.cc-bottom-nav-scroll` (Scrollbalken ausgeblendet), das Live-Widget bleibt außerhalb. Einträge sind so breit wie ihr Label (nie abgeschnitten), mindestens `--cc-hit-min` plus `--cc-space-5`; dadurch bleibt rechts ein Eintrag angeschnitten sichtbar (Scroll-Hinweis). Eintragshöhe 56px, Safe-Area unten und die Platzreservierung in `.cc-content` bleiben unverändert. Label mindestens `--cc-fs-xs`.
+5. **Sichtbar halten:** `CcSidebar.vue` stellt per `scrollLeft` (sofort, nicht animiert) sicher, dass der aktive Eintrag (z. B. Deep-Link `#settings`) und jeder fokussierte Eintrag vollständig sichtbar sind — der Browser scrollt einen nur teilweise sichtbaren Eintrag beim Fokussieren nicht nach. Ein `ResizeObserver` passt bei Breitenänderung (z. B. erscheinende Seiten-Scrollleiste) erneut an.
+6. **Aktiver Zustand:** wie Desktop — `--cc-accent-soft`-Fläche, Akzent-Icon, kräftigere Schrift, Akzentlinie (Rail: seitlich, Bottom-Nav: oben) als Hinweis ohne Farbe. Kein Gold (das Gold-Punkt-Badge für „Vorschau“-Bereiche ist ein Status, kein Aktivzustand).
+7. **Fokus:** Fokus-Tokens (`--cc-focus-*`), Ring innen (negativer Offset), weil der scrollende Container einen äußeren Ring abschneiden würde.
+8. **Prüfung:** `tests/components/CcSidebar.component.test.ts`; `tests/e2e/cc-navigation.spec.ts` (Blöcke „cc-tablet-rail“ und „cc-bottom-nav“: Zielgrößen, Namen, Gruppen, Scrollbereich, Labels ungekürzt, kein Seiten-Überlauf, Tab-Reihenfolge, Fokusringe, Deep-Link, Reduced Motion); Pixelvergleich Tablet/Mobil in `tests/e2e/cc-shell-visual.spec.ts` (Baselines in UI-2C bewusst erneuert). Die Ratchets in `tests/design-governance.test.ts` sanken dabei (Farb-Literale `style.css` 152 → 150, Text unter 12px 86 → 85).

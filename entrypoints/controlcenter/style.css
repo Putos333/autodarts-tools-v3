@@ -399,9 +399,9 @@ ul {
   right: 0;
   bottom: 0;
   z-index: 30;
-  gap: 2px;
-  border-top: 1px solid var(--cc-border);
-  background: rgba(6, 11, 18, 0.96);
+  border-top: var(--cc-border-width) solid var(--cc-border);
+  /* 96 % --cc-bg: gleiche Anmutung wie zuvor, ohne Farb-Literal. */
+  background: color-mix(in srgb, var(--cc-bg) 96%, transparent);
   backdrop-filter: blur(12px);
   /* iOS Home-Indicator: Leiste nicht darunter verstecken. */
   padding-bottom: env(safe-area-inset-bottom, 0px);
@@ -418,32 +418,68 @@ ul {
   margin: 6px 10px 4px;
 }
 
-.cc-bottom-nav-item {
-  flex: 1 1 0;
+/* Scrollbereich der neun Einträge (UI-2C). Die Leiste bleibt 56px hoch; horizontal scrollbar statt gequetscht.
+   Scrollbalken bewusst ausgeblendet (Touch); der angeschnittene Folgeeintrag ist der Hinweis. position:relative
+   macht den Bereich zum offsetParent für CcSidebar.vue (aktiven Eintrag sichtbar halten). */
+.cc-bottom-nav-scroll {
+  position: relative;
+  display: flex;
+  flex: 1 1 100%;
   min-width: 0;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+}
+
+.cc-bottom-nav-scroll::-webkit-scrollbar { display: none; }
+
+/* Breite folgt dem Inhalt (Label nie abgeschnitten), mindestens Zielgröße plus Rand — so bleibt rechts ein
+   Eintrag angeschnitten sichtbar. */
+.cc-bottom-nav-item {
+  position: relative;
+  flex: 0 0 auto;
+  min-width: calc(var(--cc-hit-min) + var(--cc-space-5));
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   gap: 2px;
   min-height: 56px;
+  padding: 0 var(--cc-space-2);
   border: none;
   background: transparent;
   color: var(--cc-text-dim);
   cursor: pointer;
+  transition:
+    background var(--cc-dur-fast) var(--cc-ease-standard),
+    color var(--cc-dur-fast) var(--cc-ease-standard);
 }
 
+/* Aktiv: gleiche Sprache wie die Desktop-Sidebar (rote Fläche, Akzent-Icon, kräftigere Schrift) plus Akzentlinie
+   oben als Nicht-Farb-Hinweis. Kein Gold. */
 .cc-bottom-nav-item.is-active {
-  color: var(--cc-gold);
+  background: var(--cc-accent-soft);
+  color: var(--cc-text);
+}
+
+.cc-bottom-nav-item.is-active::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--cc-accent);
 }
 
 .cc-bottom-nav-item.is-active .cc-bottom-nav-icon {
   color: var(--cc-accent);
 }
 
+/* Fokus-Tokens wie Desktop-Sidebar; Ring innen, weil der Scrollbereich überstehende Ringe abschneiden würde. */
 .cc-bottom-nav-item:focus-visible {
-  outline: none;
-  box-shadow: inset 0 0 0 2px var(--cc-accent-soft);
+  outline: var(--cc-focus-width) solid var(--cc-focus-color);
+  outline-offset: calc(var(--cc-focus-width) * -1);
 }
 
 .cc-bottom-nav-icon {
@@ -466,14 +502,13 @@ ul {
 }
 
 .cc-bottom-nav-label {
-  max-width: 100%;
-  padding: 0 2px;
-  overflow: hidden;
-  text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 9px;
-  font-weight: 700;
-  letter-spacing: 0.2px;
+  font-size: var(--cc-fs-xs);
+  font-weight: var(--cc-fw-semibold);
+}
+
+.cc-bottom-nav-item.is-active .cc-bottom-nav-label {
+  font-weight: var(--cc-fw-bold);
 }
 
 /* ─── Top-Bar ────────────────────────────────────────────────────────────── */
@@ -2501,26 +2536,37 @@ ul {
   .cc-col-6 { grid-column: span 12; }
 }
 
-/* Sidebar wird zur Icon-Leiste. */
+/* Sidebar wird zur Icon-Leiste (Tablet, UI-2C). Die Rail übernimmt Zielgröße, Aktiv- und Fokuszustand der
+   Desktop-Sidebar unverändert; hier stehen nur die tatsächlichen Abweichungen. Die Gruppen bleiben echte Boxen
+   (kein display:contents) und werden durch eine Trennlinie sichtbar gegliedert. Gruppen- und Eintragslabel sind
+   nur visuell versteckt: Gruppenname und Accessible Name bleiben erhalten. */
 @media (max-width: 1080px) {
   .cc-root { grid-template-columns: var(--cc-sidebar-w-rail) minmax(0, 1fr); }
   .cc-brand-text,
-  .cc-nav-label,
   .cc-nav-badge,
   .cc-sidebar-foot,
   .cc-live-widget { display: none; }
+  .cc-nav-label,
+  .cc-nav-group-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    border: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
   .cc-live-rail { display: block; }
   .cc-brand { justify-content: center; padding-left: 0; padding-right: 0; }
+  .cc-nav { gap: var(--cc-space-2); }
+  .cc-nav-group { position: relative; }
+  .cc-nav-group + .cc-nav-group {
+    padding-top: var(--cc-space-2);
+    border-top: var(--cc-border-width) solid var(--cc-border);
+  }
   .cc-nav-item { justify-content: center; padding-left: 0; padding-right: 0; }
-  /* UI-2B-Desktopwerte für die Rail zurücksetzen (Tablet-Optik bleibt bis UI-2C unverändert). */
-  .cc-nav { gap: 3px; }
-  .cc-nav-group { display: contents; }
-  .cc-nav-group-label { display: none; }
-  .cc-nav-item.is-active { color: #fff; }
-  .cc-nav-item:focus-visible { outline: none; box-shadow: 0 0 0 2px var(--cc-accent-soft); }
-  .cc-nav-item.is-active .cc-nav-icon { color: inherit; }
-  .cc-nav-item { min-height: 0; padding-top: 10px; padding-bottom: 10px; }
-  .cc-nav-item.is-active::before { left: -12px; }
   .cc-content { padding: 20px 18px 56px; }
   .cc-topbar { padding: 14px 18px; }
 }

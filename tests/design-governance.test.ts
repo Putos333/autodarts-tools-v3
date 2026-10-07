@@ -124,9 +124,9 @@ describe("design tokens: AUTODARTS-ELITE-Designsprache", () => {
  * Zahl hier mit. Steigt ein Wert, gehört die neue Farbe/Größe stattdessen als Token ins Token-File.
  */
 const BASELINE = {
-  hardcodedColorsStyleCss: 152,
+  hardcodedColorsStyleCss: 150,
   hardcodedColorsCcComponents: 21,
-  textBelow12pxCc: 86,
+  textBelow12pxCc: 85,
 };
 
 /** Dokumentierte Breakpoints (docs/UI_GOVERNANCE.md) und Legacy-Werte des Bestands. */
