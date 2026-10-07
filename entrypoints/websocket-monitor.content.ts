@@ -1,6 +1,8 @@
 /**
  * Content script that injects the WebSocket capture script
  */
+import { ensureFreshAuthToken } from "@/utils/auth-refresh";
+import { createMatchResync } from "@/utils/match-resync";
 import { createSerialTaskQueue } from "@/utils/serial-task-queue";
 import { processWebSocketMessage } from "@/utils/websocket-helpers";
 
@@ -18,6 +20,18 @@ export default defineContentScript({
       timeoutMs: MESSAGE_TASK_TIMEOUT_MS,
       onError: (error) => console.error(error),
       onTimeout: () => console.warn("[Content Script] Message processing exceeded", MESSAGE_TASK_TIMEOUT_MS, "ms; continuing with next message"),
+    });
+
+    // R2 – nach einem Reconnect den aktuellen Match-Zustand per REST nachladen (ein Versuch + genau ein Retry).
+    // Die Versuche laufen als Aufgaben in derselben seriellen Queue wie die Live-Nachrichten.
+    const matchResync = createMatchResync({
+      getUrl: () => window.location.href,
+      getToken: () => ensureFreshAuthToken(),
+      fetch: (url, init) => fetch(url, init),
+      apply: (snapshot) => processWebSocketMessage("autodarts.matches", snapshot as Parameters<typeof processWebSocketMessage>[1]),
+      schedule: (task) => { void messageQueue.enqueue(task); },
+      onRetry: (error) => console.warn("[Content Script] Match resync failed, retrying once:", error),
+      onError: (error) => console.error("[Content Script] Match resync failed, giving up:", error),
     });
 
     // Set up event listeners BEFORE injecting the script to avoid race conditions
@@ -59,6 +73,7 @@ export default defineContentScript({
 
     // Cleanup on content script unload (SPA navigation or extension update)
     ctx.onInvalidated?.(() => {
+      matchResync.dispose();
       messageQueue.dispose();
       window.removeEventListener("websocket-incoming", handleIncoming);
       window.removeEventListener("websocket-outgoing", handleOutgoing);
@@ -69,6 +84,7 @@ export default defineContentScript({
     // Werte: 'connected' | 'disconnected' | 'error'.
     ctx.addEventListener(window, "autodarts-ws-status", (event: Event) => {
       const detail = (event as CustomEvent).detail || {};
+      matchResync.notifyStatus(detail.status);
       try {
         browser.storage.local.set({
           'adt-ws-status': {
