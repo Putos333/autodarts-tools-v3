@@ -117,7 +117,7 @@ test("Reduced Motion: keine Übergänge an den Header-Aktionen", async ({ contex
 
 /**
  * Desktop-Navigation (UI-2B): gruppierte Sidebar in den beiden Desktop-Viewports (1920x1080 und 1280x720).
- * Tablet (Icon-Rail) und Mobil sind bewusst nicht Gegenstand (UI-2C), laufen aber in den Tests oben weiter mit.
+ * Tablet (Icon-Rail) und Mobil (Bottom-Navigation) siehe die Blöcke „cc-tablet-rail“ und „cc-bottom-nav“ (UI-2C) weiter unten.
  */
 const GROUPS: ReadonlyArray<{ label: string; ids: string[] }> = [
   { label: "Live", ids: [ "dashboard", "board", "match", "matchcenter" ] },
@@ -234,6 +234,214 @@ for (const viewport of VIEWPORTS.filter(candidate => candidate.name === "wide" |
     test("Reduced Motion: keine Übergänge an Navigationseinträgen", async ({ context, extensionId }) => {
       const page = await openControlCenter(context, extensionId, { viewport });
       const durationOf = () => page.getByTestId("cc-nav-board").evaluate(el => getComputedStyle(el).transitionDuration);
+      expect(await durationOf()).not.toBe("0s");
+      await page.emulateMedia({ reducedMotion: "reduce" });
+      expect(await durationOf()).toBe("0s");
+    });
+  });
+}
+
+/**
+ * Responsive Navigation (UI-2C): Tablet-Rail (768x1024) und mobile Bottom-Navigation (390x844).
+ * Beide zeigen dieselben neun Bereiche in Registry-Reihenfolge; die Desktop-Sidebar bleibt Gegenstand von UI-2B.
+ */
+const ALL_IDS = GROUPS.flatMap(group => group.ids);
+const RAIL_NAMES = [
+  "Dashboard", "Board & Autoscoring", "Match", "Match Center", "Training",
+  "Freunde / Party", "Statistiken", "Verlauf", "Einstellungen",
+];
+
+/** Rot statt Gold: Rot-Kanal dominiert, Grün-Kanal praktisch null (Gold hätte hohen Grün-Kanal). */
+function isReddish(color: string): boolean {
+  const [ r, g, b ] = (color.match(/[\d.]+/g) ?? []).map(Number);
+  return r > 150 && g < 60 && b < 90;
+}
+
+const rgbOf = (locator: import("@playwright/test").Locator, property: "backgroundColor" | "color") =>
+  locator.evaluate((el, prop) => getComputedStyle(el)[prop as "color"], property);
+
+for (const viewport of VIEWPORTS.filter(candidate => candidate.name === "tablet")) {
+  test.describe(`cc-tablet-rail ${viewport.name} ${viewport.width}x${viewport.height}`, () => {
+    test("Rail: Breite, Gruppen, alle Einträge erreichbar, Namen, kein Überlauf", async ({ context, extensionId }) => {
+      const page = await openControlCenter(context, extensionId, { viewport });
+
+      const sidebar = await page.locator(".cc-sidebar").boundingBox();
+      expect(Math.round(sidebar!.width)).toBe(76);
+      await expect(page.locator(".cc-bottom-nav")).toBeHidden();
+
+      const navigation = page.getByRole("navigation", { name: "Control-Center-Bereiche" });
+      for (const group of GROUPS) {
+        await expect(navigation.getByRole("group", { name: group.label })).toBeAttached();
+      }
+      for (const [ index, id ] of ALL_IDS.entries()) {
+        const item = page.getByTestId(`cc-nav-${id}`);
+        await expect(item).toBeVisible();
+        await expect(navigation.getByRole("button", { name: RAIL_NAMES[index], exact: true })).toHaveCount(1);
+        const box = await item.boundingBox();
+        expect(box!.height).toBeGreaterThanOrEqual(HIT_TARGET_PX);
+        expect(box!.width).toBeGreaterThanOrEqual(HIT_TARGET_PX);
+        expect(box!.y + box!.height).toBeLessThanOrEqual(viewport.height);
+        expect(box!.x + box!.width).toBeLessThanOrEqual(sidebar!.width);
+      }
+
+      // Gruppen sind echte Boxen (kein display:contents).
+      for (const groupId of [ "live", "play", "analysis", "system" ]) {
+        const display = await page.getByTestId(`cc-nav-group-${groupId}`).evaluate(el => getComputedStyle(el).display);
+        expect(display).not.toBe("contents");
+      }
+      // Beschriftungen sind nur visuell versteckt.
+      const label = await page.getByTestId("cc-nav-stats").locator(".cc-nav-label").boundingBox();
+      expect(label!.width).toBeLessThanOrEqual(2);
+
+      expect(await navigation.evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true);
+      expect(await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth)).toBe(false);
+    });
+
+    test("Aktiver Zustand: ein Eintrag, aria-current, rot statt Gold, Wechsel setzt Hash", async ({ context, extensionId }) => {
+      const page = await openControlCenter(context, extensionId, { viewport });
+      const active = page.getByTestId("cc-nav-dashboard");
+      const inactive = page.getByTestId("cc-nav-stats");
+      await expect(active).toHaveAttribute("aria-current", "page");
+      await expect(page.locator(".cc-nav [aria-current=\"page\"]")).toHaveCount(1);
+
+      expect(await rgbOf(active, "backgroundColor")).not.toBe(await rgbOf(inactive, "backgroundColor"));
+      expect(isReddish(await rgbOf(active, "backgroundColor"))).toBe(true);
+      expect(isReddish(await rgbOf(active.locator(".cc-nav-icon"), "color"))).toBe(true);
+      expect(await active.evaluate(el => getComputedStyle(el, "::before").content)).not.toBe("none");
+
+      await inactive.click();
+      await expect(inactive).toHaveAttribute("aria-current", "page");
+      expect(new URL(page.url()).hash).toBe("#stats");
+    });
+
+    test("Tastatur: Tab-Reihenfolge Skip-Link → Rail, sichtbarer Fokusring, Enter navigiert", async ({ context, extensionId }) => {
+      const page = await openControlCenter(context, extensionId, { viewport });
+      await page.keyboard.press("Tab");
+      await expect(page.getByTestId("cc-skip-link")).toBeFocused();
+
+      for (const id of ALL_IDS) {
+        await page.keyboard.press("Tab");
+        const item = page.getByTestId(`cc-nav-${id}`);
+        await expect(item).toBeFocused();
+        const outline = await item.evaluate((el) => {
+          const style = getComputedStyle(el);
+          return { style: style.outlineStyle, width: parseFloat(style.outlineWidth) };
+        });
+        expect(outline.style).not.toBe("none");
+        expect(outline.width).toBeGreaterThanOrEqual(2);
+      }
+
+      await page.getByTestId("cc-nav-history").focus();
+      await page.keyboard.press("Enter");
+      await expect(page.getByTestId("cc-heading")).toHaveText("Verlauf");
+      expect(new URL(page.url()).hash).toBe("#history");
+    });
+
+    test("Reduced Motion: keine Übergänge an den Rail-Einträgen", async ({ context, extensionId }) => {
+      const page = await openControlCenter(context, extensionId, { viewport });
+      const durationOf = () => page.getByTestId("cc-nav-board").evaluate(el => getComputedStyle(el).transitionDuration);
+      expect(await durationOf()).not.toBe("0s");
+      await page.emulateMedia({ reducedMotion: "reduce" });
+      expect(await durationOf()).toBe("0s");
+    });
+  });
+}
+
+for (const viewport of VIEWPORTS.filter(candidate => candidate.name === "mobile")) {
+  test.describe(`cc-bottom-nav ${viewport.name} ${viewport.width}x${viewport.height}`, () => {
+    test("Leiste: 56px hoch, neun Einträge, Scrollbereich, Zielgrößen, Labels ungekürzt, kein Seiten-Überlauf", async ({ context, extensionId }) => {
+      const page = await openControlCenter(context, extensionId, { viewport });
+      await expect(page.locator(".cc-sidebar")).toBeHidden();
+      const bar = page.getByRole("navigation", { name: "Control-Center-Bereiche (mobil)" });
+      await expect(bar).toBeVisible();
+
+      // Einträge 56px hoch; die Leiste trägt zusätzlich nur ihren 1px-Rahmen (unverändert gegenüber UI-2A).
+      const barBox = await bar.boundingBox();
+      expect(Math.round(barBox!.height)).toBeLessThanOrEqual(57);
+      expect(Math.round(barBox!.y + barBox!.height)).toBe(viewport.height);
+      expect(Math.round((await page.locator(".cc-bottom-nav-scroll").boundingBox())!.height)).toBe(56);
+
+      const scroller = page.locator(".cc-bottom-nav-scroll");
+      expect(await scroller.evaluate(el => el.scrollWidth > el.clientWidth)).toBe(true);
+      await expect(page.locator(".cc-bottom-nav-item")).toHaveCount(ALL_IDS.length);
+
+      for (const id of ALL_IDS) {
+        const item = page.getByTestId(`cc-bottom-nav-${id}`);
+        await expect(item).toHaveAccessibleName(/\S/);
+        const box = await item.boundingBox();
+        expect(box!.height).toBeGreaterThanOrEqual(HIT_TARGET_PX);
+        expect(box!.width).toBeGreaterThanOrEqual(HIT_TARGET_PX);
+        const label = await item.locator(".cc-bottom-nav-label").boundingBox();
+        expect(label!.x).toBeGreaterThanOrEqual(box!.x);
+        expect(label!.x + label!.width).toBeLessThanOrEqual(box!.x + box!.width + 0.5);
+        expect(await item.locator(".cc-bottom-nav-label").evaluate(el => parseFloat(getComputedStyle(el).fontSize))).toBeGreaterThanOrEqual(12);
+      }
+      expect(await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth)).toBe(false);
+    });
+
+    test("Scrollen und Erreichbarkeit: letzter Eintrag per Scroll und Tastatur, Deep-Link zeigt aktiven Eintrag", async ({ context, extensionId }) => {
+      const page = await openControlCenter(context, extensionId, { viewport });
+      const scroller = page.locator(".cc-bottom-nav-scroll");
+      const inView = (testId: string) => page.getByTestId(testId).evaluate((el) => {
+        const item = el.getBoundingClientRect();
+        const bar = el.parentElement!.getBoundingClientRect();
+        return item.left >= bar.left - 0.5 && item.right <= bar.right + 0.5;
+      });
+
+      // Letzter Eintrag liegt zunächst außerhalb und wird per Scrollbereich erreichbar.
+      expect(await inView("cc-bottom-nav-settings")).toBe(false);
+      await scroller.evaluate(el => { el.scrollLeft = el.scrollWidth; });
+      expect(await inView("cc-bottom-nav-settings")).toBe(true);
+      await page.getByTestId("cc-bottom-nav-settings").click();
+      expect(new URL(page.url()).hash).toBe("#settings");
+
+      // Deep-Link: aktiver (letzter) Eintrag ist ohne Zutun sichtbar.
+      const deep = await openControlCenter(context, extensionId, { viewport, hash: "settings" });
+      await expect(deep.getByTestId("cc-bottom-nav-settings")).toHaveAttribute("aria-current", "page");
+      expect(await deep.getByTestId("cc-bottom-nav-settings").evaluate((el) => {
+        const item = el.getBoundingClientRect();
+        const bar = el.parentElement!.getBoundingClientRect();
+        return item.left >= bar.left - 0.5 && item.right <= bar.right + 0.5;
+      })).toBe(true);
+    });
+
+    test("Tastatur: Tab durch alle Einträge mit sichtbarem Fokusring, Fokus bleibt im Sichtbereich", async ({ context, extensionId }) => {
+      const page = await openControlCenter(context, extensionId, { viewport });
+      await page.getByTestId(`cc-bottom-nav-${ALL_IDS[0]}`).focus();
+      for (const [ index, id ] of ALL_IDS.entries()) {
+        if (index > 0) await page.keyboard.press("Tab");
+        const item = page.getByTestId(`cc-bottom-nav-${id}`);
+        await expect(item).toBeFocused();
+        const state = await item.evaluate((el) => {
+          const style = getComputedStyle(el);
+          const box = el.getBoundingClientRect();
+          const bar = el.parentElement!.getBoundingClientRect();
+          return {
+            outlineStyle: style.outlineStyle,
+            outlineWidth: parseFloat(style.outlineWidth),
+            visible: box.left >= bar.left - 0.5 && box.right <= bar.right + 0.5,
+          };
+        });
+        expect(state.outlineStyle).not.toBe("none");
+        expect(state.outlineWidth).toBeGreaterThanOrEqual(2);
+        expect(state.visible).toBe(true);
+      }
+      await page.keyboard.press("Enter");
+      expect(new URL(page.url()).hash).toBe("#settings");
+    });
+
+    test("Aktiver Zustand: ein Eintrag, aria-current, rot statt Gold, Reduced Motion", async ({ context, extensionId }) => {
+      const page = await openControlCenter(context, extensionId, { viewport });
+      const active = page.getByTestId("cc-bottom-nav-dashboard");
+      const inactive = page.getByTestId("cc-bottom-nav-training");
+      await expect(active).toHaveAttribute("aria-current", "page");
+      await expect(page.locator(".cc-bottom-nav [aria-current=\"page\"]")).toHaveCount(1);
+
+      expect(await rgbOf(active, "backgroundColor")).not.toBe(await rgbOf(inactive, "backgroundColor"));
+      expect(isReddish(await rgbOf(active.locator(".cc-bottom-nav-icon"), "color"))).toBe(true);
+      expect(await active.evaluate(el => getComputedStyle(el, "::before").backgroundColor)).not.toBe("rgba(0, 0, 0, 0)");
+
+      const durationOf = () => inactive.evaluate(el => getComputedStyle(el).transitionDuration);
       expect(await durationOf()).not.toBe("0s");
       await page.emulateMedia({ reducedMotion: "reduce" });
       expect(await durationOf()).toBe("0s");
