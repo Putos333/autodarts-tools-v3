@@ -92,3 +92,18 @@ Setup-Gate NOT RUN (kein Paket für DOCS_ONLY-HEAD). Die Zahlen 531/531 und 90/9
 **Nachtrag 2026-10-04 (HEAD `92b723e`):** Playwright 1.62.1 ist integriert (`tests/e2e`, 13/13 PASS lokal, Visual-Regression-Test enthalten) und läuft als Job „Playwright E2E"
 in `pr-control-center.yml` (PR #17 gemergt; Run 37220303579 auf `main`: SUCCESS, 13 passed). Browser-Cache in den beobachteten Läufen MISS (Treffer nicht beobachtet). Offen ohne Hardware:
 TEMP-DIAG-Bereinigung, MCP-Konsolidierung, Branch-Protection (keine), CODEOWNERS (keiner), Autor-Identität, Dependency-Triage. Human Live QA bleibt DEFERRED/BLOCKED und ist nicht der nächste Gate.
+
+## Status 2026-10-07 (Ergänzung, HEAD `44d182b`)
+
+Die Abschnitte „Completed" und „Next" (Alpha 1–6) stammen vom 2026-08-08 und sind historisch; die
+PRs #1–#3 belegen die Übernahme von Alpha 5 (Sound FX Engine v3), der Stand von Alpha 6 wurde nicht
+erneut gegen den Code geprüft (UNKNOWN).
+
+- **Setup 2.0 (Tooling-/Agent-Spur): CLOSED** (Wave 3E gemergt, PR #28; Abschlussstatus mit offenen
+  Punkten: `docs/SETUP_2_0_DEV_AGENT_SETUP.md` Abschnitt 13).
+- **UI-Spur gemergt:** UI-1 Design-System-Fundament und UI-2A bis UI-2E (PRs #22–#27; Details in
+  `docs/UI_GOVERNANCE.md`). Weitere UI-Pakete sind im Repository nicht geplant dokumentiert.
+- **Offen ohne Hardware:** TEMP-DIAG im Protected Core (nur mit Freigabe), MCP-Konsolidierung,
+  WebSocket-Auto-Resync, Multi-Tab-Schutz, Out-of-Order-Event-Test, CODEOWNERS, Autor-Identität,
+  Dev-Dependency-Triage.
+- **Human Live QA / Release-Gate:** weiterhin DEFERRED/BLOCKED (Hardware).

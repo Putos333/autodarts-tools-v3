@@ -87,3 +87,24 @@ Whether these commands and skills get archived is open and not decided here.
 This split is a judgment call, not a certainty — if any archived skill turns
 out to be part of your regular workflow, just move it back; it costs nothing
 and nothing was deleted.
+
+## Status update (Setup 2.0 Wave 3E, 2026-10-07)
+
+Like the earlier status block, this is a dated addition; the sections above are kept as written and are
+historical where they conflict with this block.
+
+- The `commands/github/` group described above as kept active (15 or 19 commands) is **no longer
+  active**. In Wave 3E (B1, PR #28) the seven remaining live commands (`code-review-swarm`,
+  `multi-repo-swarm`, `project-board-sync`, `release-swarm`, `swarm-issue`, `swarm-pr`,
+  `workflow-automation`) and their `README.md` were moved here, into `commands/github/`
+  (now 19 files). `.claude/commands/github/` is empty. Reason: all seven depended on the unpinned
+  `npx ruv-swarm` package (not installed) and contained merge, release and push recipes.
+- A new `helpers/` folder holds five inactive helpers moved out of `.claude/helpers/`
+  (`checkpoint-manager.sh`, `auto-commit.sh`, `standard-checkpoint-hooks.sh`,
+  `helpers.manifest.json`, `.helpers-version`). `.claude/helpers/github-safe.js` stays active.
+- `agents/browser/browser-agent.yaml` was reviewed (B2) and intentionally left in place: it is inert
+  (not loaded, no executable content).
+- The four `github-*` skill directories under `.claude/skills/` and `.agents/skills/` currently contain
+  no files (checked 2026-10-07), so the "kept active" skill bullets above do not describe live skills.
+- Restore any moved file with `git mv` back to its old path; the recovery tag is
+  `setup-2.0-wave3e-pre-c4bc84f`. Full status: `docs/SETUP_2_0_DEV_AGENT_SETUP.md` section 13.
