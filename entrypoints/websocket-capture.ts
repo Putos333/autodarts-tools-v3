@@ -2,7 +2,18 @@
  * WebSocket capture script to be injected into the main world
  */
 
+// R1a – Idempotenz: Wird dieses Skript mehrfach in dieselbe Seite injiziert, würden
+// WebSocket-Konstruktor, `data`-Getter und `send` mehrfach gewrappt und jede
+// Nachricht mehrfach gemeldet. Die Markierung lebt in der Hauptwelt der Seite.
+const CAPTURE_INSTALLED_FLAG = "__adtWsCaptureInstalled";
+
 export default defineUnlistedScript(() => {
+  if ((window as any)[CAPTURE_INSTALLED_FLAG]) {
+    console.log("[WebSocket Capture] Already initialized, skipping");
+    return;
+  }
+  (window as any)[CAPTURE_INSTALLED_FLAG] = true;
+
   console.log("[WebSocket Capture] Starting initialization");
 
   // v2.9.87 — Verbindungs-Zustand nach Draußen kommunizieren. Wir owned die
@@ -67,6 +78,10 @@ export default defineUnlistedScript(() => {
 
     const originalGetter = property.get;
 
+    // R1a – ein MessageEvent wird höchstens einmal gemeldet, auch wenn mehrere
+    // Handler `event.data` lesen (der Getter läuft sonst bei jedem Lesezugriff).
+    const reportedMessages = new WeakSet<object>();
+
     // Create a wrapper function that intercepts the getter
     function interceptMessageData(this: MessageEvent) {
       // Check if this is a WebSocket message
@@ -91,14 +106,17 @@ export default defineUnlistedScript(() => {
           }
         }
 
-        // Dispatch a custom event with the message data
-        window.dispatchEvent(new CustomEvent("websocket-incoming", {
-          detail: {
-            url: (this.currentTarget as WebSocket).url,
-            data: typeof messageData === "string" ? messageData : "(binary data)",
-            timestamp: new Date().toISOString(),
-          },
-        }));
+        // Dispatch a custom event with the message data (once per MessageEvent)
+        if (!reportedMessages.has(this)) {
+          reportedMessages.add(this);
+          window.dispatchEvent(new CustomEvent("websocket-incoming", {
+            detail: {
+              url: (this.currentTarget as WebSocket).url,
+              data: typeof messageData === "string" ? messageData : "(binary data)",
+              timestamp: new Date().toISOString(),
+            },
+          }));
+        }
       } catch (error) {
         console.error("[WebSocket Capture] Error processing message:", error);
       }
