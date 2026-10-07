@@ -114,3 +114,129 @@ test("Reduced Motion: keine Übergänge an den Header-Aktionen", async ({ contex
   await page.emulateMedia({ reducedMotion: "reduce" });
   expect(await durationOf()).toBe("0s");
 });
+
+/**
+ * Desktop-Navigation (UI-2B): gruppierte Sidebar in den beiden Desktop-Viewports (1920x1080 und 1280x720).
+ * Tablet (Icon-Rail) und Mobil sind bewusst nicht Gegenstand (UI-2C), laufen aber in den Tests oben weiter mit.
+ */
+const GROUPS: ReadonlyArray<{ label: string; ids: string[] }> = [
+  { label: "Live", ids: [ "dashboard", "board", "match", "matchcenter" ] },
+  { label: "Spielen", ids: [ "training", "party" ] },
+  { label: "Auswertung", ids: [ "stats", "history" ] },
+  { label: "System", ids: [ "settings" ] },
+];
+
+for (const viewport of VIEWPORTS.filter(candidate => candidate.name === "wide" || candidate.name === "desktop")) {
+  test.describe(`cc-desktop-nav ${viewport.name} ${viewport.width}x${viewport.height}`, () => {
+    test("Gruppen, Zielgrößen, alle Einträge sichtbar, kein horizontales Scrollen", async ({ context, extensionId }) => {
+      const page = await openControlCenter(context, extensionId, { viewport });
+
+      const navigation = page.getByRole("navigation", { name: "Control-Center-Bereiche" });
+      await expect(navigation).toBeVisible();
+      for (const group of GROUPS) {
+        const region = navigation.getByRole("group", { name: group.label });
+        await expect(region).toBeVisible();
+        await expect(region.getByRole("list").getByRole("listitem")).toHaveCount(group.ids.length);
+        for (const id of group.ids) {
+          const item = page.getByTestId(`cc-nav-${id}`);
+          await expect(item).toBeVisible();
+          const box = await item.boundingBox();
+          expect(box!.height).toBeGreaterThanOrEqual(HIT_TARGET_PX);
+          // Vollständig im Viewport: die Navigation muss ohne Scrollen erreichbar sein.
+          expect(box!.y + box!.height).toBeLessThanOrEqual(viewport.height);
+        }
+      }
+
+      // Beschriftung ist sichtbar (volle Sidebar, keine Rail) und die Nav selbst scrollt nicht horizontal.
+      await expect(page.getByTestId("cc-nav-stats").locator(".cc-nav-label")).toBeVisible();
+      expect(await navigation.evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true);
+      // Ohne Live-Match passt die gesamte Navigation ohne internen Scrollbalken in die Sidebar.
+      expect(await navigation.evaluate(el => el.scrollHeight <= el.clientHeight)).toBe(true);
+      expect(await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth)).toBe(false);
+    });
+
+    test("Aktiver Zustand: genau ein Eintrag, aria-current, sichtbarer Kontrast, Wechsel setzt Hash", async ({ context, extensionId }) => {
+      const page = await openControlCenter(context, extensionId, { viewport });
+      const active = page.getByTestId("cc-nav-dashboard");
+      const inactive = page.getByTestId("cc-nav-stats");
+      await expect(active).toHaveAttribute("aria-current", "page");
+      await expect(page.locator(".cc-nav [aria-current=\"page\"]")).toHaveCount(1);
+
+      const look = (locator: typeof active) => locator.evaluate((el) => {
+        const style = getComputedStyle(el);
+        return { background: style.backgroundColor, border: style.borderTopColor, weight: Number(style.fontWeight) };
+      });
+      const [ a, i ] = [ await look(active), await look(inactive) ];
+      expect(a.background).not.toBe(i.background);
+      expect(a.border).not.toBe(i.border);
+      expect(a.weight).toBeGreaterThan(i.weight);
+      // Der Akzentbalken liegt im Eintrag (nicht abgeschnitten) und ist tatsächlich sichtbar.
+      expect(await active.evaluate(el => getComputedStyle(el, "::before").content)).not.toBe("none");
+
+      await inactive.click();
+      await expect(inactive).toHaveAttribute("aria-current", "page");
+      await expect(active).not.toHaveAttribute("aria-current", "page");
+      expect(new URL(page.url()).hash).toBe("#stats");
+    });
+
+    test("Hover: Eintrag ändert Hintergrund und Textfarbe", async ({ context, extensionId }) => {
+      const page = await openControlCenter(context, extensionId, { viewport });
+      const item = page.getByTestId("cc-nav-training");
+      const read = () => item.evaluate(el => ({ bg: getComputedStyle(el).backgroundColor, color: getComputedStyle(el).color }));
+      const before = await read();
+      await item.hover();
+      await expect.poll(read).not.toEqual(before);
+
+      // Hover auf dem aktiven Eintrag lässt das Akzent-Icon unverändert (kein Flackern des Aktivzustands).
+      const activeIcon = page.getByTestId("cc-nav-dashboard").locator(".cc-nav-icon");
+      const iconColor = () => activeIcon.evaluate(el => getComputedStyle(el).color);
+      const iconBefore = await iconColor();
+      await page.getByTestId("cc-nav-dashboard").hover();
+      expect(await iconColor()).toBe(iconBefore);
+    });
+
+    test("Tastatur: Tab-Reihenfolge Skip-Link → Navigation → Header, sichtbarer Fokusring, Enter navigiert", async ({ context, extensionId }) => {
+      const page = await openControlCenter(context, extensionId, { viewport });
+
+      await page.keyboard.press("Tab");
+      await expect(page.getByTestId("cc-skip-link")).toBeFocused();
+
+      // Alle neun Einträge in Registry-Reihenfolge, jeweils mit sichtbarem Ring.
+      const order = GROUPS.flatMap(group => group.ids);
+      for (const id of order) {
+        await page.keyboard.press("Tab");
+        const item = page.getByTestId(`cc-nav-${id}`);
+        await expect(item).toBeFocused();
+        const outline = await item.evaluate((el) => {
+          const style = getComputedStyle(el);
+          return { style: style.outlineStyle, width: parseFloat(style.outlineWidth) };
+        });
+        expect(outline.style).not.toBe("none");
+        expect(outline.width).toBeGreaterThanOrEqual(2);
+        // Ring wird nicht vom scrollenden Container abgeschnitten: Fokus-Box liegt im Viewport.
+        const box = await item.boundingBox();
+        expect(box!.x).toBeGreaterThanOrEqual(0);
+        expect(box!.y).toBeGreaterThanOrEqual(0);
+      }
+
+      // Enter auf einem fokussierten Eintrag navigiert (Fokus wandert danach auf die Überschrift).
+      await page.getByTestId("cc-nav-history").focus();
+      await page.keyboard.press("Enter");
+      await expect(page.getByTestId("cc-heading")).toHaveText("Verlauf");
+      expect(new URL(page.url()).hash).toBe("#history");
+
+      // Nach der Navigation folgt der Header mit seinen Aktionen (kein Fokusfang in der Sidebar).
+      await page.getByTestId("cc-nav-settings").focus();
+      await page.keyboard.press("Tab");
+      await expect(page.locator(".cc-topbar").locator(":focus, :focus-within").first()).toBeAttached();
+    });
+
+    test("Reduced Motion: keine Übergänge an Navigationseinträgen", async ({ context, extensionId }) => {
+      const page = await openControlCenter(context, extensionId, { viewport });
+      const durationOf = () => page.getByTestId("cc-nav-board").evaluate(el => getComputedStyle(el).transitionDuration);
+      expect(await durationOf()).not.toBe("0s");
+      await page.emulateMedia({ reducedMotion: "reduce" });
+      expect(await durationOf()).toBe("0s");
+    });
+  });
+}
