@@ -8,21 +8,40 @@
       </div>
     </div>
 
+    <!--
+      Gruppierte Navigation (UI-2B): dieselbe Section-Registry, nur nach `group` gegliedert. Jede Gruppe ist
+      eine benannte Region (role="group" + aria-labelledby) mit echter Liste. `role="list"` explizit, weil
+      Safari/VoiceOver Listen mit `list-style: none` sonst nicht als Liste ausgibt. Das Gruppenlabel ist in
+      der Icon-Rail (max-width:1080px) per display:none ausgeblendet; die Gruppen werden dort mit display:contents
+      aufgelöst, die Rail ist reine Icon-Leiste (jeder Eintrag behält seinen Namen über `title`).
+    -->
     <nav class="cc-nav" aria-label="Control-Center-Bereiche">
-      <button
-        @click="$emit('navigate', section.id)"
-        v-for="section in sections"
-        :key="section.id"
-        :class="[ 'cc-nav-item', section.id === active && 'is-active' ]"
-        :aria-current="section.id === active ? 'page' : undefined"
-        :title="section.label"
-        :data-testid="`cc-nav-${section.id}`"
-        type="button"
+      <div
+        v-for="group in groups"
+        :key="group.id"
+        class="cc-nav-group"
+        role="group"
+        :aria-labelledby="`cc-nav-group-${group.id}`"
+        :data-testid="`cc-nav-group-${group.id}`"
       >
-        <span class="cc-nav-icon"><span :class="section.icon" /></span>
-        <span class="cc-nav-label">{{ section.label }}</span>
-        <span v-if="section.preview" class="cc-nav-badge">bald</span>
-      </button>
+        <span :id="`cc-nav-group-${group.id}`" class="cc-nav-group-label">{{ group.label }}</span>
+        <ul class="cc-nav-list" role="list">
+          <li v-for="section in group.sections" :key="section.id">
+            <button
+              @click="$emit('navigate', section.id)"
+              :class="[ 'cc-nav-item', section.id === active && 'is-active' ]"
+              :aria-current="section.id === active ? 'page' : undefined"
+              :title="section.label"
+              :data-testid="`cc-nav-${section.id}`"
+              type="button"
+            >
+              <span class="cc-nav-icon"><span :class="section.icon" aria-hidden="true" /></span>
+              <span class="cc-nav-label">{{ section.label }}</span>
+              <span v-if="section.preview" class="cc-nav-badge">bald</span>
+            </button>
+          </li>
+        </ul>
+      </div>
     </nav>
 
     <!-- Live-Match-Widget: erscheint nur bei echten Matchdaten -->
@@ -75,7 +94,7 @@
 
 <script setup lang="ts">
 import CcLiveMatchWidget from "./CcLiveMatchWidget.vue";
-import { CC_SECTIONS, type TCcSectionId } from "./sections";
+import { CC_SECTION_GROUPS, CC_SECTIONS, getCcSectionsByGroup, type TCcSectionId } from "./sections";
 
 defineProps<{
   active: TCcSectionId;
@@ -85,4 +104,7 @@ defineProps<{
 defineEmits<{ (e: "navigate", id: TCcSectionId): void }>();
 
 const sections = CC_SECTIONS;
+const groups = CC_SECTION_GROUPS
+  .map(group => ({ ...group, sections: getCcSectionsByGroup(group.id) }))
+  .filter(group => group.sections.length > 0);
 </script>

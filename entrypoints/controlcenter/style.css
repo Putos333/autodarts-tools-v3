@@ -250,12 +250,39 @@ ul {
   white-space: nowrap;
 }
 
+/* Navigation (UI-2B): Gruppen -> Liste -> Eintrag. Desktop-Werte stehen hier, die Icon-Rail
+   (max-width:1080px, unten) setzt die Abweichungen ausdrücklich zurück, damit Tablet unverändert bleibt. */
 .cc-nav {
   display: flex;
   flex: 1;
+  min-height: 0;
+  flex-direction: column;
+  gap: var(--cc-space-3);
+  overflow-y: auto;
+}
+
+.cc-nav-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--cc-space-1);
+}
+
+.cc-nav-group-label {
+  padding: 0 var(--cc-space-3);
+  font-size: var(--cc-fs-xs);
+  font-weight: var(--cc-fw-bold);
+  letter-spacing: 1.4px;
+  text-transform: uppercase;
+  color: var(--cc-text-dim);
+}
+
+.cc-nav-list {
+  display: flex;
   flex-direction: column;
   gap: 3px;
-  overflow-y: auto;
+  margin: 0;
+  padding: 0;
+  list-style: none;
 }
 
 .cc-nav-item {
@@ -264,16 +291,21 @@ ul {
   align-items: center;
   gap: 11px;
   width: 100%;
-  padding: 10px 12px;
-  border: 1px solid transparent;
+  min-height: var(--cc-hit-min);
+  /* Höhe kommt aus --cc-hit-min; vertikales Padding würde Einträge auf ~50px aufblähen (1280x720 passt sonst nicht). */
+  padding: 0 12px;
+  border: var(--cc-border-width) solid transparent;
   border-radius: var(--cc-radius-sm);
   background: transparent;
   color: var(--cc-text-dim);
   cursor: pointer;
   text-align: left;
-  font-size: 14px;
-  font-weight: 600;
-  transition: background 0.15s, color 0.15s, border-color 0.15s;
+  font-size: var(--cc-fs-md);
+  font-weight: var(--cc-fw-semibold);
+  transition:
+    background var(--cc-dur-fast) var(--cc-ease-standard),
+    color var(--cc-dur-fast) var(--cc-ease-standard),
+    border-color var(--cc-dur-fast) var(--cc-ease-standard);
 }
 
 .cc-nav-item:hover {
@@ -281,16 +313,25 @@ ul {
   color: var(--cc-text);
 }
 
+/* Aktiv: Fläche + Rahmen + Akzentbalken + Akzent-Icon + kräftigere Schrift. Bewusst Rot (lokaler Akzent),
+   nicht Gold: Gold bleibt Fokus/Pokal vorbehalten. */
 .cc-nav-item.is-active {
   border-color: var(--cc-accent-line);
   background: var(--cc-accent-soft);
-  color: #fff;
+  color: var(--cc-text);
+  font-weight: var(--cc-fw-bold);
 }
 
+.cc-nav-item.is-active .cc-nav-icon {
+  color: var(--cc-accent);
+}
+
+/* Der Balken liegt INNERHALB des Eintrags: .cc-nav hat overflow-y:auto (damit auch overflow-x), ein Balken
+   außerhalb (left:-12px) würde abgeschnitten. */
 .cc-nav-item.is-active::before {
   content: "";
   position: absolute;
-  left: -12px;
+  left: 0;
   top: 50%;
   transform: translateY(-50%);
   width: 3px;
@@ -303,6 +344,11 @@ ul {
 .cc-nav-icon {
   flex-shrink: 0;
   font-size: 19px;
+  transition: color var(--cc-dur-fast) var(--cc-ease-standard);
+}
+
+.cc-nav-item:not(.is-active):hover .cc-nav-icon {
+  color: var(--cc-text);
 }
 
 .cc-nav-label {
@@ -312,12 +358,12 @@ ul {
   white-space: nowrap;
 }
 
-/* Wave 1 — Sidebar-Navigation hatte bislang keinen sichtbaren Fokusring;
-   gleiche Glow-Sprache wie .cc-filter-input:focus, nur additiv ergänzt. */
+/* Fokus: dieselben Fokus-Tokens wie Skip-Link und Header-Aktionen. Negativer Offset, weil der Eintrag die volle
+   Breite von .cc-nav (overflow) füllt — ein äußerer Ring würde links/rechts abgeschnitten. */
 .cc-nav-item:focus-visible {
-  outline: none;
+  outline: var(--cc-focus-width) solid var(--cc-focus-color);
+  outline-offset: calc(var(--cc-focus-width) * -1);
   border-color: var(--cc-accent-line);
-  box-shadow: 0 0 0 2px var(--cc-accent-soft);
 }
 
 .cc-nav-badge {
@@ -553,6 +599,7 @@ ul {
 @media (prefers-reduced-motion: reduce) {
   .cc-topbar .cc-btn,
   .cc-nav-item,
+  .cc-nav-icon,
   .cc-bottom-nav-item { transition: none; }
   .cc-topbar .cc-btn:hover { transform: none; }
   .cc-topbar .animate-spin { animation: none; }
@@ -2200,7 +2247,7 @@ ul {
 
 /* Wave 1 — Top-Bar-Buttons (Aktualisieren/Autodarts öffnen/Klassische
    Ansicht) hatten keinen sichtbaren Fokusring; gleiche Glow-Sprache wie
-   .cc-nav-item:focus-visible, nur additiv ergänzt. */
+   dem früheren .cc-nav-item:focus-visible (Rail; die Desktop-Sidebar nutzt seit UI-2B den Fokus-Outline), nur additiv ergänzt. */
 .cc-btn:focus-visible {
   outline: none;
   border-color: var(--cc-accent-line);
@@ -2465,6 +2512,15 @@ ul {
   .cc-live-rail { display: block; }
   .cc-brand { justify-content: center; padding-left: 0; padding-right: 0; }
   .cc-nav-item { justify-content: center; padding-left: 0; padding-right: 0; }
+  /* UI-2B-Desktopwerte für die Rail zurücksetzen (Tablet-Optik bleibt bis UI-2C unverändert). */
+  .cc-nav { gap: 3px; }
+  .cc-nav-group { display: contents; }
+  .cc-nav-group-label { display: none; }
+  .cc-nav-item.is-active { color: #fff; }
+  .cc-nav-item:focus-visible { outline: none; box-shadow: 0 0 0 2px var(--cc-accent-soft); }
+  .cc-nav-item.is-active .cc-nav-icon { color: inherit; }
+  .cc-nav-item { min-height: 0; padding-top: 10px; padding-bottom: 10px; }
+  .cc-nav-item.is-active::before { left: -12px; }
   .cc-content { padding: 20px 18px 56px; }
   .cc-topbar { padding: 14px 18px; }
 }

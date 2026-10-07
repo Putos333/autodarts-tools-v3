@@ -193,7 +193,7 @@ Verifizierte Befunde, absichtlich nicht in UI-1 behoben (kein visueller Diff am 
 
 ## 15. Shell-Muster (seit UI-2A)
 
-Verbindliche Muster für App-Shell und Header (`CcShell`, `CcTopBar`); Navigation selbst folgt in UI-2B/2C.
+Verbindliche Muster für App-Shell und Header (`CcShell`, `CcTopBar`); Desktop-Navigation siehe Abschnitt 16, Tablet/Mobil folgt in UI-2C.
 
 1. **Skip-Link:** erstes fokussierbares Element der Seite (`.cc-skip-link`), außerhalb des Grid-Flusses, bis zum Fokus per `transform` aus dem Viewport
    geschoben, ohne Transition. Er fokussiert `<main id="cc-content" tabindex="-1">` programmatisch — **kein** Hash-Sprung, weil der Hash der Router ist.
@@ -210,3 +210,22 @@ Verbindliche Muster für App-Shell und Header (`CcShell`, `CcTopBar`); Navigatio
 6. **Reduced Motion:** Header-Aktionen und Navigationseinträge ohne Übergänge, kein Hover-Versatz, Reload-Icon dreht nicht.
 7. **Prüfung:** `tests/e2e/cc-navigation.spec.ts` (je Viewport: Header-Anteil ≤ ⅓ der Höhe, Zielgrößen, Landmarks, Layout-Shift ≤ 0,1, Skip-Link, Fokusringe,
    Fokus nach Bereichswechsel, Deep-Link) und `tests/components/CcShell|CcTopBar.component.test.ts`; Pixelvergleich in `tests/e2e/cc-shell-visual.spec.ts`.
+
+## 16. Desktop-Navigation (seit UI-2B)
+
+Gilt für die volle Sidebar (ab 1081px, QA-Viewports 1280×720 und 1920×1080). Die Icon-Rail (≤ 1080px) und die Bottom-Navigation bleiben bis UI-2C visuell unverändert.
+
+1. **Eine Quelle, Gruppen als Präsentation:** `components/ControlCenter/sections.ts` (`CC_SECTIONS`, `CC_SECTION_GROUPS`). Das Feld `group` gliedert nur die Sidebar
+   (Live · Spielen · Auswertung · System); Section-IDs, Hash-Routing und Reihenfolge sind unverändert. Neue Bereiche brauchen eine `group`.
+2. **Semantik:** `<nav aria-label>` → je Gruppe `role="group"` mit `aria-labelledby` (sichtbares Gruppenlabel, mindestens `--cc-fs-xs`) → `<ul role="list">` → `<li>` → `<button>`.
+   Aktiver Eintrag: `aria-current="page"`. Icons sind `aria-hidden`. Das `title` bleibt: in der Icon-Rail ist das Label ausgeblendet, `title` ist dort der zugängliche Name.
+3. **Aktiver Zustand:** rote Fläche (`--cc-accent-soft`), Rahmen (`--cc-accent-line`), Akzentbalken im Eintrag, Akzent-Icon, kräftigere Schrift. **Kein Gold** als Active-Fläche.
+   Der Balken liegt innerhalb des Eintrags, weil `.cc-nav` (overflow) außenliegende Elemente abschneidet.
+4. **Hover:** `--cc-surface-hover`, Text und Icon hellen auf; Dauer `--cc-dur-fast`, mit Reduced Motion ohne Übergang.
+5. **Fokus:** Fokus-Tokens (`--cc-focus-*`) wie der Skip-Link (Header-Aktionen nutzen ebenfalls den Fokus-Outline); Ring **innen** (negativer Offset), weil ein äußerer Ring vom scrollenden Container abgeschnitten würde.
+   Die Fokusfarbe bleibt die offene Entscheidung aus Abschnitt 14.
+6. **Zielgröße und Höhe:** Einträge `min-height: var(--cc-hit-min)`, ohne vertikales Padding (sonst ~50px und 1280×720 passt nicht). Ohne Live-Match passt die gesamte Navigation ohne
+   internen Scrollbalken in 1280×720; mit Live-Widget darf `.cc-nav` scrollen.
+7. **Rail-Entkopplung:** Die Desktop-Werte werden im Block `@media (max-width: 1080px)` ausdrücklich zurückgesetzt. Hover-, Fokus- und Aktivzustand der Rail entsprechen UI-2A; die Tablet-Baseline ist pixelidentisch zu UI-2A (Screenshot ohne fokussiertes Element).
+8. **Prüfung:** `tests/components/CcSidebar.component.test.ts`; `tests/e2e/cc-navigation.spec.ts` (Block „cc-desktop-nav“: Gruppen, Zielgrößen, kein Überlauf, aktiver Zustand, Hover,
+   Tab-Reihenfolge, Fokusringe, Reduced Motion); Pixelvergleich Wide/Desktop in `tests/e2e/cc-shell-visual.spec.ts` (Baselines in UI-2B bewusst erneuert).

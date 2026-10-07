@@ -18,8 +18,28 @@ export type TCcSectionId =
   | "history"
   | "settings";
 
+/**
+ * Navigationsgruppen (UI-2B): reine Präsentations-/Informationsarchitektur der Sidebar.
+ * Kein Routing-Bestandteil — Hash, Section-IDs und Reihenfolge der Bereiche bleiben unverändert.
+ */
+export type TCcGroupId = "live" | "play" | "analysis" | "system";
+
+export interface ICcSectionGroup {
+  id: TCcGroupId;
+  label: string;
+}
+
+export const CC_SECTION_GROUPS: ICcSectionGroup[] = [
+  { id: "live", label: "Live" },
+  { id: "play", label: "Spielen" },
+  { id: "analysis", label: "Auswertung" },
+  { id: "system", label: "System" },
+];
+
 export interface ICcSection {
   id: TCcSectionId;
+  /** Navigationsgruppe der Desktop-Sidebar (UI-2B). */
+  group: TCcGroupId;
   label: string;
   /** Kurzer Untertitel in der Top-Bar. */
   hint: string;
@@ -44,6 +64,7 @@ export interface ICcSection {
 export const CC_SECTIONS: ICcSection[] = [
   {
     id: "dashboard",
+    group: "live",
     label: "Dashboard",
     shortLabel: "Home",
     hint: "Board, Verbindung, aktuelles Match und Spieler auf einen Blick",
@@ -51,6 +72,7 @@ export const CC_SECTIONS: ICcSection[] = [
   },
   {
     id: "board",
+    group: "live",
     label: "Board & Autoscoring",
     shortLabel: "Board",
     hint: "Verbindungs- und Board-Diagnose (Kalibrierung/Erkennung bleiben bei Autodarts)",
@@ -58,12 +80,14 @@ export const CC_SECTIONS: ICcSection[] = [
   },
   {
     id: "match",
+    group: "live",
     label: "Match",
     hint: "Live-Scoreboard, Spielerwerte und Match-Historie",
     icon: "icon-[pixelarticons--gamepad]",
   },
   {
     id: "matchcenter",
+    group: "live",
     label: "Match Center",
     shortLabel: "Center",
     hint: "3-Spalten-Match-Ansicht (Design Tokens + UI Shell, Phase 2C) — bereits als eigene Ansicht unter #matchcenter eingebunden",
@@ -72,12 +96,14 @@ export const CC_SECTIONS: ICcSection[] = [
   },
   {
     id: "training",
+    group: "play",
     label: "Training",
     hint: "Trainingsziele, Übungsbibliothek und Fortschritt",
     icon: "icon-[pixelarticons--trending-up]",
   },
   {
     id: "party",
+    group: "play",
     label: "Freunde / Party",
     shortLabel: "Party",
     hint: "Lobby-Status und Freundesliste von Autodarts",
@@ -85,6 +111,7 @@ export const CC_SECTIONS: ICcSection[] = [
   },
   {
     id: "stats",
+    group: "analysis",
     label: "Statistiken",
     shortLabel: "Stats",
     hint: "Kennzahlen und Trends aus deinen gespeicherten Match-Ergebnissen",
@@ -92,12 +119,14 @@ export const CC_SECTIONS: ICcSection[] = [
   },
   {
     id: "history",
+    group: "analysis",
     label: "Verlauf",
     hint: "Gespeicherte Canonical Match Results durchsuchen und analysieren",
     icon: "icon-[pixelarticons--clock]",
   },
   {
     id: "settings",
+    group: "system",
     label: "Einstellungen",
     shortLabel: "Optionen",
     hint: "Version, Diagnose, Datenschutz, Caller & Sounds, WLED / Beleuchtung",
@@ -119,6 +148,11 @@ export const CC_STATS_PENDING_GAME_MODE_KEY = "cc-stats-pending-game-mode";
 
 export function isCcSectionId(value: unknown): value is TCcSectionId {
   return typeof value === "string" && CC_SECTIONS.some(section => section.id === value);
+}
+
+/** Bereiche einer Gruppe in Registry-Reihenfolge (leere Gruppen entfallen im Aufrufer). */
+export function getCcSectionsByGroup(group: TCcGroupId): ICcSection[] {
+  return CC_SECTIONS.filter(section => section.group === group);
 }
 
 export function getCcSection(id: TCcSectionId): ICcSection {
