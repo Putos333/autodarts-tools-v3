@@ -71,7 +71,7 @@ Substitute protection layers (they do not replace GateGuard's fact-forcing): `pr
 ### Known low-priority open points (intentionally not changed)
 
 - Stale `mcp__github__*` allow rules in `~/.claude/settings.local.json` (old tool-name form, no effect).
-- The graphify hook text ("MANDATORY: run graphify query") conflicts with "graphify only when structural relationships matter".
+- The graphify hook text ("MANDATORY: run graphify query") conflicts with "graphify only when structural relationships matter". Actual hook behavior (verified from graphify 0.9.43 source, Wave 3E): the hook injects a graphify nudge; strict mode (`hook-guard read --strict`) blocks the first indexed Read per session once and then only nudges; the hook fails open (any error allows the call).
 
 ## Agent Mapping
 
