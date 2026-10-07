@@ -144,7 +144,7 @@ D1-Messung und wurden nicht neu gemessen.
 `silent-failure-hunter`, `pr-test-analyzer`, `python-reviewer` und `database-reviewer`
 (siehe 3.2); auch sie stehen oben noch in der historischen D1-Klassifikation.
 
-### 3.2 Deny-Liste (aktueller lokaler Stand: 59 Einträge, versionsabhängig)
+### 3.2 Deny-Liste (Agent-Regeln: 59 Einträge; seit Wave 3E-B4 zusätzlich 15 Skill-Regeln = 74 gesamt, versionsabhängig)
 
 Rekonstruktionsreferenz für `.claude/settings.local.json`, falls die lokale
 Datei verloren geht. Nur der Block `permissions` ist hier wiedergegeben; die
@@ -163,8 +163,9 @@ verfügbare Agent-Typen. **Diese Regeln liegen ausschließlich in
 Repositories; die vier Wave-1B-Regeln wirken deshalb nur auf diesem Rechner. Andere
 Klone oder Rechner besitzen sie nicht automatisch.**
 
-**Wave 2B (2026-10-06):** Es kamen neun weitere Deny-Regeln hinzu; der aktuelle
-lokale Stand sind **59**. P0/P1 (automatisch delegierende bzw. konkurrierende Agents
+**Wave 2B (2026-10-06):** Es kamen neun weitere Deny-Regeln hinzu; der damalige
+lokale Stand waren **59** (Agent-Regeln; seit Wave 3E-B4 sind es mit 15 Skill-Regeln
+insgesamt 74, siehe Nachtrag am Ende von 3.2). P0/P1 (automatisch delegierende bzw. konkurrierende Agents
 mit Schreibrechten; schreibende Änderungen laufen grundsätzlich über die
 Hauptsitzung): `ecc:refactor-cleaner`, `ecc:performance-optimizer`, `ecc:tdd-guide`,
 `ecc:doc-updater`, `ecc:e2e-runner` (Browser-E2E-Primary ist die Playwright-Suite).
@@ -177,8 +178,9 @@ Dateizählung (68 ECC-Agent-Dateien) sind damit 9 ECC-Agents erlaubt: `a11y-arch
 sichtbaren ECC-Agents aus der D1-Messung (Abschnitt 3) sind ein historischer Messwert
 und wurden nicht neu gemessen. Bewusst nicht gesperrt wurden die fünf optionalen
 Kandidaten der Wave-2A-Analyse (`gan-planner`, `gan-generator`, `harness-optimizer`,
-`loop-operator`, `agent-evaluator`). Die Liste unten gibt den aktuellen lokalen Stand
-(59) wieder.
+`loop-operator`, `agent-evaluator`). Die Liste unten gibt den lokalen Agent-Deny-Stand
+von Wave 2B (59 Einträge) wieder; die 15 Skill-Regeln aus Wave 3E-B4 stehen im
+Nachtrag nach der Liste (gesamt: 59 Agent + 15 Skill = 74).
 
 ```json
 {
@@ -254,6 +256,27 @@ Begründungsgruppen: Sprach- und Domänen-Spezialisten ohne Bezug zum Projekt;
 `conversation-analyzer`, `type-design-analyzer`); 2 als defekt bekannte Agents
 (`docs-lookup`, `gan-evaluator`).
 
+**Nachtrag Wave 3E-B4 (2026-10-07): Skill-Deny-Regeln.** Zusätzlich zu den 59
+Agent-Regeln stehen in `permissions.deny` der lokalen, git-ignorierten
+`.claude/settings.local.json` 15 exakte `Skill(...)`-Regeln (insgesamt 74 Einträge).
+Grundlage war ein read-only Audit der ECC-Skills und -Commands (ECC 2.2.1:
+292 Skills, 94 Command-Shims, davon nur 2 mit `disable-model-invocation`):
+`Skill(ecc:pr)`, `Skill(ecc:prp-pr)`, `Skill(ecc:santa-loop)` (Push bzw. PR-Erstellung),
+`Skill(ecc:epic-claim)`, `Skill(ecc:epic-decompose)`, `Skill(ecc:epic-publish)`,
+`Skill(ecc:epic-review)`, `Skill(ecc:epic-sync)`, `Skill(ecc:epic-unblock)`
+(GitHub-Issue-Änderungen über `scripts/github-coordination.js`),
+`Skill(ecc:autonomous-loops)` (beschriebenes Auto-Merge-Muster),
+`Skill(ecc:multi-plan)`, `Skill(ecc:multi-execute)`, `Skill(ecc:multi-backend)`,
+`Skill(ecc:multi-frontend)`, `Skill(ecc:multi-workflow)` (Voraussetzung: ungepinntes
+`npx ccg-workflow`). Die Syntax wurde mit einer Kanarienregel
+(`Skill(ecc:multi-backend)`) positiv geprüft (Aufruf blockiert, Kontroll-Skill
+`ecc:search-first` unbeeinträchtigt); danach wurden `ecc:epic-sync` und `ecc:prp-pr`
+stichprobenartig als blockiert bestätigt. Die übrigen 12 Regeln wurden nicht einzeln
+getestet. Die Datei ist nicht versioniert; Backup lokal:
+`.claude/settings.local.json.bak-b4-20261007T170050`. Bewusst nicht gesperrt
+(REVIEW-Klasse des Audits: nur lokale Wirkung oder eigene Freigabehinweise im Skill): `ecc:prp-commit`, `ecc:github-ops`,
+`ecc:opensource-pipeline`, `ecc:orch-*`, `ecc:checkpoint`, `ecc:loop-start`.
+
 ## 4. ECC-Update-Wartungsvertrag
 
 Diese Regeln gelten nach jedem ECC-Update (und bei jeder Änderung an der
@@ -265,8 +288,9 @@ ECC-Installation):
 4. Danach wird bewusst zwischen KEEP und DENY entschieden.
 5. Die Zahl 22 ist eine gemessene Baseline für ECC 2.2.1, kein unveränderlicher
    Vertrag.
-6. Die Deny-Einträge (D1: 46; Wave 1B: 50; lokaler Stand seit Wave 2B: 59) sind
-   versionsabhängig.
+6. Die Deny-Einträge (D1: 46; Wave 1B: 50; Wave 2B: 59 Agent-Regeln; seit Wave 3E-B4
+   zusätzlich 15 `Skill(ecc:…)`-Regeln = 74 gesamt) sind versionsabhängig und nach
+   einem ECC-Update gemeinsam zu prüfen (die Skill-Namen müssen weiter existieren).
 7. Die erforderlichen Spezialisten müssen nach jedem ECC-Update weiterhin
    verfügbar sein, mindestens: `vue-reviewer`, `typescript-reviewer`,
    `silent-failure-hunter`, `database-reviewer`, `python-reviewer`,
@@ -308,7 +332,8 @@ Deny-Liste gegen die dann registrierten ECC-Agents abgleichen.
   Reaktivierbarkeit von Ruflo entfernt (Backup vorhanden).
 - Es gibt keine automatische Wiederinstallation dieser Altbestände.
 
-Bewusst **nicht** entfernt (unverändert): `.claude/commands/github/`,
+Bewusst **nicht** entfernt (historischer Stand zu Package C; durch die Nachträge zu
+Wave 3E unten teilweise überholt, fünf Helper und die Commands sind inzwischen archiviert): `.claude/commands/github/`,
 6 generische Helper (`.claude/helpers/.helpers-version`, `auto-commit.sh`,
 `checkpoint-manager.sh`, `github-safe.js`, `helpers.manifest.json`,
 `standard-checkpoint-hooks.sh`), `.claude/agents/browser/browser-agent.yaml`,
@@ -330,9 +355,10 @@ Automatismus).
 SHA-256 geprüft). Grund: alle rufen ungepinnt `npx ruv-swarm` auf (Paket nicht
 installiert) und enthalten Merge-/Release-/Push-/Issue-Close-Rezepte; als
 Commands waren sie modell-aufrufbar. `.claude/commands/github/` ist damit leer.
-Weiterhin offen und **nicht** ausgeführt: B2 (`browser-agent.yaml`),
-B3 (Nutzer-Settings `~/.claude/settings.json`), B4 (Skill-Deny-Regeln; die ECC-
-Skills sind nicht auditiert). Recovery-Tag: `setup-2.0-wave3e-pre-c4bc84f`.
+Zum Zeitpunkt von B1 waren B2, B3 und B4 noch offen; seitdem entschieden bzw.
+ausgeführt (siehe Abschnitt 13): B2 (`browser-agent.yaml`): SKIPPED — NOT NEEDED;
+B3 (Nutzer-Settings `~/.claude/settings.json`): PASS; B4 (15 Skill-Deny-Regeln nach
+read-only Audit der ECC-Skills, Abschnitt 3.2): PASS. Recovery-Tag: `setup-2.0-wave3e-pre-c4bc84f`.
 Zurückholen: `git mv .claude/scaffold-archive/helpers/<datei> .claude/helpers/<datei>`
 bzw. `git mv .claude/scaffold-archive/commands/github/<datei> .claude/commands/github/<datei>`.
 
@@ -587,7 +613,10 @@ Keine automatische Ausführung, jeweils separate Entscheidung erforderlich.
   (Abschnitt 4) erneut prüfen.
 - **C) Dokumentations-Restpunkte:** `CLAUDE.md`,
   `.claude/agents/browser/browser-agent.yaml` und `.claude/commands/github/`
-  nur nach separater Prüfung ändern.
+  nur nach separater Prüfung ändern. **Entschieden (Wave 3E, 2026-10-07):**
+  `.claude/commands/github/` archiviert (B1), `browser-agent.yaml` bewusst belassen
+  (B2: SKIPPED — NOT NEEDED), `CLAUDE.md` um das tatsächliche Graphify-Hook-Verhalten
+  ergänzt (B5).
 - **D) Weitere ECC-Katalogreduktion:** Skills und Commands wurden durch D1
   nicht reduziert. Eine weitere Reduktion nur über einen separat verifizierten,
   unterstützten Mechanismus, ohne ECC-Source-Patch.
@@ -746,7 +775,7 @@ berechnet (ECC `hook-flags.js`); „nicht aufgerufen" heißt: Vorhandensein best
 - **Ersatzschutzschichten** (ersetzen GateGuards Faktenzwang vor Edits nicht): `block-no-verify`; projektlokaler Hook
   `destructive-guard.sh` (PreToolUse/Bash, Exit 2 blockt); `permissions.ask` + `disableBypassPermissionsMode` für die 5 Core-Dateien
   (`docs/PROTECTED_CORE_ENFORCEMENT.md`); Git-Hooks `commit-msg`/`pre-push` mit `scripts/core-guard.mjs`
-  (`core.hooksPath=scripts/githooks`); `Agent(ecc:…)`-Deny-Regeln (lokal, nicht im Repository; D1: 46, Wave 1B: 50, seit Wave 2B 2026-10-06: 59); Validation-Gate; Truth & Verification Contract in `CLAUDE.md`.
+  (`core.hooksPath=scripts/githooks`); `Agent(ecc:…)`-Deny-Regeln (lokal, nicht im Repository; D1: 46, Wave 1B: 50, seit Wave 2B 2026-10-06: 59) plus seit Wave 3E-B4 (2026-10-07) 15 exakte `Skill(ecc:…)`-Deny-Regeln (gesamt 74); Validation-Gate; Truth & Verification Contract in `CLAUDE.md`.
 - **Weitere projektlokale Einstellungen** in `.claude/settings.local.json` (bisher hier nicht beschrieben): Plugins `hookify`, `playwright`,
   `github`, `context7`, `security-guidance`, `claude-mem` auf `false`; `ecc@ecc` aktiv. Diese Plugin-Disables beeinflussen die ECC-Hooks nicht.
 - **Hinweis:** Dieselbe Variable stand zeitweise auch in der lokalen, nicht committeten `.codex/config.toml`. Entscheidung Wave 3 (2026-10-06): für Codex bewusst nicht gesetzt und dort entfernt (kein Codex-Hook ruft ECC auf; Wirkungslosigkeit INFERRED, nicht per Laufzeittest belegt). `minimal` gilt nur für Claude Code.
@@ -827,3 +856,80 @@ Nachtrag; Abschnitt 11 bleibt als historischer Stand vom 2026-10-03 erhalten. Wo
 - Potenzielles Produktrisiko (nicht geändert): Das Capture-Skript hat keinen Idempotenz-Mechanismus; bei zweimaliger Injektion entstehen pro Nachricht zwei
   `websocket-incoming`-Events (Probe, im normalen Ablauf wird nur einmal injiziert).
 - **Human Live QA ist nicht der nächste Gate** und bleibt DEFERRED/BLOCKED (Hardware). Für den Setup-Abschluss ist keine Hardware erforderlich.
+
+## 13. SETUP 2.0 – ABSCHLUSSSTATUS (Stand 2026-10-07, HEAD `44d182b`, Wave 4)
+
+Dokumentarischer Abschluss der Tooling-/Agent-Spur von Setup 2.0. Dieser Abschnitt ändert
+weder Produktcode noch Konfiguration; er fasst den durch Repository-Belege gestützten
+Stand zusammen. Historische Abschnitte oben (z. B. 5, 8, 9, 10) bleiben als datierte
+Aufzeichnungen unverändert und sind dort, wo sie überholt sind, markiert.
+Recovery-Tag vor Wave 4: `setup-2.0-wave4-pre-44d182b`.
+
+**Status: Setup 2.0 (Tooling-/Agent-Spur) CLOSED.** Das schließt die unten unter
+„Offen / zukünftig" genannten Punkte nicht ein; sie sind bewusst nicht umgesetzt.
+
+### 13.1 Abgeschlossen (mit Beleg)
+
+- Wave 0 (Baseline-Tag `setup-2.0-wave0-baseline`), Packages A, B/D1, C, C3, Codex D1–D8,
+  P40, PKG-1, PKG-7 (Protected-Core-Erzwingung, `docs/PROTECTED_CORE_ENFORCEMENT.md`): Abschnitte 2–10.
+- Playwright-E2E und E2E-CI: PR #17 (Abschnitt 12). Schutz von `main` per Ruleset (PR plus zwei
+  Required Checks), PR #18; ein direkter Push auf `main` wurde am 2026-10-07 mit GH013 abgelehnt.
+- Wave 1b und Wave 2 (Single-Owner-Agent-Routing): PR #19. Produktions-Dependency-Advisories: PR #20.
+- Wave 3 (Konfigurationsstatus, Codex-Entscheidungen vom 2026-10-06): PR #21.
+- **Wave 3E** (PR #28, Merge-Commit `44d182b`, Inhalt-Commit `296d75a`, Recovery-Tag
+  `setup-2.0-wave3e-pre-c4bc84f`):
+  - Phase A: fünf inaktive Helper nach `.claude/scaffold-archive/helpers/` archiviert
+    (`checkpoint-manager.sh`, `auto-commit.sh`, `standard-checkpoint-hooks.sh`,
+    `helpers.manifest.json`, `.helpers-version`); `github-safe.js` bleibt.
+  - B1: die sieben `/github:*`-Swarm-Commands samt README nach
+    `.claude/scaffold-archive/commands/github/` archiviert (ungepinntes `npx ruv-swarm`,
+    Merge-/Release-/Push-Rezepte); `.claude/commands/github/` ist leer.
+  - B2: **SKIPPED — NOT NEEDED.** `.claude/agents/browser/browser-agent.yaml` ist inert (nicht
+    geladen, kein ausführbarer Inhalt, in keiner Konfiguration referenziert) und bleibt unverändert.
+  - B3: Benutzerebene (außerhalb des Repositories): der autoMode-Hinweis „npx routine" in
+    `~/.claude/settings.json` wurde eingeengt. Backup: `~/.claude/settings.json.bak-b3-20261007T170546`.
+    Das Verhalten des Auto-Mode-Classifiers mit dem neuen Wortlaut wurde nicht gemessen.
+  - B4: 15 exakte `Skill(ecc:…)`-Deny-Regeln in der lokalen `.claude/settings.local.json` (Abschnitt 3.2).
+  - B5: `CLAUDE.md` beschreibt das tatsächliche Graphify-Hook-Verhalten.
+- Verifikation Wave 3E (2026-10-07, lokal unter Node v24.19.0, siehe 13.4): `yarn compile` Exit 0,
+  `yarn test` 635/635, `yarn test:lifecycle` 58/58, `yarn test:components` 121/121 (16 Dateien);
+  PR-Checks „Control Center PR Gates" und „Playwright E2E" grün; Protected Core, Graphify- und
+  Codex-Konfiguration gegenüber `origin/main` unverändert.
+
+### 13.2 UNKNOWN (aus dem Repository nicht belegbar)
+
+- Umfang und Ergebnis der Wellen **3A, 3B, 3C und 3D**: Das Repository enthält dazu weder Tags noch
+  Commits noch Dokumente. Belegt sind nur Wave 3 (PR #21) und Wave 3E. Die Angaben „3C abgeschlossen"
+  und „3D read-only Audit abgeschlossen" stammen aus Sitzungsanweisungen, nicht aus Repository-Belegen.
+- Wirkung des neuen autoMode-Wortlauts auf den Classifier (B3, nicht gemessen).
+- Von den 15 Skill-Regeln (B4) wurden nur drei einzeln getestet (`multi-backend`, `epic-sync`,
+  `prp-pr`); die übrigen zwölf sind nicht einzeln geprüft.
+
+### 13.3 Offen / zukünftig (bewusst nicht umgesetzt)
+
+- **Codex** (Abschnitt 8 B, ausdrücklich außerhalb von Wave 4): Ausführung und Trust der Codex-Hooks,
+  `hook-guard read --strict` mit Codex-Toolnamen, ob Codex `AGENTS.md` lädt, Vite-MCP,
+  absolute Pfade in `.codex/hooks.json`. Separate Folgeprüfung.
+- `.ruvector/` und `ruvector.db`: ignorierte Dateien, Herkunft nicht abschließend geprüft.
+- ECC-Wartungsvertrag (Abschnitt 4): nach jedem ECC-Update Agent-Katalog, Agent-Deny-Liste und die
+  15 Skill-Regeln erneut prüfen.
+- Produktseitig (ohne Hardware): TEMP-DIAG-Block in `utils/websocket-helpers.ts` (Protected Core, nur mit
+  ausdrücklicher Freigabe), MCP-Konsolidierung, WebSocket-Auto-Resync, Multi-Tab-Schutz,
+  Out-of-Order-Event-Test, CODEOWNERS (keiner), Autor-Identität `du@example.com`, Dev-Dependency-Triage
+  (Produktions-Audit laut PR #20: 0 Meldungen).
+- UI: bekannte Abweichungen und offene Entscheidungen in `docs/UI_GOVERNANCE.md` (Abschnitte 14 und 19).
+  Ein Plan für weitere UI-Pakete nach UI-2E ist im Repository nicht dokumentiert.
+- Human Live QA / Release-Gate: DEFERRED/BLOCKED (benötigt Hardware); Issues #13–#15 sind alte
+  Release-Readiness-Audit-Threads (2026-08-19).
+
+### 13.4 Hinweise
+
+- **Node-Version:** `.nvmrc` und die CI nutzen `v22.23.2`; die lokalen Wave-3E-Gates liefen unter
+  `v24.19.0`. Ältere Verifikationsangaben in diesem Dokument beziehen sich auf `v22.23.2`.
+- **Historische Berichte** (u. a. `AUTODARTS_ELITE_FACTORY_CERTIFICATION.md`, `PRE_LIVE_*`,
+  `MASTER_AUTODARTS_ELITE.md` in älteren Abschnitten) beschreiben den Stand zu ihrem Datum, etwa Ruflo
+  als „RUNNING", und sind nicht der aktuelle Zustand.
+- Absichtlich verbliebene leere, nicht versionierte Verzeichnisse: `.claude/agents/core/`,
+  `.claude/skills/github-*/`, `.agents/skills/github-*/`.
+- Lokale Sicherungen (nicht versioniert, nicht löschen): `.claude/settings.local.json.bak-20260930T234259`,
+  `.claude/settings.local.json.bak-b4-20261007T170050`, `~/.claude/settings.json.bak-b3-20261007T170546`.
