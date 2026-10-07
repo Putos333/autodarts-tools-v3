@@ -398,3 +398,48 @@ describe("design drift: Akzent als Textfarbe und getönte Flächen (UI-2D)", () 
     assert.deepEqual(offenders, [], `faint auf getönter Fläche: ${offenders.join(" | ")}`);
   });
 });
+
+// ── 8: Button- und Touch-Target-System (UI-2E) ──────────────────────────────
+
+describe("design drift: Button- und Touch-Target-System (UI-2E)", () => {
+  const ruleFor = (selector: string): ICssRule | undefined =>
+    allCcRules.find(rule => rule.file === STYLE_PATH && rule.selector === selector);
+
+  it("Mindest-Zielgröße wird zentral über --cc-hit-min erzwungen (.cc-btn, .cc-herobar-cta, .cc-fd-close)", () => {
+    for (const selector of [ ".cc-btn", ".cc-herobar-cta", ".cc-fd-close" ]) {
+      const rule = ruleFor(selector);
+      assert.ok(rule, `${selector} fehlt in style.css`);
+      assert.match(rule.body, /min-height\s*:\s*var\(--cc-hit-min\)/, `${selector} braucht min-height: var(--cc-hit-min)`);
+    }
+  });
+
+  it("keine .cc-btn-Regel setzt eine feste Höhe unter der Mindest-Zielgröße", () => {
+    const hitMin = Number.parseInt(tokenValue("--cc-hit-min") ?? "", 10);
+    assert.ok(hitMin >= 44);
+    const offenders = allCcRules
+      .filter(rule => /\.cc-btn(?![\w-])|\.cc-herobar-cta(?![\w-])|\.cc-fd-close(?![\w-])/.test(rule.selector))
+      .flatMap(rule => Array.from(
+        rule.body.matchAll(/(?<![\w-])((?:min-|max-)?height)\s*:\s*(\d+(?:\.\d+)?)px/g),
+        match => ({ rule, property: match[1], value: Number(match[2]) })))
+      .filter(entry => entry.value < hitMin)
+      .map(entry => `${entry.rule.file}: ${entry.rule.selector} { ${entry.property}: ${entry.value}px }`);
+    assert.deepEqual(offenders, [], `Höhe unter ${hitMin}px an Buttons: ${offenders.join(" | ")}`);
+  });
+
+  it("Hover-Lift gilt nur für bedienbare Buttons, Active nimmt ihn zurück", () => {
+    const lift = allCcRules.filter(rule => /\.cc-btn[^,]*:hover/.test(rule.selector) && /translateY/.test(rule.body));
+    assert.ok(lift.length > 0, "Hover-Regel für .cc-btn fehlt");
+    for (const rule of lift) assert.match(rule.selector, /:not\(:disabled\)/, `Hover auch bei disabled: ${rule.selector}`);
+    const active = ruleFor(".cc-btn:where(:not(:disabled)):active");
+    assert.ok(active, ".cc-btn braucht eine :active-Regel für bedienbare Buttons");
+    assert.match(active.body, /transform\s*:\s*none/);
+  });
+
+  it("disabled-Buttons bleiben ohne Hover-Bewegung und als gesperrt erkennbar", () => {
+    const disabled = ruleFor(".cc-btn:disabled");
+    assert.ok(disabled, ".cc-btn:disabled fehlt");
+    assert.match(disabled.body, /cursor\s*:\s*not-allowed/);
+    assert.match(disabled.body, /opacity\s*:/);
+    assert.match(disabled.body, /transform\s*:\s*none/);
+  });
+});
