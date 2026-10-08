@@ -34,6 +34,14 @@ ist daher die einzige repositoryseitige Beschreibung dieser Konfigurationen.
 | ECC (Plugin) | Engineering-, Governance-, Skill- und Agent-Schicht. Keine Memory-Aufgaben. |
 | Graphify | Struktur- und Beziehungsanalyse des Codes (`graphify-out/`, Runtime-/Analyseoutput, kein Anwendungscode) |
 
+> **Stand 2026-10-08 (Projekt `autodarts-tools-v3`):** claude-mem ist hier lokal deaktiviert
+> (`.claude/settings.local.json`, `enabledPlugins` für `claude-mem@thedotmack` = `false`; global
+> bleibt das Plugin aktiviert). Die Rolle „Primary Memory Owner" gilt damit für außerhalb des
+> Projekts gestartete Sessions. In Projektsitzungen ist claude-mem nicht aktiv; dort steht das
+> dateibasierte Auto-Memory von Claude Code zur Verfügung (in der Sitzungsumgebung sichtbar,
+> nicht weiter geprüft). Beleg und Prozessanalyse: Abschnitt 9 („claude-mem-Setup-Blocker: CLOSED").
+> Die Aussagen in Abschnitt 2 bleiben als datierte Aufzeichnung unverändert.
+
 ## 2. Package A – ECC-Memory-Duplikate deaktiviert
 
 **Ziel:** claude-mem ist der einzige Memory-/Persistence-Owner. ECC führt keine
@@ -276,6 +284,87 @@ getestet. Die Datei ist nicht versioniert; Backup lokal:
 `.claude/settings.local.json.bak-b4-20261007T170050`. Bewusst nicht gesperrt
 (REVIEW-Klasse des Audits: nur lokale Wirkung oder eigene Freigabehinweise im Skill): `ecc:prp-commit`, `ecc:github-ops`,
 `ecc:opensource-pipeline`, `ecc:orch-*`, `ecc:checkpoint`, `ecc:loop-start`.
+
+**Wiederherstellung auf einer neuen Maschine (Stand 2026-10-08, HEAD `871acfb`; Zählung
+59 Agent + 15 Skill = 74 geprüft).** Die Datei `.claude/settings.local.json` ist lokal und
+git-ignoriert (siehe oben). Die 15 Skill-Regeln als kopierbarer Block (nur Regelnamen, keine
+weiteren Einstellungen):
+
+```json
+{
+  "permissions": {
+    "deny": [
+      "Skill(ecc:autonomous-loops)",
+      "Skill(ecc:epic-claim)",
+      "Skill(ecc:epic-decompose)",
+      "Skill(ecc:epic-publish)",
+      "Skill(ecc:epic-review)",
+      "Skill(ecc:epic-sync)",
+      "Skill(ecc:epic-unblock)",
+      "Skill(ecc:multi-backend)",
+      "Skill(ecc:multi-execute)",
+      "Skill(ecc:multi-frontend)",
+      "Skill(ecc:multi-plan)",
+      "Skill(ecc:multi-workflow)",
+      "Skill(ecc:pr)",
+      "Skill(ecc:prp-pr)",
+      "Skill(ecc:santa-loop)"
+    ]
+  }
+}
+```
+
+- Beide Blöcke (59 Agent-Regeln oben, 15 Skill-Regeln hier) gehören in dasselbe Array
+  `permissions.deny` der lokalen Datei. Sie sind keine vollständigen Settings; vorhandene
+  Einträge (z. B. `enabledPlugins`, `env`, `hooks`) nicht überschreiben.
+- Prüfung nach dem Einspielen: 59 `Agent(ecc:…)` + 15 `Skill(ecc:…)` = 74, keine Duplikate.
+- Die 15 Namen existieren (ECC 2.2.1) als Command-Shim (14) bzw. Skill-Verzeichnis
+  (`autonomous-loops`); nach einem ECC-Update gemäß Abschnitt 4 abgleichen.
+- Nur drei der 15 Regeln wurden einzeln getestet (`multi-backend`, `epic-sync`, `prp-pr`).
+- Das Deny-Verhalten ist maschinenlokal; ohne die Datei sind die gesperrten Agents und Skills
+  wieder verfügbar. Es wurde nichts gelöscht.
+- `destructive-guard`: Die lokale Datei bindet per PreToolUse(Bash)-Hook das Skript
+  `~/.claude/hooks/destructive-guard.sh` ein (außerhalb des Repositories, ca. 130 Zeilen,
+  Exit 2 blockiert). Es wird hier nicht kopiert und ist bei einem Rechnerwechsel getrennt zu
+  sichern. Bekannte Grenzen laut Skript-Kopf: `bash -c`, `$(…)`, Variablen und Aliasse werden
+  nicht geparst.
+
+### 3.3 Routing und Zuständigkeiten (Stand 2026-10-08)
+
+Quelle der Routing-Regeln ist `CLAUDE.md` („Agent Mapping"). Dieser Abschnitt hält nur den
+belegten Stand fest und ersetzt sie nicht. Abschnitt 3.1 ist eine historische Messung.
+
+- **Single Owner:** Schreibende Änderungen laufen über die Hauptsitzung (MAIN). Subagents
+  analysieren, prüfen oder planen, sofern nicht ausdrücklich anders freigegeben.
+- **Primär zuständig:** Planung: Plan-Modus bzw. `Plan`-Subagent. Bug-Triage: `fork` oder
+  `Explore`. Normales Review: Skill `code-review`. Spezial-Review:
+  `pr-review-toolkit:code-reviewer` und `pr-review-toolkit:silent-failure-hunter`. Security:
+  Skill `security-review`. Test/Validierung: `.claude/agents/testing/production-validator.md`.
+  Browser/Laufzeit: kein eigener Agent (Playwright-Suite, Chrome DevTools MCP, `web-ext`).
+- **59 ECC-Agents: technisch lokal aus dem Standard-Routing ausgeschlossen.** 59 der 68
+  ECC-Agent-Dateien sind per lokaler `Agent(ecc:…)`-Deny-Regel ausgeschlossen (Abschnitt 3.2).
+  Sie sind nicht gelöscht oder deinstalliert; die Dateien bleiben installiert. Ihre Nutzung ist
+  technisch gesperrt. Eine Freigabe erfolgt nicht durch eine Anweisung in der Sitzung, sondern
+  erfordert eine separate, genehmigte Änderung der lokalen Konfiguration (Abschnitt 4).
+- **Neun ECC-Agents: technisch verfügbar, nicht Teil des Standard-Routings.** Sie sind nicht
+  gesperrt, stehen aber nicht im „Agent Mapping" von `CLAUDE.md`. Ihr Einsatz ist eine bewusste
+  Einzelfallentscheidung. Schreibende Änderungen laufen auch dann über MAIN (Single Owner, siehe
+  oben); sieben der neun Agents haben Schreibwerkzeuge (Tabelle).
+
+| ECC-Agent | Tools (Frontmatter, ECC 2.2.1) | Write/Edit |
+|---|---|---|
+| `a11y-architect` | Read, Write, Edit, Grep, Glob | ja |
+| `agent-evaluator` | Read, Grep, Glob, Bash | nein |
+| `build-error-resolver` | Read, Write, Edit, Bash, Grep, Glob | ja |
+| `gan-generator` | Read, Write, Edit, Bash, Grep, Glob | ja |
+| `gan-planner` | Read, Write, Grep, Glob | ja |
+| `harness-optimizer` | Read, Grep, Glob, Bash, Edit | ja |
+| `loop-operator` | Read, Grep, Glob, Bash, Edit | ja |
+| `security-reviewer` | Read, Grep, Glob, Bash | nein |
+| `spec-miner` | Read, Grep, Glob, Bash, Write | ja |
+
+Die Spalte zeigt nur Write/Edit; `Bash` kann ebenfalls Dateien verändern. Nach einem ECC-Update
+sind Tools und Zahl 9 neu zu prüfen (Abschnitt 4).
 
 ## 4. ECC-Update-Wartungsvertrag
 
@@ -537,6 +626,14 @@ hinaus ist **NEEDS RECHECK** nach jedem ECC-/claude-mem-Update.
   und kein Anwendungscode.
 - Ein Graphify-Update wird nicht automatisch bei jedem Paket ausgeführt,
   sondern nur, wenn es für den Graphzustand erforderlich ist.
+
+**Portabilität der Hook-Pfade (Stand 2026-10-08, nur Dokumentation, keine Konfigurationsänderung):**
+Die Graphify-Hooks verwenden den absoluten Pfad `<HOME>/.local/bin/graphify` (ein Symlink auf
+eine Benutzerinstallation): `.claude/settings.json` Zeilen 19 und 28, `.codex/hooks.json`
+Zeilen 9 und 18. `.codex/hooks.json` Zeile 29 enthält zusätzlich den absoluten Repository-Pfad
+des Session-Start-Skripts. Auf einem anderen Rechner oder bei anderem Benutzernamen müssen
+diese Pfade manuell angepasst werden. Ob ein fehlendes Binary den Aufruf blockiert, wurde
+nicht geprüft (UNKNOWN). Siehe auch Abschnitt 8 I) und 13.3.
 
 ## 7. Recovery und Backups
 
@@ -926,6 +1023,21 @@ Recovery-Tag vor Wave 4: `setup-2.0-wave4-pre-44d182b`.
 
 - **Node-Version:** `.nvmrc` und die CI nutzen `v22.23.2`; die lokalen Wave-3E-Gates liefen unter
   `v24.19.0`. Ältere Verifikationsangaben in diesem Dokument beziehen sich auf `v22.23.2`.
+- **Node-Auswahl (manuell, Stand 2026-10-08):** Quelle ist `.nvmrc` (derzeit `v22.23.2`). Der
+  nvm-Standard dieser Maschine ist Node 24 (`~/.nvm/alias/default`), daher läuft eine frische
+  Shell unter `v24.19.0`. Das Gate (`scripts/gate.config.json`, `nodePolicy`) blockiert
+  Code-Gates bei abweichender Major-Version; Ergebnisse unter einer anderen Major-Version sind
+  keine Gate-Evidenz. Frühere erfolgreiche einzelne `yarn`-Aufrufe unter Node 24 (z. B. in
+  Abschnitt 13.1) sind keine Evidenz für einen `yarn gate`-Lauf unter einer abweichenden
+  Major-Version; sie werden hier nicht umgewertet. Sichere Auswahl pro Shell, ohne Installation
+  und ohne den Standard zu ändern:
+  - interaktiv im Repository-Ordner: `nvm use` (liest `.nvmrc`)
+  - sonst nur für einen Aufruf: `PATH="$HOME/.nvm/versions/node/$(cat .nvmrc)/bin:$PATH" <Befehl>`
+  - Prüfung: `node -v` muss dem Inhalt von `.nvmrc` entsprechen.
+
+  Nicht tun: `nvm install`, `nvm alias default …`. Der S0-Hook (`scripts/test-related.mjs`)
+  nutzt das `node` der jeweiligen Claude-Sitzung; er ist Feedback und ersetzt S1 nicht
+  (`TESTING.md`).
 - **Historische Berichte** (u. a. `AUTODARTS_ELITE_FACTORY_CERTIFICATION.md`, `PRE_LIVE_*`,
   `MASTER_AUTODARTS_ELITE.md` in älteren Abschnitten) beschreiben den Stand zu ihrem Datum, etwa Ruflo
   als „RUNNING", und sind nicht der aktuelle Zustand.
