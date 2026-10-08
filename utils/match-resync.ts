@@ -16,6 +16,10 @@
  *     (MAX_RESYNC_ATTEMPTS = 2, keine Schleife). Danach endet der Vorgang sauber; der Fehler geht an `onError`.
  *   - Versuche laufen als Aufgaben in der seriellen Queue (`schedule`); die Retry-Wartezeit ist ein
  *     Timer außerhalb der Queue und blockiert Live-Nachrichten nicht.
+ *   - Jeder Versuch hat ein Zeitlimit (`requestTimeoutMs`, Standard 10 s) für Token, Board-Lookup und Snapshot-Abruf.
+ *     Läuft es ab, wird der Request per AbortSignal abgebrochen, der Versuch zählt als Fehlschlag (Retry/onError wie
+ *     oben) und der Zustand wird zurückgesetzt – ein nie antwortender Fetch blockiert spätere Reconnects nicht.
+ *     Das Zeitlimit endet vor `apply`; die Verarbeitung selbst ist davon nicht betroffen.
  *   - `dispose()` verwirft ausstehende Arbeit: laufende Versuche schreiben nichts mehr, der Retry-Timer
  *     wird gelöscht, spätere Signale werden ignoriert.
  *   - Navigiert die Seite während eines Versuchs zu einem anderen Match/Board, wird das Ergebnis verworfen.
@@ -27,6 +31,7 @@
 
 export const MAX_RESYNC_ATTEMPTS = 2;
 export const DEFAULT_RETRY_DELAY_MS = 2000;
+export const DEFAULT_REQUEST_TIMEOUT_MS = 10000;
 export const AUTODARTS_API_BASE = "https://api.autodarts.io";
 
 const URL_TARGET_RE = /\/(matches|boards)\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/i;
@@ -58,7 +63,7 @@ export interface MatchResyncDeps {
   getUrl(): string;
   /** Liefert ein möglichst frisches Access-Token (ensureFreshAuthToken). */
   getToken(): Promise<string | null | undefined>;
-  fetch(url: string, init: { headers: Record<string, string> }): Promise<ResyncResponse>;
+  fetch(url: string, init: { headers: Record<string, string>; signal?: AbortSignal }): Promise<ResyncResponse>;
   /** Speist den Snapshot in denselben Verarbeitungsweg wie Live-Nachrichten (Kanal "autodarts.matches"). */
   apply(snapshot: unknown): Promise<unknown> | unknown;
   /** Reiht eine Aufgabe in die serielle Verarbeitungs-Queue ein. */
@@ -70,6 +75,11 @@ export interface MatchResyncDeps {
   retryDelayMs?: number;
   setTimer?(cb: () => void, ms: number): unknown;
   clearTimer?(handle: unknown): void;
+  /** Zeitlimit pro Versuch (Token + Abrufe, ohne `apply`). */
+  requestTimeoutMs?: number;
+  /** Eigener Timer für das Zeitlimit, getrennt vom Retry-Timer (Standard: setTimeout). */
+  setRequestTimer?(cb: () => void, ms: number): unknown;
+  clearRequestTimer?(handle: unknown): void;
 }
 
 export type ResyncPhase = "idle" | "queued" | "running" | "retry-wait";
@@ -90,6 +100,12 @@ export function createMatchResync(deps: MatchResyncDeps): MatchResync {
   const retryDelayMs = deps.retryDelayMs ?? DEFAULT_RETRY_DELAY_MS;
   const setTimer = deps.setTimer ?? ((cb: () => void, ms: number) => setTimeout(cb, ms));
   const clearTimer = deps.clearTimer ?? ((handle: unknown) => clearTimeout(handle as ReturnType<typeof setTimeout>));
+
+  const requestTimeoutMs = deps.requestTimeoutMs ?? DEFAULT_REQUEST_TIMEOUT_MS;
+  const setRequestTimer = deps.setRequestTimer ?? ((cb: () => void, ms: number) => setTimeout(cb, ms));
+  const clearRequestTimer = deps.clearRequestTimer ?? ((handle: unknown) => clearTimeout(handle as ReturnType<typeof setTimeout>));
+  /** Bricht den Request des laufenden Versuchs ab (Timeout oder dispose). */
+  let abortCurrent: (() => void) | undefined;
 
   let armed = false;
   let phase: ResyncPhase = "idle";
@@ -112,33 +128,64 @@ export function createMatchResync(deps: MatchResyncDeps): MatchResync {
     deps.schedule(() => attempt());
   }
 
+  type Loaded = { outcome: "skipped" | "discarded" } | { snapshot: unknown };
+
+  /** Token + Abrufe unter Zeitlimit. Das Limit endet hier, bevor `apply` läuft. */
+  async function load(target: ResyncTarget): Promise<Loaded> {
+    const controller = new AbortController();
+    let timer: unknown;
+    let rejectLimit!: (error: Error) => void;
+    const timeout = new Promise<never>((_, reject) => {
+      rejectLimit = reject;
+      timer = setRequestTimer(() => {
+        controller.abort();
+        reject(new Error(`resync request timed out after ${requestTimeoutMs} ms`));
+      }, requestTimeoutMs);
+    });
+    timeout.catch(() => { /* wird über race() behandelt */ });
+    abortCurrent = () => { controller.abort(); rejectLimit(new Error("resync aborted")); };
+    const limited = <T>(p: Promise<T>): Promise<T> => Promise.race([p, timeout]);
+
+    try {
+      const token = await limited(deps.getToken());
+      if (disposed) return { outcome: "discarded" };
+      const init = { headers: token ? { Authorization: `Bearer ${token}` } : {} as Record<string, string>, signal: controller.signal };
+
+      let matchId = target.id;
+      if (target.kind === "board") {
+        const boardRes = await limited(deps.fetch(`${AUTODARTS_API_BASE}/bs/v0/boards/${target.id}`, init));
+        if (!boardRes.ok) throw new Error(`board lookup failed: HTTP ${boardRes.status}`);
+        const board = (await limited(boardRes.json())) as { matchId?: string | null } | null;
+        if (disposed) return { outcome: "discarded" };
+        if (!board?.matchId) return { outcome: "skipped" }; // Board ohne aktives Match
+        matchId = board.matchId;
+      }
+
+      const res = await limited(deps.fetch(`${AUTODARTS_API_BASE}/gs/v0/matches/${matchId}/state`, init));
+      if (!res.ok) throw new Error(`match state failed: HTTP ${res.status}`);
+      return { snapshot: await limited(res.json()) };
+    } catch (error) {
+      // Fehlerpfade (HTTP-Fehler, Timeout, dispose, Fetch-Fehler) geben den Request frei; erfolgreiche Requests bleiben unberührt.
+      controller.abort();
+      throw error;
+    } finally {
+      clearRequestTimer(timer);
+      abortCurrent = undefined;
+    }
+  }
+
   async function fetchAndApply(): Promise<Outcome> {
     const target = resolveResyncTarget(deps.getUrl());
     if (!target) return "skipped";
 
-    const token = await deps.getToken();
-    if (disposed) return "discarded";
-    const init = { headers: token ? { Authorization: `Bearer ${token}` } : {} as Record<string, string> };
-
-    let matchId = target.id;
-    if (target.kind === "board") {
-      const boardRes = await deps.fetch(`${AUTODARTS_API_BASE}/bs/v0/boards/${target.id}`, init);
-      if (!boardRes.ok) throw new Error(`board lookup failed: HTTP ${boardRes.status}`);
-      const board = (await boardRes.json()) as { matchId?: string | null } | null;
-      if (disposed) return "discarded";
-      if (!board?.matchId) return "skipped"; // Board ohne aktives Match
-      matchId = board.matchId;
-    }
-
-    const res = await deps.fetch(`${AUTODARTS_API_BASE}/gs/v0/matches/${matchId}/state`, init);
-    if (!res.ok) throw new Error(`match state failed: HTTP ${res.status}`);
-    const snapshot = await res.json();
+    const loaded = await load(target);
+    if ("outcome" in loaded) return loaded.outcome;
 
     // Verworfen, wenn inzwischen invalidiert oder zu einem anderen Match/Board navigiert wurde.
     if (disposed) return "discarded";
     if (resolveResyncTarget(deps.getUrl())?.id !== target.id) return "discarded";
 
-    await deps.apply(snapshot);
+    await deps.apply(loaded.snapshot);
     return "applied";
   }
 
@@ -183,6 +230,7 @@ export function createMatchResync(deps: MatchResyncDeps): MatchResync {
     },
     dispose() {
       disposed = true;
+      abortCurrent?.();
       if (retryPending) {
         clearTimer(retryHandle);
         retryPending = false;
