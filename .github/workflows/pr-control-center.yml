@@ -16,9 +16,10 @@ name: pr-control-center
 # Kein Gate hier nutzt continue-on-error — jeder Fehler lässt den Workflow
 # tatsächlich fehlschlagen.
 #
-# Die Datei enthält zwei voneinander unabhängige Jobs: `checks` (unverändert)
-# und `e2e` (Playwright-Browser-E2E der gebauten Chrome-MV3-Extension, siehe
-# Kommentar am Job). Beide Jobs laufen parallel.
+# Die Datei enthält drei voneinander unabhängige Jobs: `checks` (unverändert),
+# `e2e` (Playwright-Browser-E2E der gebauten Chrome-MV3-Extension, siehe
+# Kommentar am Job) und `preview` (Screenshot-Artefakte, informativ, kein
+# Pflicht-Check). Alle Jobs laufen parallel.
 
 on:
   pull_request:
@@ -146,3 +147,66 @@ jobs:
           path: test-results/
           if-no-files-found: ignore
           retention-days: 7
+
+  # Lokales Preview-System (scripts/preview.mjs, docs/preview/README.md): echte
+  # Desktop-/Mobil-Screenshots der gebauten Chrome-MV3-Extension als Artefakt.
+  # Informativ, KEIN Pflicht-Check (nicht in den Required Status Checks, siehe
+  # docs/PROTECTED_CORE_ENFORCEMENT.md). Separater Job, damit er die Gates
+  # `checks` und `e2e` nicht beeinflusst. Kein Netzwerkzugriff auf Autodarts:
+  # nur die gebaute Extension und eine lokal gestubbte Seite. Der Build läuft
+  # per `wxt build` wie in den anderen Jobs (`--fast-build`), compile/test laufen
+  # bereits in `checks`. Kein continue-on-error: ein Aufnahmefehler soll sichtbar
+  # bleiben. In CI gibt es keinen Vorgängerlauf, der Vergleich ist dort der
+  # Ausgangsstand.
+  preview:
+    name: Preview Screenshots
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'yarn'
+
+      - name: Install dependencies (frozen lockfile)
+        run: yarn install --frozen-lockfile
+        env:
+          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
+
+      - name: Playwright version
+        id: playwright
+        run: echo "version=$(node -p "require('playwright/package.json').version")" >> "$GITHUB_OUTPUT"
+
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.playwright.outputs.version }}
+
+      - name: Install Playwright Chromium and system dependencies
+        run: yarn playwright install --with-deps --no-shell chromium
+
+      - name: Install Noto fonts (stable rendering)
+        run: sudo apt-get install -y --no-install-recommends fonts-noto-core
+
+      # Das Skript startet sich ohne $DISPLAY selbst unter xvfb-run (Chromium
+      # lädt die Extension nur headed).
+      - name: Build and capture preview
+        run: yarn preview --fast-build
+
+      - name: Upload preview artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: preview-${{ github.sha }}
+          path: docs/preview/
+          if-no-files-found: warn
+          retention-days: 14
