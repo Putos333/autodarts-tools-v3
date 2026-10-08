@@ -46,11 +46,11 @@ jobs:
         env:
           PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
 
-      # `yarn test` = node --test über tests/*.test.mjs (Lifecycle-Contracts,
-      # Gatekeeper) und tests/*.test.ts; die Tests laufen in dieser CI-Ausführung
+      # `yarn test:all` = App-Tests (tests/*.test.ts, Lifecycle-Contracts) + Tooling-Tests
+      # (Gatekeeper, Core-Guard, S0-Selektor); die Tests laufen in dieser CI-Ausführung
       # genau einmal (der Build-Job führt sie nicht erneut aus, `needs: test`).
-      - name: Run unit, lifecycle and gatekeeper tests
-        run: yarn test
+      - name: Run unit, lifecycle and tooling tests
+        run: yarn test:all
 
       # Blocking as of Setup 2.0 Wave 6 (2026-09-29): verified 0 type errors at
       # promotion time. The prior "61 pre-existing errors" note (2026-08-18) is

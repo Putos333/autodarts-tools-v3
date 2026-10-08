@@ -55,15 +55,21 @@
     "LIFECYCLE": ["diffcheck", "compile", "test", "build-firefox"],
     "GENERAL_APP": ["diffcheck", "compile", "test", "components", "build-firefox"],
     "SCORING_RELATED": ["diffcheck", "compile", "test", "components", "build-firefox", "build-chrome"],
-    "BUILD_DEPENDENCY": ["diffcheck", "compile", "test", "components", "build-firefox", "build-chrome"],
+    "BUILD_DEPENDENCY": ["diffcheck", "compile", "test", "tooling", "components", "build-firefox", "build-chrome"],
     "EXTERNAL_TOOLING": ["diffcheck", "syntax"]
   },
   "pathGates": [
     { "glob": "tests/components/**", "add": ["components"] },
-    { "glob": "scripts/gate.*", "add": ["test"] }
+    { "glob": "scripts/gate.*", "add": ["tooling"] },
+    { "glob": "scripts/core-guard.mjs", "add": ["tooling"] },
+    { "glob": "scripts/githooks/**", "add": ["tooling"] },
+    { "glob": "scripts/test-related.mjs", "add": ["tooling"] },
+    { "glob": "tests/gate.test.mjs", "add": ["tooling"] },
+    { "glob": "tests/core-guard.test.mjs", "add": ["tooling"] },
+    { "glob": "tests/test-related.test.mjs", "add": ["tooling"] }
   ],
   "gateOrder": [
-    "diffcheck", "syntax", "workflow-consistency", "compile", "test", "components", "build-firefox", "build-chrome"
+    "diffcheck", "syntax", "workflow-consistency", "compile", "test", "tooling", "components", "build-firefox", "build-chrome"
   ],
   "inputSets": {
     "srcAndTests": {
@@ -75,6 +81,13 @@
         ".claude/**", ".agents/**", ".codex/**", ".cursor/**", "graphify-out/**", "runtime-artifacts/**",
         "docs/**", "node_modules/**", ".output/**", ".wxt/**", "scripts/gate.mjs", "scripts/gate.config.json"
       ]
+    },
+    "toolingSet": {
+      "include": [
+        "scripts/gate.mjs", "scripts/gate.config.json", "scripts/core-guard.mjs", "scripts/githooks/**", "scripts/test-related.mjs",
+        "tests/*.test.*", "package.json", "yarn.lock", ".nvmrc"
+      ],
+      "exclude": []
     },
     "componentsSet": {
       "include": [
@@ -105,6 +118,7 @@
     "workflow-consistency": { "version": 1, "kind": "light", "cache": false, "command": ["internal:workflow-consistency"] },
     "compile": { "version": 1, "kind": "code", "cache": true, "inputSet": "srcAndTests", "command": ["yarn", "compile"] },
     "test": { "version": 1, "kind": "code", "cache": true, "inputSet": "srcAndTests", "command": ["yarn", "test"] },
+    "tooling": { "version": 1, "kind": "code", "cache": true, "inputSet": "toolingSet", "command": ["yarn", "test:tooling"] },
     "components": { "version": 1, "kind": "code", "cache": true, "inputSet": "componentsSet", "command": ["yarn", "test:components"] },
     "build-firefox": { "version": 1, "kind": "code", "cache": true, "inputSet": "buildSet", "command": ["yarn", "wxt", "build", "-b", "firefox"] },
     "build-chrome": { "version": 1, "kind": "code", "cache": true, "inputSet": "buildSet", "command": ["yarn", "wxt", "build"] }

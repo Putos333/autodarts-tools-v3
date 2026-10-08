@@ -58,13 +58,14 @@ jobs:
         env:
           PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
 
-      # `yarn test` enthält bereits die Lifecycle-Contract-Tests (tests/*.test.mjs)
-      # und die Gatekeeper-Tests (tests/gate.test.mjs): kein separater Lauf.
-      # `yarn build` / `yarn build:firefox` würden über `preflight` compile + test
+      # `yarn test:all` = App-Tests (`yarn test`: tests/*.test.ts, Lifecycle-Contracts, Preview-Skript)
+      # + Tooling-Tests (`yarn test:tooling`: Gatekeeper, Core-Guard, S0-Selektor): vollständige
+      # automatisierte Prüfung in einem Schritt (S2).
+      # `yarn build` / `yarn build:firefox` würden über `preflight` compile + test:all
       # erneut ausführen; die Build-Schritte rufen deshalb wxt direkt auf
       # (derselbe Befehl wie in package.json), nachdem compile/test oben liefen.
-      - name: Unit, Lifecycle and Gatekeeper Tests
-        run: yarn test
+      - name: Unit, Lifecycle and Tooling Tests
+        run: yarn test:all
 
       - name: Component Tests
         run: yarn test:components

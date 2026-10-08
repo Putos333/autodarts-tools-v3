@@ -29,7 +29,8 @@ else
 fi
 
 # ── Tests ────────────────────────────────────────────────────────────────────
-if yarn test > "$LOG_DIR/tests.log" 2>&1; then
+# test:all = App-Tests (`yarn test`) + Tooling-Tests (`yarn test:tooling`); beide Zusammenfassungen stehen im Log.
+if yarn test:all > "$LOG_DIR/tests.log" 2>&1; then
   TEST_SUMMARY=$(grep -E "^ℹ (tests|pass|fail) " "$LOG_DIR/tests.log" | tr '\n' ' ')
   echo "Tests ........... PASS   ($TEST_SUMMARY)"
 else
