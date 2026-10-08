@@ -276,10 +276,19 @@ Tablet-Rail (≤ 1080px, QA-Viewport 768×1024) und mobile Bottom-Navigation (�
 3. **Zustände:** Hover-Lift und Active-Rückstellung gelten nur für bedienbare Buttons (`.cc-btn:where(:not(:disabled)):hover/:active`; `:where` hält die Spezifität bei 0,2,0, damit die Reduced-Motion-Regel
    der Shell weiter Vorrang hat). `:active` nimmt den Lift zurück (Druck-Feedback ohne neue Farbe). Gesperrte Buttons behalten Sperr-Cursor, Opacity und `transform: none` und reagieren nicht mehr mit Hover-Hintergrund.
 4. **Unverändert:** Fokus-Sprache und Kontrast aus UI-2D (Abschnitt 18), Tokens, Breakpoints und Farben. Textlinks im Fließtext (`display: inline`) sind von der 44px-Regel ausgenommen (WCAG 2.5.8 „inline“);
-   die Inline-Retry-Links mit Gold-Inline-Style sind bewusst nicht Teil von K1.
+   die Inline-Retry-Links mit Gold-Inline-Style waren bewusst nicht Teil von K1 (seit K2-A: Punkt 8).
 5. **Auswirkung auf Baselines:** `.cc-herobar-cta` wächst von 43 auf 44px. Auf dem Phone (390×844) verschiebt das den Inhalt unter dem Hero um 1px (Pixelvergleich: der Bereich ist verschoben um genau 1px identisch);
    auf Tablet, Desktop und Wide ändert sich nichts über der 1-%-Schwelle.
 6. **Bekannte Abweichung (nicht in K1 behoben):** Das geschlossene Freund-Detail (`.cc-friend-detail`) liegt per `transform: translateX(100%)` außerhalb des Viewports und ist nicht per `visibility`/`inert`
    ausgeblendet; seine Bedienelemente bleiben im DOM sichtbar im Sinne der Messung. Ob sie per Tab erreichbar sind, wurde nicht geprüft.
 7. **Prüfung:** `tests/design-governance.test.ts` (Abschnitt 8: `min-height` an den drei Basisregeln, keine feste Button-Höhe unter dem Token, Hover/Active nur für bedienbare Buttons, disabled-Regel);
    `tests/e2e/cc-targets.spec.ts` (je Viewport: alle sichtbaren Bedienelemente der neun Bereiche ≥ 44px und kein Seiten-Überlauf, Hover/Active/disabled an Prüfknoten, Tastaturfokus am `.cc-btn` mit unverändertem 2px-Ring).
+8. **Retry-Aktion im Fehlerhinweis (UI-2E K2-A):** Aktiv gerenderte Retry-Stelle ist `CcTraining` (Zustand `unavailable` beim Fortschritt). Sie ist ein echtes
+   `<button type="button" class="cc-retry">` statt `<a href="#">` mit Gold-Inline-Style. `.cc-retry` (`style.css`) ist das zentrale, tokenisierte Retry-Muster: sieht wie ein Textlink aus,
+   hat `min-height: var(--cc-hit-min)` und nutzt nur Tokens; Enter/Leertaste, Fokus-Ring (Abschnitt 18) und Zielgröße kommen aus nativer Semantik und Basisregeln.
+   Vollflächige Zustandsansichten (`CcEmptyState`) behalten `.cc-btn.is-primary`. Der Fehlerhinweis wird dadurch nur im Fehlerzustand etwa eine Zielgröße höher
+   (kein Layout-Eingriff im Normalzustand). Die Ladelogik ist unverändert. Visuelle Prüfung (Scratch-QA, nicht im Repository): nur der aktive `CcTraining`-Retry-Zustand
+   (390×844, 768×1024, 1280×720, Fokus). Prüfung im Repository: `tests/components/cc-retry.component.test.ts`, `tests/design-governance.test.ts` (Abschnitt 9).
+   **Nicht Teil von K2-A:** `CcDashboardSummary.vue` (Bilanz/Training) wird in der Produktion offenbar nicht gerendert (verwaist) und bleibt unverändert; sein `<a href="#">`-Retry
+   ist kein aktiver K2-A-Ort. Verwaister Code/Aufräumen ist ein separates P3-Follow-up (Dead-Code & Architektur, braucht Bestätigung).
+   **Tablet-Abweichung:** UI-2E K2 TABLET DEVIATION = BLOCKED / NEEDS EVIDENCE – im Repository ist keine reproduzierbare Abweichung belegt (benötigt Screenshot oder genauen Viewport, betroffenen Bereich, Soll/Ist).

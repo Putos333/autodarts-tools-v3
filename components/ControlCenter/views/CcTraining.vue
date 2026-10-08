@@ -66,7 +66,7 @@
         <p v-if="progressState === 'loading'" class="cc-note" style="margin-top: 8px;">Lädt …</p>
         <p v-else-if="progressState === 'unavailable'" class="cc-note" style="margin-top: 8px; color: var(--cc-warn);">
           Fortschritt nicht verfügbar.
-          <a href="#" @click.prevent="() => loadProgress()" style="color: var(--cc-gold); text-decoration: underline;">Erneut versuchen</a>
+          <button type="button" class="cc-retry" data-testid="cc-retry-progress" @click="() => loadProgress()">Erneut versuchen</button>
         </p>
         <template v-else>
           <div class="cc-grid" style="grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 18px;">

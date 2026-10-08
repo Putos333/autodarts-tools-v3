@@ -443,3 +443,37 @@ describe("design drift: Button- und Touch-Target-System (UI-2E)", () => {
     assert.match(disabled.body, /transform\s*:\s*none/);
   });
 });
+
+// ── 9: Retry-Aktion im Fehlerhinweis (UI-2E K2-A) ───────────────────────────
+
+describe("design drift: Retry-Aktion (UI-2E K2-A)", () => {
+  it(".cc-retry ist zentral definiert, erreicht die Mindest-Zielgröße und nutzt nur Tokens", () => {
+    const rule = allCcRules.find(r => r.file === STYLE_PATH && r.selector === ".cc-retry");
+    assert.ok(rule, ".cc-retry fehlt in style.css");
+    assert.match(rule.body, /min-height\s*:\s*var\(--cc-hit-min\)/);
+    assert.match(rule.body, /color\s*:\s*var\(--cc-gold\)/);
+    assert.doesNotMatch(rule.body, /#[0-9a-f]{3,8}\b|rgba?\(/i, ".cc-retry darf keine Farb-Literale enthalten");
+  });
+
+  it("keine Retry-Aktion als <a href=\"#\"> oder mit Inline-Gold-Style in CcTraining (aktiv gerenderte K2-A-Stelle)", () => {
+    // Bewusst nur CcTraining: CcDashboardSummary wird in der Produktion nicht gerendert und ist nicht Teil von K2-A
+    // (verwaister Code, separates Aufräum-Follow-up).
+    const source = read("components/ControlCenter/views/CcTraining.vue");
+    assert.doesNotMatch(source, /<a\b[^>]*href="#"[^>]*@click/);
+    assert.doesNotMatch(source, /<a\b[^>]*style="[^"]*var\(--cc-gold\)[^"]*"[^>]*>\s*Erneut versuchen/);
+  });
+
+  it("die „Erneut versuchen“-Aktion in CcTraining ist ein <button type=\"button\" class=\"cc-retry\">", () => {
+    const file = "components/ControlCenter/views/CcTraining.vue";
+    const source = read(file);
+    // `(?:[^>]|=>)*`: ein Pfeil `=>` im @click-Handler beendet das Tag nicht.
+    const actions = source.match(/<(?:a|button)\b(?:[^>]|=>)*>\s*Erneut versuchen\s*<\/(?:a|button)>/g) ?? [];
+    assert.ok(actions.length > 0, `${file}: keine Retry-Aktion gefunden`);
+    for (const action of actions) {
+      assert.match(action, /^<button\b/, `${file}: Retry muss ein <button> sein: ${action}`);
+      assert.match(action, /type="button"/);
+      assert.match(action, /class="cc-retry"/);
+      assert.doesNotMatch(action, /style=/, `${file}: kein Inline-Style am Retry`);
+    }
+  });
+});
