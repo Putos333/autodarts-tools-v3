@@ -11,7 +11,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 const PROJECT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const BASE = fs.mkdtempSync(path.join(os.tmpdir(), 'gate-test-'));
 const HOME = path.join(BASE, 'home'); fs.mkdirSync(HOME);
-const GATE_CODE_GATES = ['compile', 'test', 'components', 'build-firefox', 'build-chrome'];
+const GATE_CODE_GATES = ['compile', 'test', 'tooling', 'components', 'build-firefox', 'build-chrome'];
 after(() => fs.rmSync(BASE, { recursive: true, force: true }));
 
 const baseEnv = { ...process.env, HOME, XDG_CONFIG_HOME: HOME, GIT_CONFIG_GLOBAL: '/dev/null', GIT_CONFIG_NOSYSTEM: '1' };
@@ -240,9 +240,25 @@ test('W index flags that hide changes from git diff (assume-unchanged / skip-wor
   const cb = b.g(['classify']); assert.equal(cb.status, 3); assert.match(cb.stdout, /HIDDEN_INDEX_FLAG.*utils\/other\.ts/);
 });
 
-test('X changing the gatekeeper itself requires the gate tests', () => {
+test('X changing the gatekeeper itself requires the tooling tests', () => {
   const r = mkRepo(); fs.appendFileSync(path.join(r.dir, 'scripts/gate.mjs'), '\n// touched\n');
-  const c = r.g(['classify']); assert.equal(c.status, 0, out(c)); assert.match(c.stdout, /REQUIRED GATES: diffcheck, syntax, test/);
+  const c = r.g(['classify']); assert.equal(c.status, 0, out(c)); assert.match(c.stdout, /REQUIRED GATES: diffcheck, syntax, tooling$/m);
+});
+
+test('X2 every tooling input (gate, core-guard, git hooks, S0 selector and the tooling tests) requires the tooling gate, not just syntax', () => {
+  for (const f of ['scripts/gate.config.json', 'scripts/core-guard.mjs', 'scripts/githooks/pre-push', 'scripts/test-related.mjs']) {
+    const r = mkRepo(); r.edit(f, f.endsWith('.json') ? fs.readFileSync(path.join(r.dir, f), 'utf8') : '// tooling\n');
+    if (f.endsWith('.json')) fs.appendFileSync(path.join(r.dir, f), '\n');
+    const c = r.g(['classify']); assert.equal(c.status, 0, `${f}: ${out(c)}`); assert.match(c.stdout, /REQUIRED GATES: diffcheck, syntax, tooling$/m, f);
+  }
+  for (const f of ['tests/gate.test.mjs', 'tests/core-guard.test.mjs', 'tests/test-related.test.mjs']) {
+    const r = mkRepo(); r.edit(f, '// tooling test\n');
+    const c = r.g(['classify']); assert.equal(c.status, 0, `${f}: ${out(c)}`); assert.match(c.stdout, /REQUIRED GATES: diffcheck, compile, test, tooling$/m, f);
+  }
+  const p = mkRepo(); p.edit('scripts/preview.mjs', '// not a gate input\n');
+  const pc = p.g(['classify']); assert.equal(pc.status, 0, out(pc)); assert.doesNotMatch(pc.stdout, /REQUIRED GATES:.*tooling/);
+  const b = mkRepo(); b.edit('package.json', '{"name":"t","version":"1.0.1"}\n');
+  const bc = b.g(['classify']); assert.equal(bc.status, 0, out(bc)); assert.match(bc.stdout, /REQUIRED GATES:.*\btooling\b/);
 });
 
 test('Y --force never bypasses a guard', () => {

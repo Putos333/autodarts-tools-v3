@@ -17,7 +17,7 @@ Verified working toolchain (2026-08-28, see PRE_LIVE_SNAPSHOT.md / POST_LIVE_DIA
 | Codebase/symbol search | Read/Grep/Glob + TypeScript LSP (`.ts` only — no `.vue` support) |
 | Architecture/relationships | graphify — only when structural relationships actually matter, not for simple lookups |
 | Implementation | native Edit/Write, only the files actually required |
-| Unit/regression tests | project test runner (`yarn test`, `yarn test:lifecycle`, `yarn test:components`); browser E2E see next row |
+| Unit/regression tests | project test runner (`yarn test` = app, `yarn test:tooling`, `yarn test:all`, `yarn test:lifecycle`, `yarn test:components`); fast affected-test feedback after edits: `yarn test:related` (S0, PostToolUse hook, never a commit gate); levels S0–S3 and stop rules in `TESTING.md`; browser E2E see next row |
 | Browser E2E (extension) | Playwright test suite (`@playwright/test` 1.62.1, `tests/e2e`, 13 tests incl. 1 visual-regression test). After `yarn wxt build`: `yarn test:e2e` (without `$DISPLAY`: `xvfb-run -a yarn test:e2e`). Runs in CI as job "Playwright E2E". Not a `yarn gate` stage |
 | Firefox extension | existing `yarn build:firefox` + `web-ext` (global install) for lint/runtime when needed |
 | Chrome live debug | Chrome DevTools MCP (project-scoped, `chrome-devtools-mcp@1.8.0`; see Verified tool status) |
