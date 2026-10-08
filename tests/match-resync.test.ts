@@ -12,6 +12,7 @@ import { describe, it } from "node:test";
 
 import {
   createMatchResync,
+  DEFAULT_REQUEST_TIMEOUT_MS,
   DEFAULT_RETRY_DELAY_MS,
   MAX_RESYNC_ATTEMPTS,
   resolveResyncTarget,
@@ -30,6 +31,7 @@ interface Harness {
   deps: MatchResyncDeps;
   url: { current: string };
   fetched: Array<{ url: string; auth?: string }>;
+  signals: Array<AbortSignal | undefined>;
   applied: unknown[];
   retries: unknown[];
   errors: unknown[];
@@ -39,18 +41,23 @@ interface Harness {
   queued(): number;
   timers: Array<{ cb: () => void; ms: number; cleared: boolean }>;
   fireTimer(i?: number): void;
-  responses: Array<(url: string) => ResyncResponse | Promise<ResyncResponse>>;
+  /** Request-Timeout-Timer (R2-Stabilisierung): getrennt von den Retry-Timern. */
+  requestTimers: Array<{ cb: () => void; ms: number; cleared: boolean }>;
+  fireRequestTimer(i?: number): void;
+  responses: Array<(url: string, signal?: AbortSignal) => ResyncResponse | Promise<ResyncResponse>>;
 }
 
 function harness(opts: { token?: string | null; retryDelayMs?: number } = {}): Harness {
   const url = { current: MATCH_URL };
   const fetched: Harness["fetched"] = [];
+  const signals: Harness["signals"] = [];
   const applied: unknown[] = [];
   const retries: unknown[] = [];
   const errors: unknown[] = [];
   const tokens = { calls: 0 };
   const queue: Array<() => Promise<void>> = [];
   const timers: Harness["timers"] = [];
+  const requestTimers: Harness["requestTimers"] = [];
   const responses: Harness["responses"] = [];
 
   const deps: MatchResyncDeps = {
@@ -58,9 +65,10 @@ function harness(opts: { token?: string | null; retryDelayMs?: number } = {}): H
     getToken: async () => { tokens.calls++; return opts.token === undefined ? "tok" : opts.token; },
     fetch: async (u, init) => {
       fetched.push({ url: u, auth: (init.headers as Record<string, string>).Authorization });
+      signals.push(init.signal);
       const next = responses.shift();
       if (!next) throw new Error("kein Response geskriptet");
-      return next(u);
+      return next(u, init.signal);
     },
     apply: async (s) => { applied.push(s); },
     schedule: (task) => { queue.push(task); },
@@ -69,13 +77,16 @@ function harness(opts: { token?: string | null; retryDelayMs?: number } = {}): H
     retryDelayMs: opts.retryDelayMs,
     setTimer: (cb, ms) => { const t = { cb, ms, cleared: false }; timers.push(t); return t; },
     clearTimer: (h) => { (h as { cleared: boolean }).cleared = true; },
+    setRequestTimer: (cb, ms) => { const t = { cb, ms, cleared: false }; requestTimers.push(t); return t; },
+    clearRequestTimer: (h) => { (h as { cleared: boolean }).cleared = true; },
   };
 
   return {
-    deps, url, fetched, applied, retries, errors, tokens, timers, responses,
+    deps, url, fetched, signals, applied, retries, errors, tokens, timers, responses, requestTimers,
     async runNext() { const t = queue.shift(); if (t) await t(); },
     queued: () => queue.length,
     fireTimer(i = timers.length - 1) { const t = timers[i]; if (!t.cleared) t.cb(); },
+    fireRequestTimer(i = requestTimers.length - 1) { const t = requestTimers[i]; if (!t.cleared) t.cb(); },
   };
 }
 
@@ -361,5 +372,204 @@ describe("createMatchResync – Invalidierung und Verwerfen", () => {
     assert.equal(h.applied.length, 0);
     assert.equal(h.errors.length, 0);
     assert.equal(r.phase, "idle");
+  });
+});
+
+// R2-Stabilisierung (Risiko 1): ein Fetch, der nie antwortet, darf den Resync nicht dauerhaft blockieren.
+const never = (): Promise<ResyncResponse> => new Promise<ResyncResponse>(() => { /* antwortet nie */ });
+const flush = async () => { for (let i = 0; i < 10; i++) await Promise.resolve(); };
+
+describe("createMatchResync – Request-Timeout (nie antwortender Fetch)", () => {
+  it("22. Regression: ein hängender Fetch läuft in einen Timeout, setzt den Zustand zurück und ein weiterer Reconnect startet neu", async () => {
+    const h = harness();
+    h.responses.push(never, never, () => ok({ id: UUID_A }));
+    const r = createMatchResync(h.deps);
+    r.notifyStatus("disconnected"); r.notifyStatus("connected");
+
+    const first = h.runNext();
+    await flush();
+    assert.equal(r.phase, "running");
+    assert.equal(h.requestTimers.length, 1, "pro Versuch ein Request-Timeout-Timer");
+    assert.equal(h.requestTimers[0].ms, DEFAULT_REQUEST_TIMEOUT_MS);
+
+    h.fireRequestTimer();                       // Timeout des ersten Versuchs
+    await first;                                // darf nicht mehr hängen
+    assert.equal(r.phase, "retry-wait");
+    assert.equal(h.retries.length, 1);
+    assert.equal(h.signals[0]?.aborted, true, "hängender Request wird per AbortSignal abgebrochen");
+
+    h.fireTimer();                              // Retry
+    const second = h.runNext();
+    await flush();
+    h.fireRequestTimer();                       // Timeout des zweiten Versuchs
+    await second;
+    assert.equal(r.phase, "idle");
+    assert.equal(r.attempts, 0);
+    assert.equal(h.errors.length, 1);
+    assert.equal(h.fetched.length, 2, "genau zwei Versuche, keine Schleife");
+
+    r.notifyStatus("disconnected"); r.notifyStatus("connected");   // der zweite Reconnect ist NICHT blockiert
+    assert.equal(h.queued(), 1);
+    await h.runNext();
+    assert.equal(h.applied.length, 1);
+  });
+
+  it("23. Ein Timeout im ersten Versuch zählt als Fehlschlag: Retry, danach erfolgreicher Snapshot", async () => {
+    const h = harness();
+    h.responses.push(never, () => ok({ id: UUID_A, ok: 1 }));
+    const r = createMatchResync(h.deps);
+    r.notifyStatus("disconnected"); r.notifyStatus("connected");
+    const first = h.runNext(); await flush();
+    h.fireRequestTimer(); await first;
+    h.fireTimer(); await h.runNext();
+    assert.deepEqual(h.applied, [{ id: UUID_A, ok: 1 }]);
+    assert.equal(h.errors.length, 0);
+    assert.equal(r.phase, "idle");
+  });
+
+  it("24. Eine rechtzeitige Antwort löscht den Request-Timer und bricht nichts ab", async () => {
+    const h = harness();
+    h.responses.push(() => ok({ id: UUID_A }));
+    const r = createMatchResync(h.deps);
+    r.notifyStatus("disconnected"); r.notifyStatus("connected");
+    await h.runNext();
+    assert.equal(h.requestTimers.length, 1);
+    assert.equal(h.requestTimers[0].cleared, true);
+    assert.equal(h.signals[0]?.aborted, false);
+    assert.equal(h.applied.length, 1);
+  });
+
+  it("25. Board-Pfad: der Timeout gilt für den Versuch insgesamt (Board-Lookup hängt)", async () => {
+    const h = harness();
+    h.url.current = `https://play.autodarts.io/boards/${UUID_B}`;
+    h.responses.push(never);
+    const r = createMatchResync(h.deps);
+    r.notifyStatus("disconnected"); r.notifyStatus("connected");
+    const first = h.runNext(); await flush();
+    h.fireRequestTimer(); await first;
+    assert.equal(r.phase, "retry-wait");
+    assert.equal(h.signals[0]?.aborted, true);
+  });
+
+  it("26. dispose() während des hängenden Requests: Timer weg, kein Retry, kein apply, kein onError", async () => {
+    const h = harness();
+    h.responses.push(never);
+    const r = createMatchResync(h.deps);
+    r.notifyStatus("disconnected"); r.notifyStatus("connected");
+    const first = h.runNext(); await flush();
+    r.dispose();
+    assert.equal(h.signals[0]?.aborted, true);
+    await first;
+    assert.equal(h.requestTimers[0].cleared, true);
+    assert.equal(h.timers.length, 0);
+    assert.equal(h.retries.length, 0);
+    assert.equal(h.errors.length, 0);
+    assert.equal(h.applied.length, 0);
+    assert.equal(r.phase, "idle");
+  });
+
+  it("27. Verspätete Antwort nach dem Timeout wird nicht angewendet; Retry läuft wirklich, ein zweiter Reconnect startet", async () => {
+    const h = harness();
+    let late!: (r: ResyncResponse) => void;
+    // Der erste Fetch ignoriert das Abort-Signal und liefert erst nach dem Timeout.
+    h.responses.push(
+      () => new Promise<ResyncResponse>((res) => { late = res; }),
+      () => ok({ id: UUID_A, round: "frisch-1" }),
+      () => ok({ id: UUID_A, round: "frisch-2" }),
+    );
+    const r = createMatchResync(h.deps);
+    r.notifyStatus("disconnected"); r.notifyStatus("connected");
+    const first = h.runNext(); await flush();
+    h.fireRequestTimer(); await first;
+    assert.equal(r.phase, "retry-wait");
+    assert.equal(h.retries.length, 1);
+
+    late(ok({ id: UUID_A, round: "veraltet" }));
+    await flush();
+    assert.deepEqual(h.applied, [], "die verspätete Antwort wird nicht angewendet");
+
+    h.fireTimer();
+    await h.runNext();
+    assert.equal(h.fetched.length, 2, "der Retry hat tatsächlich einen zweiten Fetch ausgeführt");
+    assert.deepEqual(h.applied, [{ id: UUID_A, round: "frisch-1" }], "nur der Retry-Snapshot, nie der verspätete");
+    assert.equal(h.errors.length, 0);
+    assert.equal(r.phase, "idle");
+
+    r.notifyStatus("disconnected"); r.notifyStatus("connected");
+    assert.equal(h.queued(), 1, "zweiter Reconnect startet");
+    await h.runNext();
+    assert.deepEqual(h.applied, [{ id: UUID_A, round: "frisch-1" }, { id: UUID_A, round: "frisch-2" }]);
+  });
+
+  it("28. Abort-Rejection: ein auf Abort ablehnender Fetch erzeugt keine unbehandelte Ablehnung; Retry und zweiter Reconnect laufen", async () => {
+    const unhandled: unknown[] = [];
+    const onUnhandled = (e: unknown) => { unhandled.push(e); };
+    process.on("unhandledRejection", onUnhandled);
+    try {
+      const h = harness();
+      const abortable = (_u: string, signal?: AbortSignal) => new Promise<ResyncResponse>((_, reject) => {
+        signal?.addEventListener("abort", () => reject(new DOMException("aborted", "AbortError")));
+      });
+      h.responses.push(abortable, () => ok({ id: UUID_A, round: "retry" }), () => ok({ id: UUID_A, round: "zweiter-reconnect" }));
+      const r = createMatchResync(h.deps);
+      r.notifyStatus("disconnected"); r.notifyStatus("connected");
+      const first = h.runNext(); await flush();
+      h.fireRequestTimer(); await first;
+      await new Promise((res) => setImmediate(res));
+      assert.equal(h.signals[0]?.aborted, true);
+      assert.equal(r.phase, "retry-wait");
+      assert.equal(h.retries.length, 1);
+      assert.equal(h.errors.length, 0);
+
+      h.fireTimer(); await h.runNext();
+      assert.equal(h.fetched.length, 2, "Retry wurde ausgeführt");
+      assert.deepEqual(h.applied, [{ id: UUID_A, round: "retry" }]);
+
+      r.notifyStatus("disconnected"); r.notifyStatus("connected");
+      assert.equal(h.queued(), 1);
+      await h.runNext();
+      assert.equal(h.applied.length, 2);
+      await new Promise((res) => setImmediate(res));
+      assert.deepEqual(unhandled, [], "keine unbehandelte Promise-Ablehnung");
+    } finally {
+      process.off("unhandledRejection", onUnhandled);
+    }
+  });
+
+  it("29. dispose() bei auf Abort ablehnendem Fetch: kein Retry, kein onError, keine unbehandelte Ablehnung", async () => {
+    const unhandled: unknown[] = [];
+    const onUnhandled = (e: unknown) => { unhandled.push(e); };
+    process.on("unhandledRejection", onUnhandled);
+    try {
+      const h = harness();
+      h.responses.push((_u, signal) => new Promise<ResyncResponse>((_, reject) => {
+        signal?.addEventListener("abort", () => reject(new DOMException("aborted", "AbortError")));
+      }));
+      const r = createMatchResync(h.deps);
+      r.notifyStatus("disconnected"); r.notifyStatus("connected");
+      const first = h.runNext(); await flush();
+      r.dispose(); await first;
+      await new Promise((res) => setImmediate(res));
+      assert.equal(h.signals[0]?.aborted, true);
+      assert.equal(h.requestTimers[0].cleared, true);
+      assert.equal(h.timers.length, 0);
+      assert.equal(h.retries.length + h.errors.length + h.applied.length, 0);
+      assert.deepEqual(unhandled, []);
+    } finally {
+      process.off("unhandledRejection", onUnhandled);
+    }
+  });
+
+  it("30. Fehlerpfade geben den Request frei (HTTP-Fehler → abort), erfolgreiche Requests nicht", async () => {
+    const h = harness();
+    h.responses.push(() => http(500), () => ok({ id: UUID_A }));
+    const r = createMatchResync(h.deps);
+    r.notifyStatus("disconnected"); r.notifyStatus("connected");
+    await h.runNext();
+    assert.equal(h.signals[0]?.aborted, true, "fehlgeschlagener Versuch: Signal abgebrochen");
+    assert.equal(h.requestTimers[0].cleared, true);
+    h.fireTimer(); await h.runNext();
+    assert.equal(h.signals[1]?.aborted, false, "erfolgreicher Versuch: Signal unberührt");
+    assert.equal(h.applied.length, 1);
   });
 });
