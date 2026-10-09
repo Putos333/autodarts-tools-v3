@@ -280,10 +280,13 @@ Grundlage war ein read-only Audit der ECC-Skills und -Commands (ECC 2.2.1:
 (`Skill(ecc:multi-backend)`) positiv geprüft (Aufruf blockiert, Kontroll-Skill
 `ecc:search-first` unbeeinträchtigt); danach wurden `ecc:epic-sync` und `ecc:prp-pr`
 stichprobenartig als blockiert bestätigt. Die übrigen 12 Regeln wurden am 2026-10-09
-einzeln geprüft (ein Aufrufversuch je Regel, ohne Argumente): alle 12 durch Permission-Regeln
-blockiert, keine Skill-Inhalte ausgeführt. Damit sind 15 von 15 Regeln praktisch bestätigt.
-Grenzen: keine zusätzliche Kontrollprobe erlaubter Skills am 2026-10-09; Bash- und Agentenpfade
-nicht vollständig geprüft; keine vollständige Sicherheitsgarantie. Die Datei ist nicht
+einzeln geprüft (ein Aufrufversuch je Regel, ohne Argumente): alle 12 mit der Meldung „Skill
+execution blocked by permission rules" abgelehnt, keine Skill-Inhalte ausgeführt (VERIFIED ist
+die Meldung; die Zuordnung zur einzelnen Deny-Regel ist INFERRED, da die Meldung die Regel nicht
+nennt). Damit ist für alle 15 Skill-Aufrufe die Ablehnung beobachtet. Grenzen: keine
+zusätzliche Kontrollprobe erlaubter Skills am 2026-10-09; Bash- und Agentenpfade nicht
+vollständig geprüft; Subagenten-Vererbung offen (13.2); keine vollständige
+Sicherheitsgarantie. Die Datei ist nicht
 versioniert; Backup lokal:
 `.claude/settings.local.json.bak-b4-20261007T170050`. Bewusst nicht gesperrt
 (REVIEW-Klasse des Audits: nur lokale Wirkung oder eigene Freigabehinweise im Skill): `ecc:prp-commit`, `ecc:github-ops`,
@@ -324,8 +327,13 @@ weiteren Einstellungen):
 - Prüfung nach dem Einspielen: 59 `Agent(ecc:…)` + 15 `Skill(ecc:…)` = 74, keine Duplikate.
 - Die 15 Namen existieren (ECC 2.2.1) als Command-Shim (14) bzw. Skill-Verzeichnis
   (`autonomous-loops`); nach einem ECC-Update gemäß Abschnitt 4 abgleichen.
-- Alle 15 Regeln sind praktisch bestätigt: 3 historische Einzeltests (`multi-backend`, `epic-sync`,
-  `prp-pr`) und 12 Einzeltests am 2026-10-09 (jeweils blockiert, siehe Abschnitt 3.2).
+- 15 von 15 getesteten Skill-Aufrufen wurden abgelehnt: 3 historische Einzeltests (`multi-backend`,
+  `epic-sync`, `prp-pr`) und 12 Einzeltests am 2026-10-09. Der Meldungstext „Skill execution
+  blocked by permission rules" wurde bei den 12 Tests vom 2026-10-09 beobachtet; die 3
+  historischen Tests wurden ebenfalls abgelehnt, ihr genauer Meldungstext ist nicht dokumentiert.
+  Die Zuordnung zur einzelnen Deny-Regel ist INFERRED, nicht separat verifiziert.
+  Subagenten-Vererbung sowie Bash- und alternative Agentenpfade sind ungeprüft
+  (siehe Abschnitt 3.2 und 13.1/13.2).
 - Das Deny-Verhalten ist maschinenlokal; ohne die Datei sind die gesperrten Agents und Skills
   wieder verfügbar. Es wurde nichts gelöscht.
 - `destructive-guard`: Die lokale Datei bindet per PreToolUse(Bash)-Hook das Skript
@@ -992,6 +1000,15 @@ Recovery-Tag vor Wave 4: `setup-2.0-wave4-pre-44d182b`.
     `~/.claude/settings.json` wurde eingeengt. Backup: `~/.claude/settings.json.bak-b3-20261007T170546`.
     Das Verhalten des Auto-Mode-Classifiers mit dem neuen Wortlaut wurde nicht gemessen.
   - B4: 15 exakte `Skill(ecc:…)`-Deny-Regeln in der lokalen `.claude/settings.local.json` (Abschnitt 3.2).
+    Stand 2026-10-09: für alle 15 Skill-Aufrufe wurde die Ablehnung beobachtet (3 historische
+    Einzeltests: `multi-backend`, `epic-sync`, `prp-pr`; 12 zusätzliche Einzeltests, je ein Versuch
+    ohne Argumente). VERIFIED ist nur die Meldung „Skill execution blocked by permission rules"
+    bei den 12 Tests vom 2026-10-09; der genaue Meldungstext der 3 historischen Tests ist nicht
+    dokumentiert. Die Zuordnung zur jeweiligen Deny-Regel ist INFERRED (die Meldung nennt die
+    Regel nicht).
+    Grenzen: keine zusätzliche Kontrollprobe erlaubter Skills am 2026-10-09; Bash- und Agentenpfade
+    nicht vollständig geprüft; Subagenten-Vererbung offen (siehe 13.2); keine vollständige
+    Sicherheitsgarantie.
   - B5: `CLAUDE.md` beschreibt das tatsächliche Graphify-Hook-Verhalten.
 - Verifikation Wave 3E (2026-10-07, lokal unter Node v24.19.0, siehe 13.4): `yarn compile` Exit 0,
   `yarn test` 635/635, `yarn test:lifecycle` 58/58, `yarn test:components` 121/121 (16 Dateien);
@@ -1004,10 +1021,8 @@ Recovery-Tag vor Wave 4: `setup-2.0-wave4-pre-44d182b`.
   Commits noch Dokumente. Belegt sind nur Wave 3 (PR #21) und Wave 3E. Die Angaben „3C abgeschlossen"
   und „3D read-only Audit abgeschlossen" stammen aus Sitzungsanweisungen, nicht aus Repository-Belegen.
 - Wirkung des neuen autoMode-Wortlauts auf den Classifier (B3, nicht gemessen).
-- Skill-Regeln (B4): 15 von 15 praktisch bestätigt. Drei historische Einzeltests (`multi-backend`,
-  `epic-sync`, `prp-pr`) und zwölf zusätzliche Einzeltests am 2026-10-09, alle durch Permission-Regeln
-  blockiert. Grenzen: keine zusätzliche Kontrollprobe erlaubter Skills am 2026-10-09; Bash- und
-  Agentenpfade nicht vollständig geprüft; keine vollständige Sicherheitsgarantie.
+- Ob Subagenten dieselben Skill-Deny-Regeln (B4) erben, wurde nicht geprüft (UNKNOWN). Ebenso nicht
+  geprüft: Bash- und Agentenpfade, die dieselben Fähigkeiten ohne Skill-Aufruf erreichen.
 
 ### 13.3 Offen / zukünftig (bewusst nicht umgesetzt)
 
@@ -1031,8 +1046,11 @@ Recovery-Tag vor Wave 4: `setup-2.0-wave4-pre-44d182b`.
 - **Node-Version:** `.nvmrc` und die CI nutzen `v22.23.2`; die lokalen Wave-3E-Gates liefen unter
   `v24.19.0`. Ältere Verifikationsangaben in diesem Dokument beziehen sich auf `v22.23.2`.
 - **Node-Auswahl (manuell, Stand 2026-10-08):** Quelle ist `.nvmrc` (derzeit `v22.23.2`). Der
-  nvm-Standard dieser Maschine ist Node 24 (`~/.nvm/alias/default`), daher läuft eine frische
-  Shell unter `v24.19.0`. Das Gate (`scripts/gate.config.json`, `nodePolicy`) blockiert
+  nvm-Standard dieser Maschine ist Node 24 (`~/.nvm/alias/default`, VERIFIED am 2026-10-09).
+  Beobachtete Shell-Versionen: 2026-10-08 lief eine frische Shell unter `v24.19.0`; am 2026-10-09
+  lief die Bash-Umgebung der Claude-Code-Sitzung unter `v22.23.2` (Ursache nicht geprüft). Welche
+  Version eine Shell hat, ist daher mit `node -v` zu prüfen, nicht aus dem nvm-Standard
+  abzuleiten. Das Gate (`scripts/gate.config.json`, `nodePolicy`) blockiert
   Code-Gates bei abweichender Major-Version; Ergebnisse unter einer anderen Major-Version sind
   keine Gate-Evidenz. Frühere erfolgreiche einzelne `yarn`-Aufrufe unter Node 24 (z. B. in
   Abschnitt 13.1) sind keine Evidenz für einen `yarn gate`-Lauf unter einer abweichenden
