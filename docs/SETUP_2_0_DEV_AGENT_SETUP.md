@@ -279,8 +279,12 @@ Grundlage war ein read-only Audit der ECC-Skills und -Commands (ECC 2.2.1:
 `npx ccg-workflow`). Die Syntax wurde mit einer Kanarienregel
 (`Skill(ecc:multi-backend)`) positiv geprüft (Aufruf blockiert, Kontroll-Skill
 `ecc:search-first` unbeeinträchtigt); danach wurden `ecc:epic-sync` und `ecc:prp-pr`
-stichprobenartig als blockiert bestätigt. Die übrigen 12 Regeln wurden nicht einzeln
-getestet. Die Datei ist nicht versioniert; Backup lokal:
+stichprobenartig als blockiert bestätigt. Die übrigen 12 Regeln wurden am 2026-10-09
+einzeln geprüft (ein Aufrufversuch je Regel, ohne Argumente): alle 12 durch Permission-Regeln
+blockiert, keine Skill-Inhalte ausgeführt. Damit sind 15 von 15 Regeln praktisch bestätigt.
+Grenzen: keine zusätzliche Kontrollprobe erlaubter Skills am 2026-10-09; Bash- und Agentenpfade
+nicht vollständig geprüft; keine vollständige Sicherheitsgarantie. Die Datei ist nicht
+versioniert; Backup lokal:
 `.claude/settings.local.json.bak-b4-20261007T170050`. Bewusst nicht gesperrt
 (REVIEW-Klasse des Audits: nur lokale Wirkung oder eigene Freigabehinweise im Skill): `ecc:prp-commit`, `ecc:github-ops`,
 `ecc:opensource-pipeline`, `ecc:orch-*`, `ecc:checkpoint`, `ecc:loop-start`.
@@ -320,7 +324,8 @@ weiteren Einstellungen):
 - Prüfung nach dem Einspielen: 59 `Agent(ecc:…)` + 15 `Skill(ecc:…)` = 74, keine Duplikate.
 - Die 15 Namen existieren (ECC 2.2.1) als Command-Shim (14) bzw. Skill-Verzeichnis
   (`autonomous-loops`); nach einem ECC-Update gemäß Abschnitt 4 abgleichen.
-- Nur drei der 15 Regeln wurden einzeln getestet (`multi-backend`, `epic-sync`, `prp-pr`).
+- Alle 15 Regeln sind praktisch bestätigt: 3 historische Einzeltests (`multi-backend`, `epic-sync`,
+  `prp-pr`) und 12 Einzeltests am 2026-10-09 (jeweils blockiert, siehe Abschnitt 3.2).
 - Das Deny-Verhalten ist maschinenlokal; ohne die Datei sind die gesperrten Agents und Skills
   wieder verfügbar. Es wurde nichts gelöscht.
 - `destructive-guard`: Die lokale Datei bindet per PreToolUse(Bash)-Hook das Skript
@@ -999,8 +1004,10 @@ Recovery-Tag vor Wave 4: `setup-2.0-wave4-pre-44d182b`.
   Commits noch Dokumente. Belegt sind nur Wave 3 (PR #21) und Wave 3E. Die Angaben „3C abgeschlossen"
   und „3D read-only Audit abgeschlossen" stammen aus Sitzungsanweisungen, nicht aus Repository-Belegen.
 - Wirkung des neuen autoMode-Wortlauts auf den Classifier (B3, nicht gemessen).
-- Von den 15 Skill-Regeln (B4) wurden nur drei einzeln getestet (`multi-backend`, `epic-sync`,
-  `prp-pr`); die übrigen zwölf sind nicht einzeln geprüft.
+- Skill-Regeln (B4): 15 von 15 praktisch bestätigt. Drei historische Einzeltests (`multi-backend`,
+  `epic-sync`, `prp-pr`) und zwölf zusätzliche Einzeltests am 2026-10-09, alle durch Permission-Regeln
+  blockiert. Grenzen: keine zusätzliche Kontrollprobe erlaubter Skills am 2026-10-09; Bash- und
+  Agentenpfade nicht vollständig geprüft; keine vollständige Sicherheitsgarantie.
 
 ### 13.3 Offen / zukünftig (bewusst nicht umgesetzt)
 
