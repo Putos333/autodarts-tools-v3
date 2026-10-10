@@ -12,6 +12,8 @@
  *
  * Aufbau:
  *   Teil 1  Bestandstokens (aus style.css wortgleich übernommen, keine Wertänderung)
+ *   Cyan    Eigener UI-Block (neue Design-Entscheidung, P1): aktive Navigation, Interaktion,
+ *           primäre Aktionen. Keine Spieler-, Gegner- oder Statusfarbe; noch ohne Consumer.
  *   Teil 2  Additive Tokens (Motion, Ebenen, Typografie, Borders, Fokus, Hit-Target)
  *           — benennen vorhandene Bestandswerte, ersetzen aber keinen Bestandscode.
  *
@@ -123,6 +125,22 @@
   --cc-glow-accent: 0 0 26px rgba(232, 0, 45, 0.16);
   --cc-glow-blue: 0 0 26px rgba(59, 130, 246, 0.16);
   --cc-glow-gold: 0 0 0 1px rgba(245, 200, 66, 0.08), 0 0 32px rgba(245, 200, 66, 0.06);
+}
+
+/* ─── Cyan-UI-Token (P1) ──────────────────────────────────────────────────
+ * Eigenständige UI-Farbrolle für aktive Navigation, Interaktion und primäre
+ * Aktionen. KEINE Spieler-, Gegner- oder Statusfarbe: Rot = lokaler Spieler,
+ * Blau = Gegner, Grün = online/Erfolg, Gold = Elite/Rang/Sieg bleiben unverändert.
+ * Neu per ausdrücklicher Design-Entscheidung (nicht aus dem Bestand abgeleitet);
+ * Kontrast und Werte sind in tests/design-governance.test.ts festgehalten.
+ * Noch ohne Consumer — die Umstellung der Oberfläche folgt in späteren Phasen.
+ * ────────────────────────────────────────────────────────────────────────── */
+
+:root {
+  --cc-cyan: #22d3ee;
+  --cc-cyan-soft: rgba(34, 211, 238, 0.14);
+  --cc-cyan-line: rgba(34, 211, 238, 0.45);
+  --cc-glow-cyan: 0 0 26px rgba(34, 211, 238, 0.16);
 }
 
 /* ─── Teil 2: additive Tokens ─────────────────────────────────────────────

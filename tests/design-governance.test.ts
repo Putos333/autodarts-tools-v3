@@ -115,6 +115,24 @@ describe("design tokens: AUTODARTS-ELITE-Designsprache", () => {
   it("Mindest-Zielgröße ist 44px", () => {
     assert.equal(tokenValue("--cc-hit-min"), "44px");
   });
+
+  it("Cyan-UI-Token: eigene Farbrolle mit exakten Werten, getrennt von Spieler-, Gegner-, Status- und Gold-Farben", () => {
+    assert.equal(tokenValue("--cc-cyan"), "#22d3ee");
+    assert.equal(tokenValue("--cc-cyan-soft"), "rgba(34, 211, 238, 0.14)");
+    assert.equal(tokenValue("--cc-cyan-line"), "rgba(34, 211, 238, 0.45)");
+    assert.equal(tokenValue("--cc-glow-cyan"), "0 0 26px rgba(34, 211, 238, 0.16)");
+    for (const anchor of [ "--cc-accent", "--cc-blue", "--cc-ok", "--cc-gold" ]) {
+      assert.notEqual(tokenValue("--cc-cyan"), tokenValue(anchor), `--cc-cyan darf nicht ${anchor} entsprechen`);
+    }
+  });
+
+  it("Cyan-Varianten (soft, line, glow) leiten sich vom Basis-Hex ab", () => {
+    const hex = tokenValue("--cc-cyan") ?? "";
+    const channels = [ 1, 3, 5 ].map(offset => parseInt(hex.slice(offset, offset + 2), 16)).join(", ");
+    for (const variant of [ "--cc-cyan-soft", "--cc-cyan-line", "--cc-glow-cyan" ]) {
+      assert.ok((tokenValue(variant) ?? "").includes(`rgba(${channels},`), `${variant} weicht vom Basis-Cyan ab`);
+    }
+  });
 });
 
 // ── 4: Ratchets (dürfen nur sinken) ─────────────────────────────────────────
@@ -191,7 +209,7 @@ function contrast(foreground: string, background: string): number {
 const KNOWN_CONTRAST_EXCEPTIONS = [ "--cc-accent" ];
 const TEXT_TOKENS = [
   "--cc-text", "--cc-text-dim", "--cc-text-faint", "--cc-accent", "--cc-accent-text", "--cc-gold",
-  "--cc-blue", "--cc-ok", "--cc-warn", "--cc-bad",
+  "--cc-blue", "--cc-ok", "--cc-warn", "--cc-bad", "--cc-cyan",
 ];
 
 describe("design tokens: Kontrast (WCAG 2.x)", () => {
@@ -269,6 +287,27 @@ describe("design tokens: Kontrast auf Standardflächen (UI-2D)", () => {
       }
     });
   }
+
+  it("--cc-cyan erreicht 4,5:1 auf allen Standardflächen und auf der --cc-cyan-soft-Fläche; dunkle Schrift auf Cyan ebenso", () => {
+    const cyan = hexToRgb(tokenValue("--cc-cyan") ?? "");
+    for (const surface of standardSurfaces()) {
+      const ratio = rgbContrast(cyan, surface.rgb);
+      assert.ok(ratio >= 4.5, `--cc-cyan auf ${surface.name}: ${ratio.toFixed(2)}:1 unter 4,5:1`);
+    }
+    const bg = hexToRgb(tokenValue("--cc-bg") ?? "");
+    const elev = hexToRgb(tokenValue("--cc-bg-elev") ?? "");
+    const softBases: Array<{ name: string; rgb: TRgb }> = [
+      { name: "--cc-bg", rgb: bg },
+      { name: "--cc-bg-elev", rgb: elev },
+      { name: "--cc-surface auf --cc-bg-elev", rgb: overlay(elev, "--cc-surface") },
+    ];
+    for (const base of softBases) {
+      const ratio = rgbContrast(cyan, overlay(base.rgb, "--cc-cyan-soft"));
+      assert.ok(ratio >= 4.5, `--cc-cyan auf --cc-cyan-soft über ${base.name}: ${ratio.toFixed(2)}:1 unter 4,5:1`);
+    }
+    const darkOnCyan = rgbContrast(bg, cyan);
+    assert.ok(darkOnCyan >= 4.5, `--cc-bg als Schrift auf --cc-cyan-Fläche: ${darkOnCyan.toFixed(2)}:1 unter 4,5:1`);
+  });
 
   it("--cc-focus-color erreicht 3:1 (WCAG 1.4.11) auch auf der stark getönten surface-strong", () => {
     const foreground = hexToRgb(tokenValue("--cc-focus-color") ?? "");
