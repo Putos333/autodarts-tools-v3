@@ -12,6 +12,8 @@
  *
  * Aufbau:
  *   Teil 1  Bestandstokens (aus style.css wortgleich übernommen, keine Wertänderung)
+ *   Cyan    Eigener UI-Block (neue Design-Entscheidung, P1): aktive Navigation, Interaktion,
+ *           primäre Aktionen. Keine Spieler-, Gegner- oder Statusfarbe; noch ohne Consumer.
  *   Teil 2  Additive Tokens (Motion, Ebenen, Typografie, Borders, Fokus, Hit-Target)
  *           — benennen vorhandene Bestandswerte, ersetzen aber keinen Bestandscode.
  *
